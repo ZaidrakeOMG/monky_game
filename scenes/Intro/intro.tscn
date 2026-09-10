@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://dt6770ggqj1n3"]
+
+[ext_resource type="VideoStream" uid="uid://bvye5fd8moyty" path="res://videos/intro.ogv" id="1_agmbe"]
+
+[node name="Intro" type="Node2D" unique_id=1695769951]
+
+[node name="Control" type="Control" parent="." unique_id=237124997]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1080.0
+offset_bottom = 1920.0
+
+[node name="VideoStreamPlayer" type="VideoStreamPlayer" parent="Control" unique_id=1135418050]
+layout_mode = 0
+offset_right = 1080.0
+offset_bottom = 1920.0
+stream = ExtResource("1_agmbe")
+expand = true
