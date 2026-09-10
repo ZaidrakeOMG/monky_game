@@ -1,8 +1,10 @@
 [gd_scene format=3 uid="uid://dt6770ggqj1n3"]
 
 [ext_resource type="VideoStream" uid="uid://bvye5fd8moyty" path="res://videos/intro.ogv" id="1_agmbe"]
+[ext_resource type="Script" uid="uid://y8x2q41kml3a" path="res://scenes/Intro/intro.gd" id="1_l4pir"]
 
 [node name="Intro" type="Node2D" unique_id=1695769951]
+script = ExtResource("1_l4pir")
 
 [node name="Control" type="Control" parent="." unique_id=237124997]
 layout_mode = 3

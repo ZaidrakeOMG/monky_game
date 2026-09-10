@@ -16,11 +16,12 @@ config/features=PackedStringArray("4.7")
 
 [display]
 
-window/size/viewport_width=941
-window/size/viewport_height=1672
+window/size/viewport_width=1080
+window/size/viewport_height=1920
 window/size/window_width_override=424
 window/size/window_height_override=752
 window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [file_customization]
 

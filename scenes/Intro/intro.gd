@@ -7,23 +7,38 @@ const GAME_SCENE := "res://scenes/main.tscn"
 
 
 func _ready() -> void:
-	# Si el jugador ya vio la intro anteriormente,
-	# entramos directamente al juego.
+	print("INTRO INICIADA")
+
+	# Si ya vio la intro anteriormente, ir directo al juego.
 	if intro_ya_vista():
+		print("INTRO YA VISTA")
 		ir_al_juego()
 		return
 
-	# La primera vez reproducimos el video.
-	video.finished.connect(_on_video_finished)
+	# Primera vez: reproducir intro.
+	print("REPRODUCIENDO INTRO")
+
+	video.loop = false
 	video.play()
+
+	# Cuando termine el video.
+	video.finished.connect(_on_video_finished)
+
+
+func _on_video_finished() -> void:
+	print("VIDEO TERMINADO")
+
+	marcar_intro_como_vista()
+	ir_al_juego()
 
 
 func intro_ya_vista() -> bool:
 	var config := ConfigFile.new()
 
-	# Si todavía no existe guardado, significa
-	# que es la primera vez que abre el juego.
-	if config.load(SAVE_PATH) != OK:
+	var resultado := config.load(SAVE_PATH)
+
+	# No existe guardado todavía = primera vez.
+	if resultado != OK:
 		return false
 
 	return config.get_value("game", "intro_seen", false)
@@ -32,25 +47,22 @@ func intro_ya_vista() -> bool:
 func marcar_intro_como_vista() -> void:
 	var config := ConfigFile.new()
 
-	# Intentamos cargar el guardado anterior.
-	# Si no existe, simplemente crearemos uno nuevo.
+	# Si existe guardado lo carga.
+	# Si no existe, simplemente creará uno nuevo.
 	config.load(SAVE_PATH)
 
 	config.set_value("game", "intro_seen", true)
 
-	var error := config.save(SAVE_PATH)
+	var resultado := config.save(SAVE_PATH)
 
-	if error != OK:
-		push_error("No se pudo guardar el progreso de la intro.")
-
-
-func _on_video_finished() -> void:
-	# Guardamos que el jugador ya vio la intro.
-	marcar_intro_como_vista()
-
-	# Entramos al juego principal.
-	ir_al_juego()
+	if resultado != OK:
+		print("ERROR GUARDANDO INTRO: ", resultado)
 
 
 func ir_al_juego() -> void:
-	get_tree().change_scene_to_file(GAME_SCENE)
+	print("ABRIENDO MAIN")
+
+	var resultado := get_tree().change_scene_to_file(GAME_SCENE)
+
+	if resultado != OK:
+		print("ERROR ABRIENDO MAIN: ", resultado)

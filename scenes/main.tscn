@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://1fod1swr4x3p"]
+
+[ext_resource type="Texture2D" uid="uid://dsqvdguvo6cqr" path="res://escenarios imagenes/principal/cuarto-principal.png" id="1_o5qli"]
+
+[node name="Main" type="Node2D" unique_id=1843885726]
+
+[node name="background" type="Sprite2D" parent="." unique_id=496201387]
+texture = ExtResource("1_o5qli")
