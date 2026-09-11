@@ -9,9 +9,9 @@ extends Node2D
 
 const ROOM_BACKGROUNDS := {
 	"dormitorio": "res://assets/backgrounds/cuarto-principal.png",
-	"cocina": "res://assets/backgrounds/cocina.png",
-	"baño": "res://assets/backgrounds/bano.png",
-	"sala de juegos": "res://assets/backgrounds/sala_juegos.png"
+	"cocina": "res://assets/backgrounds/cocina.jpg",
+	"baño": "res://assets/backgrounds/bano.jpg",
+	"sala de juegos": "res://assets/backgrounds/sala_juegos.jpg"
 }
 
 func _ready() -> void:
