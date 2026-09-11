@@ -24,6 +24,10 @@ func _ready() -> void:
 	# Cuando termine el video.
 	video.finished.connect(_on_video_finished)
 
+func _unhandled_input(event: InputEvent) -> void:
+	if (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed):
+		_on_video_finished()
+
 
 func _on_video_finished() -> void:
 	print("VIDEO TERMINADO")

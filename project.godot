@@ -14,6 +14,10 @@ config/name="Wonky"
 run/main_scene="uid://dt6770ggqj1n3"
 config/features=PackedStringArray("4.7")
 
+[autoload]
+
+GameManager="*res://scripts/autoload/game_manager.gd"
+
 [display]
 
 window/size/viewport_width=1080
