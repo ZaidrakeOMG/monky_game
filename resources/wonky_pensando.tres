@@ -1,4 +1,4 @@
-[gd_resource load_steps=61 format=3]
+[gd_resource type="SpriteFrames" load_steps=61 format=3 uid="uid://df5w3k58m8r2y"]
 
 [ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_001.png" id="1_frame"]
 [ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_002.png" id="2_frame"]
