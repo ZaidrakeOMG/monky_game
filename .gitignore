@@ -1,4 +1,37 @@
+# Godot 4.x cache and generated files
 .godot/
-*.tmp
+
+# Godot export binaries and presets
+*.apk
+*.aab
+*.exe
+*.zip
+*.pck
+builds/
+dist/
+export_presets.cfg
+
+# Mono / C# (if ever used)
+.mono/
+[Bb]in/
+[Oo]bj/
+
+# OS-specific
 .DS_Store
+.directory
 Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# IDE and Editor configurations
+.vscode/
+.idea/
+*.swp
+*~
+
+# Temporary and log files
+*.tmp
+*.log
+*.bak
+
