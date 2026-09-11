@@ -4,6 +4,8 @@ class_name HUD
 ## Controlador del HUD y Sistema de Interfaz Avanzado
 ## Maneja barras de estado, nivel, monedas, dock de cuartos y paneles de interacción.
 
+@onready var level_label: Label = $TopBar/VBox/HeaderRow/LevelContainer/LevelLabel
+@onready var xp_bar: ProgressBar = $TopBar/VBox/HeaderRow/LevelContainer/XPBar
 @onready var btn_coins: Button = $TopBar/VBox/HeaderRow/BtnCoins
 @onready var coins_label: Label = $TopBar/VBox/HeaderRow/BtnCoins/HBox/CoinsLabel
 
