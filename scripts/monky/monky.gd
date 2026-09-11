@@ -1,19 +1,19 @@
-﻿extends Node2D
+extends Node2D
 class_name Monky
 
 ## Controlador visual e interactivo de Monky
 ## Maneja las animaciones, estados y eventos táctiles (caricias / toques).
 
-@onready var animated_sprite: AnimatedSprite2D = 
-@onready var touch_area: Area2D = 
+@onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
+@onready var touch_area: Area2D = $TouchArea
 
 var is_interacting: bool = false
 var original_scale: Vector2
 
 func _ready() -> void:
 	original_scale = scale
-	if animated_sprite.sprite_frames and animated_sprite.sprite_frames.has_animation(pensando):
-		animated_sprite.play(pensando)
+	if animated_sprite and animated_sprite.sprite_frames and animated_sprite.sprite_frames.has_animation("pensando"):
+		animated_sprite.play("pensando")
 
 	# Conectar con el GameManager
 	if GameManager:
@@ -36,9 +36,9 @@ func on_tapped() -> void:
 
 	# Efecto visual de rebote (Squash & Stretch)
 	var tween = create_tween()
-	tween.tween_property(self, scale, original_scale * Vector2(1.15, 0.85), 0.1)
-	tween.tween_property(self, scale, original_scale * Vector2(0.9, 1.1), 0.1)
-	tween.tween_property(self, scale, original_scale, 0.15)
+	tween.tween_property(self, "scale", original_scale * Vector2(1.15, 0.85), 0.1)
+	tween.tween_property(self, "scale", original_scale * Vector2(0.9, 1.1), 0.1)
+	tween.tween_property(self, "scale", original_scale, 0.15)
 	
 	# Dar un poco de felicidad y monedas
 	if GameManager:
@@ -50,16 +50,19 @@ func on_tapped() -> void:
 
 func _on_monky_state_changed(new_state: String) -> void:
 	match new_state:
-		eating:
+		"eating":
 			play_reaction_bounce(Vector2(1.1, 1.1))
-		happy:
+		"happy":
 			play_reaction_bounce(Vector2(1.15, 1.15))
-		sleeping:
-			animated_sprite.modulate = Color(0.6, 0.6, 0.8)
-		idle:
-			animated_sprite.modulate = Color.WHITE
+		"sleeping":
+			if animated_sprite:
+				animated_sprite.modulate = Color(0.6, 0.6, 0.8)
+		"idle":
+			if animated_sprite:
+				animated_sprite.modulate = Color.WHITE
 
 func play_reaction_bounce(target_scale: Vector2) -> void:
 	var tween = create_tween()
-	tween.tween_property(self, scale, original_scale * target_scale, 0.15)
-	tween.tween_property(self, scale, original_scale, 0.2)
+	tween.tween_property(self, "scale", original_scale * target_scale, 0.15)
+	tween.tween_property(self, "scale", original_scale, 0.2)
+
