@@ -15,5 +15,13 @@ texture = ExtResource("2_bg")
 [node name="Monky" parent="." instance=ExtResource("3_monky")]
 position = Vector2(540, 1180)
 
+[node name="NightOverlay" type="ColorRect" parent="."]
+z_index = 5
+offset_right = 1080.0
+offset_bottom = 1920.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+
 [node name="HUD" parent="." instance=ExtResource("4_hud")]
+
 

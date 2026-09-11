@@ -67,4 +67,3 @@ func marcar_intro_como_vista() -> void:
 func ir_al_juego() -> void:
 	print("ABRIENDO MAIN")
 	get_tree().change_scene_to_file.call_deferred(GAME_SCENE)
-
