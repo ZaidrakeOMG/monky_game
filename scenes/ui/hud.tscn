@@ -36,19 +36,35 @@ layout_mode = 2
 size_flags_horizontal = 0
 show_percentage = false
 
-[node name="CoinsContainer" type="HBoxContainer" parent="TopBar/VBox/HeaderRow"]
+[node name="BtnCoins" type="Button" parent="TopBar/VBox/HeaderRow"]
 layout_mode = 2
-alignment = 2
+theme_override_font_sizes/font_size = 28
 
-[node name="CoinsIcon" type="Label" parent="TopBar/VBox/HeaderRow/CoinsContainer"]
+[node name="HBox" type="HBoxContainer" parent="TopBar/VBox/HeaderRow/BtnCoins"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_right = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="CoinsIcon" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 28
 text = "🪙"
 
-[node name="CoinsLabel" type="Label" parent="TopBar/VBox/HeaderRow/CoinsContainer"]
+[node name="CoinsLabel" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 28
 text = "50"
+
+[node name="PlusBadge" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = " ➕"
 
 [node name="StatsGrid" type="HBoxContainer" parent="TopBar/VBox"]
 layout_mode = 2
@@ -355,5 +371,148 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 32
 text = "¡Genial! 🎁"
+
+[node name="ShopPopup" type="Control" parent="."]
+visible = false
+z_index = 60
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="ShopPopup"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Panel" type="PanelContainer" parent="ShopPopup"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -480.0
+offset_top = -650.0
+offset_right = 480.0
+offset_bottom = 650.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="ShopPopup/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 36
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 36
+
+[node name="VBox" type="VBoxContainer" parent="ShopPopup/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="HeaderRow" type="HBoxContainer" parent="ShopPopup/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 36
+text = "🏦 TIENDA DE MONEDAS"
+
+[node name="BalanceLabel" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Saldo: 50 🪙"
+
+[node name="BtnCloseShop" type="Button" parent="ShopPopup/Panel/Margin/VBox/HeaderRow"]
+custom_minimum_size = Vector2(70, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "❌"
+
+[node name="Scroll" type="ScrollContainer" parent="ShopPopup/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ContentVBox" type="VBoxContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 28
+
+[node name="SecCoinsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "✨ PACKS DE MONEDAS ✨"
+horizontal_alignment = 1
+
+[node name="CoinPacksGrid" type="GridContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 16
+columns = 2
+
+[node name="BtnDaily" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid"]
+custom_minimum_size = Vector2(420, 160)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 24
+text = "🎁 Recompensa Diaria\n+50 🪙\n[¡RECLAMAR GRATIS!]"
+
+[node name="BtnAd" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid"]
+custom_minimum_size = Vector2(420, 160)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 24
+text = "🎬 Ver Anuncio Corto\n+100 🪙\n[VER VIDEO]"
+
+[node name="BtnBag" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid"]
+custom_minimum_size = Vector2(420, 160)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 24
+text = "💰 Bolsa de Oro\n+500 🪙\n[OBTENER]"
+
+[node name="BtnChest" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid"]
+custom_minimum_size = Vector2(420, 160)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 24
+text = "💎 Cofre Gigante\n+2,500 🪙\n[OBTENER]"
+
+[node name="SecPotionsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "🧪 POCIONES MÁGICAS 🧪"
+horizontal_alignment = 1
+
+[node name="PotionsGrid" type="VBoxContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BtnPotEnergy" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "⚡ Poción Energética Flash (Energía al 100%)\nPrecio: 25 🪙"
+
+[node name="BtnPotHygiene" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "🧼 Poción de Burbujas Mágicas (Higiene al 100%)\nPrecio: 20 🪙"
+
+[node name="BtnPotMega" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "🌟 Poción Suprema (¡Restaura TODO al 100%!)\nPrecio: 50 🪙"
+
 
 
