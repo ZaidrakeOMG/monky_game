@@ -7,12 +7,11 @@ extends Node2D
 @onready var monky: Monky = $Monky
 @onready var hud: HUD = $HUD
 
-# Colores de tinte según la habitación (mientras se añaden los fondos de cocina, baño, etc.)
-const ROOM_TINTS := {
-	"dormitorio": Color(1.0, 1.0, 1.0),
-	"cocina": Color(1.0, 0.95, 0.85),
-	"baño": Color(0.85, 0.95, 1.0),
-	"sala de juegos": Color(0.95, 0.85, 1.0)
+const ROOM_BACKGROUNDS := {
+	"dormitorio": "res://assets/backgrounds/cuarto-principal.png",
+	"cocina": "res://assets/backgrounds/cocina.png",
+	"baño": "res://assets/backgrounds/bano.png",
+	"sala de juegos": "res://assets/backgrounds/sala_juegos.png"
 }
 
 func _ready() -> void:
@@ -22,8 +21,16 @@ func _ready() -> void:
 
 func _on_room_changed(room_name: String) -> void:
 	var key = room_name.to_lower()
-	if ROOM_TINTS.has(key) and background:
-		var target_color: Color = ROOM_TINTS[key]
-		var tween = create_tween()
-		tween.tween_property(background, "modulate", target_color, 0.3)
+	if ROOM_BACKGROUNDS.has(key) and background:
+		var path: String = ROOM_BACKGROUNDS[key]
+		if ResourceLoader.exists(path):
+			var new_tex: Texture2D = load(path)
+			if new_tex:
+				var tween = create_tween()
+				tween.tween_property(background, "modulate:a", 0.3, 0.1)
+				tween.tween_callback(func():
+					background.texture = new_tex
+				)
+				tween.tween_property(background, "modulate:a", 1.0, 0.1)
+
 
