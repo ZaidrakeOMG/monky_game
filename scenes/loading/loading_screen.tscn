@@ -1,0 +1,69 @@
+[gd_scene load_steps=3 format=3 uid="uid://c8loadingscreen01"]
+
+[ext_resource type="Script" path="res://scripts/loading/loading_screen.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/splash_cover.jpg" id="2_cover"]
+
+[node name="LoadingScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="CoverTexture" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_cover")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="BottomContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 60.0
+offset_top = -280.0
+offset_right = -60.0
+offset_bottom = -60.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="VBox" type="VBoxContainer" parent="BottomContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="ProgressBar" type="ProgressBar" parent="BottomContainer/VBox"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+value = 50.0
+show_percentage = false
+
+[node name="PercentLabel" type="Label" parent="BottomContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 32
+text = "50%"
+horizontal_alignment = 1
+
+[node name="TipLabel" type="Label" parent="BottomContainer/VBox"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 26
+text = "Preparando la casita de Monky..."
+horizontal_alignment = 1
+autowrap_mode = 2
+

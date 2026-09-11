@@ -24,6 +24,11 @@ func _ready() -> void:
 	# Cuando termine el video.
 	video.finished.connect(_on_video_finished)
 
+func _unhandled_input(event: InputEvent) -> void:
+	if (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed):
+		set_process_unhandled_input(false)
+		call_deferred("_on_video_finished")
+
 
 func _on_video_finished() -> void:
 	print("VIDEO TERMINADO")
@@ -61,8 +66,4 @@ func marcar_intro_como_vista() -> void:
 
 func ir_al_juego() -> void:
 	print("ABRIENDO MAIN")
-
-	var resultado := get_tree().change_scene_to_file(GAME_SCENE)
-
-	if resultado != OK:
-		print("ERROR ABRIENDO MAIN: ", resultado)
+	get_tree().change_scene_to_file.call_deferred(GAME_SCENE)
