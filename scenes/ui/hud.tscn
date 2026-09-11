@@ -1,11 +1,11 @@
-﻿[gd_scene load_steps=2 format=3 uid=uid://cb8a4j26k7qnx]
+[gd_scene load_steps=2 format=3 uid="uid://cb8a4j26k7qnx"]
 
-[ext_resource type=Script path=res://scripts/ui/hud.gd id=1_hud_script]
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud_script"]
 
-[node name=HUD type=CanvasLayer]
-script = ExtResource(1_hud_script)
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud_script")
 
-[node name=TopBar type=MarginContainer parent=.]
+[node name="TopBar" type="MarginContainer" parent="."]
 anchors_preset = 10
 anchor_right = 1.0
 offset_left = 30.0
@@ -14,94 +14,94 @@ offset_right = -30.0
 offset_bottom = 200.0
 grow_horizontal = 2
 
-[node name=VBox type=VBoxContainer parent=TopBar]
+[node name="VBox" type="VBoxContainer" parent="TopBar"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name=CoinsContainer type=HBoxContainer parent=TopBar/VBox]
+[node name="CoinsContainer" type="HBoxContainer" parent="TopBar/VBox"]
 layout_mode = 2
 alignment = 2
 
-[node name=CoinsIcon type=Label parent=TopBar/VBox/CoinsContainer]
+[node name="CoinsIcon" type="Label" parent="TopBar/VBox/CoinsContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = 🪙
+text = "🪙"
 
-[node name=CoinsLabel type=Label parent=TopBar/VBox/CoinsContainer]
+[node name="CoinsLabel" type="Label" parent="TopBar/VBox/CoinsContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = 50
+text = "50"
 
-[node name=StatsContainer type=HBoxContainer parent=TopBar/VBox]
+[node name="StatsContainer" type="HBoxContainer" parent="TopBar/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name=HungerContainer type=VBoxContainer parent=TopBar/VBox/StatsContainer]
+[node name="HungerContainer" type="VBoxContainer" parent="TopBar/VBox/StatsContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name=IconLabel type=Label parent=TopBar/VBox/StatsContainer/HungerContainer]
+[node name="IconLabel" type="Label" parent="TopBar/VBox/StatsContainer/HungerContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = 🍎 Hambre
+text = "🍎 Hambre"
 horizontal_alignment = 1
 
-[node name=HungerBar type=ProgressBar parent=TopBar/VBox/StatsContainer/HungerContainer]
+[node name="HungerBar" type="ProgressBar" parent="TopBar/VBox/StatsContainer/HungerContainer"]
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
 value = 100.0
 show_percentage = false
 
-[node name=EnergyContainer type=VBoxContainer parent=TopBar/VBox/StatsContainer]
+[node name="EnergyContainer" type="VBoxContainer" parent="TopBar/VBox/StatsContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name=IconLabel type=Label parent=TopBar/VBox/StatsContainer/EnergyContainer]
+[node name="IconLabel" type="Label" parent="TopBar/VBox/StatsContainer/EnergyContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = ⚡ Energía
+text = "⚡ Energía"
 horizontal_alignment = 1
 
-[node name=EnergyBar type=ProgressBar parent=TopBar/VBox/StatsContainer/EnergyContainer]
+[node name="EnergyBar" type="ProgressBar" parent="TopBar/VBox/StatsContainer/EnergyContainer"]
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
 value = 100.0
 show_percentage = false
 
-[node name=FunContainer type=VBoxContainer parent=TopBar/VBox/StatsContainer]
+[node name="FunContainer" type="VBoxContainer" parent="TopBar/VBox/StatsContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name=IconLabel type=Label parent=TopBar/VBox/StatsContainer/FunContainer]
+[node name="IconLabel" type="Label" parent="TopBar/VBox/StatsContainer/FunContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = ⚽ Diversión
+text = "⚽ Diversión"
 horizontal_alignment = 1
 
-[node name=FunBar type=ProgressBar parent=TopBar/VBox/StatsContainer/FunContainer]
+[node name="FunBar" type="ProgressBar" parent="TopBar/VBox/StatsContainer/FunContainer"]
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
 value = 100.0
 show_percentage = false
 
-[node name=HygieneContainer type=VBoxContainer parent=TopBar/VBox/StatsContainer]
+[node name="HygieneContainer" type="VBoxContainer" parent="TopBar/VBox/StatsContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name=IconLabel type=Label parent=TopBar/VBox/StatsContainer/HygieneContainer]
+[node name="IconLabel" type="Label" parent="TopBar/VBox/StatsContainer/HygieneContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = 🧼 Higiene
+text = "🧼 Higiene"
 horizontal_alignment = 1
 
-[node name=HygieneBar type=ProgressBar parent=TopBar/VBox/StatsContainer/HygieneContainer]
+[node name="HygieneBar" type="ProgressBar" parent="TopBar/VBox/StatsContainer/HygieneContainer"]
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
 value = 100.0
 show_percentage = false
 
-[node name=BottomBar type=MarginContainer parent=.]
+[node name="BottomBar" type="MarginContainer" parent="."]
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
@@ -113,39 +113,40 @@ offset_bottom = -40.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name=VBox type=VBoxContainer parent=BottomBar]
+[node name="VBox" type="VBoxContainer" parent="BottomBar"]
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 2
 
-[node name=ActionButton type=Button parent=BottomBar/VBox]
+[node name="ActionButton" type="Button" parent="BottomBar/VBox"]
 custom_minimum_size = Vector2(300, 70)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 30
-text = Acción
+text = "Acción"
 
-[node name=NavContainer type=HBoxContainer parent=BottomBar/VBox]
+[node name="NavContainer" type="HBoxContainer" parent="BottomBar/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name=BtnLeft type=Button parent=BottomBar/VBox/NavContainer]
+[node name="BtnLeft" type="Button" parent="BottomBar/VBox/NavContainer"]
 custom_minimum_size = Vector2(100, 70)
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = ◀
+text = "◀"
 
-[node name=RoomTitleLabel type=Label parent=BottomBar/VBox/NavContainer]
+[node name="RoomTitleLabel" type="Label" parent="BottomBar/VBox/NavContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 34
-text = DORMITORIO
+text = "DORMITORIO"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name=BtnRight type=Button parent=BottomBar/VBox/NavContainer]
+[node name="BtnRight" type="Button" parent="BottomBar/VBox/NavContainer"]
 custom_minimum_size = Vector2(100, 70)
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = ▶
+text = "▶"
+

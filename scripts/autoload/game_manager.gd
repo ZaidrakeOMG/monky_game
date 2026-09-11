@@ -133,7 +133,7 @@ func load_game() -> void:
 		var elapsed_seconds: int = current_time - last_time
 		if elapsed_seconds > 0:
 			# Decaimiento por tiempo desconectado (máximo 8 horas de impacto)
-			var passed_ticks = min(elapsed_seconds / 10, 2880)
+			var passed_ticks: float = minf(float(elapsed_seconds) / 10.0, 2880.0)
 			hunger -= passed_ticks * 0.2
 			energy -= passed_ticks * 0.15
 			fun -= passed_ticks * 0.2
@@ -142,4 +142,3 @@ func load_game() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
 		save_game()
-

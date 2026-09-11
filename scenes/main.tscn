@@ -1,18 +1,19 @@
-﻿[gd_scene load_steps=5 format=3 uid=uid://1fod1swr4x3p]
+[gd_scene load_steps=5 format=3 uid="uid://1fod1swr4x3p"]
 
-[ext_resource type=Script path=res://scripts/main.gd id=1_script]
-[ext_resource type=Texture2D uid=uid://dsqvdguvo6cqr path=res://escenarios imagenes/principal/cuarto-principal.png id=2_bg]
-[ext_resource type=PackedScene uid=uid://cx6qvh7m0a1mn path=res://scenes/monky/monky.tscn id=3_monky]
-[ext_resource type=PackedScene uid=uid://cb8a4j26k7qnx path=res://scenes/ui/hud.tscn id=4_hud]
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dsqvdguvo6cqr" path="res://escenarios imagenes/principal/cuarto-principal.png" id="2_bg"]
+[ext_resource type="PackedScene" uid="uid://cx6qvh7m0a1mn" path="res://scenes/monky/monky.tscn" id="3_monky"]
+[ext_resource type="PackedScene" uid="uid://cb8a4j26k7qnx" path="res://scenes/ui/hud.tscn" id="4_hud"]
 
-[node name=Main type=Node2D]
-script = ExtResource(1_script)
+[node name="Main" type="Node2D"]
+script = ExtResource("1_script")
 
-[node name=Background type=Sprite2D parent=.]
+[node name="Background" type="Sprite2D" parent="."]
 position = Vector2(540, 960)
-texture = ExtResource(2_bg)
+texture = ExtResource("2_bg")
 
-[node name=Monky parent=. instance=ExtResource(3_monky)]
+[node name="Monky" parent="." instance=ExtResource("3_monky")]
 position = Vector2(540, 1180)
 
-[node name=HUD parent=. instance=ExtResource(4_hud)]
+[node name="HUD" parent="." instance=ExtResource("4_hud")]
+
