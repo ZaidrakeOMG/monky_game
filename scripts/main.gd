@@ -15,12 +15,15 @@ const ROOM_BACKGROUNDS := {
 	"sala de juegos": "res://assets/backgrounds/sala_juegos.jpg"
 }
 
+var gm: Node = null
+
 func _ready() -> void:
-	if GameManager:
-		GameManager.room_changed.connect(_on_room_changed)
-		GameManager.monky_state_changed.connect(_on_monky_state_changed)
-		GameManager.show_floating_text.connect(_spawn_floating_text)
-		_on_room_changed(GameManager.current_room)
+	gm = get_tree().root.get_node_or_null("GameManager")
+	if gm:
+		gm.room_changed.connect(_on_room_changed)
+		gm.monky_state_changed.connect(_on_monky_state_changed)
+		gm.show_floating_text.connect(_spawn_floating_text)
+		_on_room_changed(gm.current_room)
 
 func _on_room_changed(room_name: String) -> void:
 	var key = room_name.to_lower()

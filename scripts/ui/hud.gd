@@ -42,25 +42,28 @@ class_name HUD
 @onready var level_popup_label: Label = $LevelUpPopup/Margin/VBox/DescLabel
 @onready var btn_close_level: Button = $LevelUpPopup/Margin/VBox/BtnClaim
 
+var gm: Node = null
+
 func _ready() -> void:
-	if GameManager:
-		GameManager.stat_changed.connect(_on_stat_changed)
-		GameManager.coins_changed.connect(_on_coins_changed)
-		GameManager.xp_changed.connect(_on_xp_changed)
-		GameManager.level_up.connect(_on_level_up)
-		GameManager.room_changed.connect(_on_room_changed)
+	gm = get_tree().root.get_node_or_null("GameManager")
+	if gm:
+		gm.stat_changed.connect(_on_stat_changed)
+		gm.coins_changed.connect(_on_coins_changed)
+		gm.xp_changed.connect(_on_xp_changed)
+		gm.level_up.connect(_on_level_up)
+		gm.room_changed.connect(_on_room_changed)
 		
 		# Inicializar UI
-		_update_stat_ui("hunger", GameManager.hunger, GameManager.MAX_STAT)
-		_update_stat_ui("energy", GameManager.energy, GameManager.MAX_STAT)
-		_update_stat_ui("fun", GameManager.fun, GameManager.MAX_STAT)
-		_update_stat_ui("hygiene", GameManager.hygiene, GameManager.MAX_STAT)
-		_on_coins_changed(GameManager.coins)
-		_on_xp_changed(GameManager.xp, GameManager.get_xp_needed(), GameManager.level)
+		_update_stat_ui("hunger", gm.hunger, gm.MAX_STAT)
+		_update_stat_ui("energy", gm.energy, gm.MAX_STAT)
+		_update_stat_ui("fun", gm.fun, gm.MAX_STAT)
+		_update_stat_ui("hygiene", gm.hygiene, gm.MAX_STAT)
+		_on_coins_changed(gm.coins)
+		_on_xp_changed(gm.xp, gm.get_xp_needed(), gm.level)
 
 	_setup_dock_buttons()
 	_setup_action_drawers()
-	_update_room_view(GameManager.current_room if GameManager else "dormitorio")
+	_update_room_view(gm.current_room if gm else "dormitorio")
 
 func _setup_dock_buttons() -> void:
 	btn_bed.pressed.connect(func(): _select_room("dormitorio"))
@@ -69,53 +72,54 @@ func _setup_dock_buttons() -> void:
 	btn_play.pressed.connect(func(): _select_room("sala de juegos"))
 
 func _select_room(r_name: String) -> void:
-	if GameManager:
-		GameManager.change_room(r_name)
+	if gm:
+		gm.change_room(r_name)
 
 func _setup_action_drawers() -> void:
 	# Configurar comidas en la cocina
 	for child in food_items_grid.get_children():
 		child.queue_free()
 
-	for food in GameManager.FOOD_CATALOG:
+	var catalog = gm.FOOD_CATALOG if gm else []
+	for food in catalog:
 		var card = Button.new()
 		card.custom_minimum_size = Vector2(160, 180)
 		card.text = food.icon + "\n" + food.name + "\n" + (str(food.price) + " 🪙" if food.price > 0 else "GRATIS")
 		card.add_theme_font_size_override("font_size", 22)
 		card.pressed.connect(func():
-			if GameManager:
-				GameManager.feed_item(food)
+			if gm:
+				gm.feed_item(food)
 		)
 		food_items_grid.add_child(card)
 
 	# Configurar acciones de baño
 	btn_soap.pressed.connect(func():
-		if GameManager:
-			GameManager.clean(20.0)
+		if gm:
+			gm.clean(20.0)
 	)
 	btn_shower.pressed.connect(func():
-		if GameManager:
-			GameManager.clean(35.0)
+		if gm:
+			gm.clean(35.0)
 	)
 
 	# Configurar acciones de dormitorio
 	btn_lamp.pressed.connect(func():
-		if GameManager:
-			GameManager.toggle_sleep()
-			btn_lamp.text = "☀️ Despertar" if GameManager.is_sleeping else "🌙 Dormir"
+		if gm:
+			gm.toggle_sleep()
+			btn_lamp.text = "☀️ Despertar" if gm.is_sleeping else "🌙 Dormir"
 	)
 
 	# Configurar acciones de juego
 	btn_ball.pressed.connect(func():
-		if GameManager:
-			GameManager.play_with_monky(25.0)
-			GameManager.add_coins(3)
+		if gm:
+			gm.play_with_monky(25.0)
+			gm.add_coins(3)
 	)
 	btn_game.pressed.connect(func():
-		if GameManager:
-			GameManager.play_with_monky(40.0)
-			GameManager.add_coins(15)
-			GameManager.show_floating_text.emit("¡Minijuego Ganado! +15 🪙", Vector2(540, 800), Color(1, 0.8, 0.2))
+		if gm:
+			gm.play_with_monky(40.0)
+			gm.add_coins(15)
+			gm.show_floating_text.emit("¡Minijuego Ganado! +15 🪙", Vector2(540, 800), Color(1, 0.8, 0.2))
 	)
 
 	btn_close_level.pressed.connect(func():

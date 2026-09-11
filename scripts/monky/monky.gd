@@ -9,15 +9,17 @@ class_name Monky
 
 var is_interacting: bool = false
 var original_scale: Vector2
+var gm: Node = null
 
 func _ready() -> void:
 	original_scale = scale
+	gm = get_tree().root.get_node_or_null("GameManager")
 	if animated_sprite and animated_sprite.sprite_frames and animated_sprite.sprite_frames.has_animation("pensando"):
 		animated_sprite.play("pensando")
 
 	# Conectar con el GameManager
-	if GameManager:
-		GameManager.monky_state_changed.connect(_on_monky_state_changed)
+	if gm:
+		gm.monky_state_changed.connect(_on_monky_state_changed)
 
 	if touch_area:
 		touch_area.input_event.connect(_on_touch_area_input_event)
@@ -41,9 +43,9 @@ func on_tapped() -> void:
 	tween.tween_property(self, "scale", original_scale, 0.15)
 	
 	# Dar un poco de felicidad y monedas
-	if GameManager:
-		GameManager.play_with_monky(2.0)
-		GameManager.add_coins(1)
+	if gm:
+		gm.play_with_monky(2.0)
+		gm.add_coins(1)
 
 	await tween.finished
 	is_interacting = false
