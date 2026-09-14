@@ -1,11 +1,211 @@
-[gd_scene load_steps=2 format=3 uid="uid://cb8a4j26k7qnx"]
+[gd_scene format=3 uid="uid://cb8a4j26k7qnx"]
 
-[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud_script"]
+[ext_resource type="Script" uid="uid://bny6xxbigyf8e" path="res://scripts/ui/hud.gd" id="1_hud_script"]
 
-[node name="HUD" type="CanvasLayer"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_h0628"]
+bg_color = Color(1, 0.9529412, 0.8627451, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_color = Color(0, 0, 0, 0.2509804)
+shadow_size = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8qguk"]
+bg_color = Color(0.8509804, 0.7176471, 0.49411765, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.47843137, 0.3529412, 0.19607843, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bo48s"]
+bg_color = Color(1, 0.9137255, 0.72156864, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hqnrr"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_136eg"]
+bg_color = Color(1, 0.9529412, 0.8627451, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_color = Color(0, 0, 0, 0.2509804)
+shadow_size = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gss2c"]
+bg_color = Color(0.76862746, 0.627451, 0.41568628, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.47843137, 0.3529412, 0.19607843, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oj5la"]
+bg_color = Color(1, 0.9137255, 0.72156864, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0mwgc"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_h022r"]
+bg_color = Color(1, 0.9529412, 0.8627451, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_color = Color(0, 0, 0, 0.2509804)
+shadow_size = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kicr4"]
+bg_color = Color(0.76862746, 0.627451, 0.41568628, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.47843137, 0.3529412, 0.19607843, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4jqwt"]
+bg_color = Color(1, 0.9137255, 0.72156864, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mj13f"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0h1do"]
+bg_color = Color(1, 0.9529412, 0.8627451, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_color = Color(0, 0, 0, 0.2509804)
+shadow_size = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_erw67"]
+bg_color = Color(0.76862746, 0.627451, 0.41568628, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.47843137, 0.3529412, 0.19607843, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4d46k"]
+bg_color = Color(1, 0.9137255, 0.72156864, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gonto"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.7254902, 0.54509807, 0.3372549, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[node name="HUD" type="CanvasLayer" unique_id=1725656809]
 script = ExtResource("1_hud_script")
 
-[node name="TopBar" type="MarginContainer" parent="."]
+[node name="TopBar" type="MarginContainer" parent="." unique_id=1653619197]
 anchors_preset = 10
 anchor_right = 1.0
 offset_left = 30.0
@@ -14,33 +214,33 @@ offset_right = -30.0
 offset_bottom = 240.0
 grow_horizontal = 2
 
-[node name="VBox" type="VBoxContainer" parent="TopBar"]
+[node name="VBox" type="VBoxContainer" parent="TopBar" unique_id=481232040]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="HeaderRow" type="HBoxContainer" parent="TopBar/VBox"]
+[node name="HeaderRow" type="HBoxContainer" parent="TopBar/VBox" unique_id=1160974416]
 layout_mode = 2
 
-[node name="LevelContainer" type="VBoxContainer" parent="TopBar/VBox/HeaderRow"]
+[node name="LevelContainer" type="VBoxContainer" parent="TopBar/VBox/HeaderRow" unique_id=1855331572]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="LevelLabel" type="Label" parent="TopBar/VBox/HeaderRow/LevelContainer"]
+[node name="LevelLabel" type="Label" parent="TopBar/VBox/HeaderRow/LevelContainer" unique_id=1771129188]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "⭐ NIV. 1"
 
-[node name="XPBar" type="ProgressBar" parent="TopBar/VBox/HeaderRow/LevelContainer"]
+[node name="XPBar" type="ProgressBar" parent="TopBar/VBox/HeaderRow/LevelContainer" unique_id=434084309]
 custom_minimum_size = Vector2(180, 14)
 layout_mode = 2
 size_flags_horizontal = 0
 show_percentage = false
 
-[node name="BtnCoins" type="Button" parent="TopBar/VBox/HeaderRow"]
+[node name="BtnCoins" type="Button" parent="TopBar/VBox/HeaderRow" unique_id=910866287]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 
-[node name="HBox" type="HBoxContainer" parent="TopBar/VBox/HeaderRow/BtnCoins"]
+[node name="HBox" type="HBoxContainer" parent="TopBar/VBox/HeaderRow/BtnCoins" unique_id=481798480]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -51,91 +251,91 @@ grow_horizontal = 2
 grow_vertical = 2
 alignment = 1
 
-[node name="CoinsIcon" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox"]
+[node name="CoinsIcon" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox" unique_id=150336515]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "🪙"
 
-[node name="CoinsLabel" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox"]
+[node name="CoinsLabel" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox" unique_id=1100631869]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "50"
 
-[node name="PlusBadge" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox"]
+[node name="PlusBadge" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox" unique_id=1134654222]
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
 text = " ➕"
 
-[node name="StatsGrid" type="HBoxContainer" parent="TopBar/VBox"]
+[node name="StatsGrid" type="HBoxContainer" parent="TopBar/VBox" unique_id=2126513594]
 layout_mode = 2
 theme_override_constants/separation = 14
 alignment = 1
 
-[node name="HungerContainer" type="VBoxContainer" parent="TopBar/VBox/StatsGrid"]
+[node name="HungerContainer" type="VBoxContainer" parent="TopBar/VBox/StatsGrid" unique_id=624789966]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/HungerContainer"]
+[node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/HungerContainer" unique_id=310855642]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "🍎 100%"
 horizontal_alignment = 1
 
-[node name="HungerBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/HungerContainer"]
+[node name="HungerBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/HungerContainer" unique_id=1660913576]
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 value = 100.0
 show_percentage = false
 
-[node name="EnergyContainer" type="VBoxContainer" parent="TopBar/VBox/StatsGrid"]
+[node name="EnergyContainer" type="VBoxContainer" parent="TopBar/VBox/StatsGrid" unique_id=2105511245]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/EnergyContainer"]
+[node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/EnergyContainer" unique_id=1988759332]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "⚡ 100%"
 horizontal_alignment = 1
 
-[node name="EnergyBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/EnergyContainer"]
+[node name="EnergyBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/EnergyContainer" unique_id=1405971321]
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 value = 100.0
 show_percentage = false
 
-[node name="FunContainer" type="VBoxContainer" parent="TopBar/VBox/StatsGrid"]
+[node name="FunContainer" type="VBoxContainer" parent="TopBar/VBox/StatsGrid" unique_id=1923377698]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/FunContainer"]
+[node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/FunContainer" unique_id=338426872]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "⚽ 100%"
 horizontal_alignment = 1
 
-[node name="FunBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/FunContainer"]
+[node name="FunBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/FunContainer" unique_id=1218702684]
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 value = 100.0
 show_percentage = false
 
-[node name="HygieneContainer" type="VBoxContainer" parent="TopBar/VBox/StatsGrid"]
+[node name="HygieneContainer" type="VBoxContainer" parent="TopBar/VBox/StatsGrid" unique_id=874067290]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/HygieneContainer"]
+[node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/HygieneContainer" unique_id=321727504]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "🧼 100%"
 horizontal_alignment = 1
 
-[node name="HygieneBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/HygieneContainer"]
+[node name="HygieneBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/HygieneContainer" unique_id=1960785982]
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 value = 100.0
 show_percentage = false
 
-[node name="ActionDrawers" type="Control" parent="."]
+[node name="ActionDrawers" type="Control" parent="." unique_id=519636154]
 layout_mode = 3
 anchors_preset = 12
 anchor_top = 1.0
@@ -146,7 +346,7 @@ offset_bottom = -220.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="KitchenDrawer" type="PanelContainer" parent="ActionDrawers"]
+[node name="KitchenDrawer" type="PanelContainer" parent="ActionDrawers" unique_id=1372977894]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -156,22 +356,22 @@ offset_right = -30.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Margin" type="MarginContainer" parent="ActionDrawers/KitchenDrawer"]
+[node name="Margin" type="MarginContainer" parent="ActionDrawers/KitchenDrawer" unique_id=170185914]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="FoodScroll" type="ScrollContainer" parent="ActionDrawers/KitchenDrawer/Margin"]
+[node name="FoodScroll" type="ScrollContainer" parent="ActionDrawers/KitchenDrawer/Margin" unique_id=2025783335]
 layout_mode = 2
 vertical_scroll_mode = 0
 
-[node name="FoodGrid" type="HBoxContainer" parent="ActionDrawers/KitchenDrawer/Margin/FoodScroll"]
+[node name="FoodGrid" type="HBoxContainer" parent="ActionDrawers/KitchenDrawer/Margin/FoodScroll" unique_id=1793462879]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="BathDrawer" type="PanelContainer" parent="ActionDrawers"]
+[node name="BathDrawer" type="PanelContainer" parent="ActionDrawers" unique_id=596943341]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -182,31 +382,33 @@ offset_right = -30.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Margin" type="MarginContainer" parent="ActionDrawers/BathDrawer"]
+[node name="Margin" type="MarginContainer" parent="ActionDrawers/BathDrawer" unique_id=404426264]
 layout_mode = 2
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
 
-[node name="HBox" type="HBoxContainer" parent="ActionDrawers/BathDrawer/Margin"]
+[node name="HBox" type="HBoxContainer" parent="ActionDrawers/BathDrawer/Margin" unique_id=459719741]
 layout_mode = 2
 theme_override_constants/separation = 30
 alignment = 1
 
-[node name="BtnSoap" type="Button" parent="ActionDrawers/BathDrawer/Margin/HBox"]
+[node name="BtnSoap" type="Button" parent="ActionDrawers/BathDrawer/Margin/HBox" unique_id=1859711105]
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "🧼\nEnjabonar"
+text = "🧼
+Enjabonar"
 
-[node name="BtnShower" type="Button" parent="ActionDrawers/BathDrawer/Margin/HBox"]
+[node name="BtnShower" type="Button" parent="ActionDrawers/BathDrawer/Margin/HBox" unique_id=1753131413]
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "🚿\nEnjuagar"
+text = "🚿
+Enjuagar"
 
-[node name="BedDrawer" type="PanelContainer" parent="ActionDrawers"]
+[node name="BedDrawer" type="PanelContainer" parent="ActionDrawers" unique_id=1188537546]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -217,24 +419,24 @@ offset_right = -30.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Margin" type="MarginContainer" parent="ActionDrawers/BedDrawer"]
+[node name="Margin" type="MarginContainer" parent="ActionDrawers/BedDrawer" unique_id=413276727]
 layout_mode = 2
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
 
-[node name="HBox" type="HBoxContainer" parent="ActionDrawers/BedDrawer/Margin"]
+[node name="HBox" type="HBoxContainer" parent="ActionDrawers/BedDrawer/Margin" unique_id=873508301]
 layout_mode = 2
 alignment = 1
 
-[node name="BtnLamp" type="Button" parent="ActionDrawers/BedDrawer/Margin/HBox"]
+[node name="BtnLamp" type="Button" parent="ActionDrawers/BedDrawer/Margin/HBox" unique_id=2100125838]
 custom_minimum_size = Vector2(300, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 text = "🌙 Dormir"
 
-[node name="PlayDrawer" type="PanelContainer" parent="ActionDrawers"]
+[node name="PlayDrawer" type="PanelContainer" parent="ActionDrawers" unique_id=1442392542]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -245,31 +447,33 @@ offset_right = -30.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Margin" type="MarginContainer" parent="ActionDrawers/PlayDrawer"]
+[node name="Margin" type="MarginContainer" parent="ActionDrawers/PlayDrawer" unique_id=682232133]
 layout_mode = 2
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
 
-[node name="HBox" type="HBoxContainer" parent="ActionDrawers/PlayDrawer/Margin"]
+[node name="HBox" type="HBoxContainer" parent="ActionDrawers/PlayDrawer/Margin" unique_id=1007100283]
 layout_mode = 2
 theme_override_constants/separation = 30
 alignment = 1
 
-[node name="BtnBall" type="Button" parent="ActionDrawers/PlayDrawer/Margin/HBox"]
+[node name="BtnBall" type="Button" parent="ActionDrawers/PlayDrawer/Margin/HBox" unique_id=1851390457]
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "⚽\nPelota (+3🪙)"
+text = "⚽
+Pelota (+3🪙)"
 
-[node name="BtnGame" type="Button" parent="ActionDrawers/PlayDrawer/Margin/HBox"]
+[node name="BtnGame" type="Button" parent="ActionDrawers/PlayDrawer/Margin/HBox" unique_id=224597947]
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "🎮\nMinijuego (+15🪙)"
+text = "🎮
+Minijuego (+15🪙)"
 
-[node name="BottomBar" type="MarginContainer" parent="."]
+[node name="BottomBar" type="MarginContainer" parent="." unique_id=761474792]
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
@@ -281,51 +485,83 @@ offset_bottom = -30.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="VBox" type="VBoxContainer" parent="BottomBar"]
+[node name="VBox" type="VBoxContainer" parent="BottomBar" unique_id=1886615342]
 layout_mode = 2
 theme_override_constants/separation = 12
 alignment = 2
 
-[node name="RoomTitle" type="Label" parent="BottomBar/VBox"]
+[node name="RoomTitle" type="Label" parent="BottomBar/VBox" unique_id=1565913802]
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
 text = "DORMITORIO"
 horizontal_alignment = 1
 
-[node name="DockContainer" type="HBoxContainer" parent="BottomBar/VBox"]
+[node name="DockContainer" type="HBoxContainer" parent="BottomBar/VBox" unique_id=98208272]
 layout_mode = 2
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name="BtnBed" type="Button" parent="BottomBar/VBox/DockContainer"]
+[node name="BtnBed" type="Button" parent="BottomBar/VBox/DockContainer" unique_id=2029609434]
 custom_minimum_size = Vector2(180, 110)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
+theme_override_colors/font_pressed_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
+theme_override_colors/font_hover_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
 theme_override_font_sizes/font_size = 24
-text = "🛏️\nCuarto"
+theme_override_styles/normal = SubResource("StyleBoxFlat_h0628")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_8qguk")
+theme_override_styles/hover = SubResource("StyleBoxFlat_bo48s")
+theme_override_styles/focus = SubResource("StyleBoxFlat_hqnrr")
+text = "🛏️
+Cuarto"
 
-[node name="BtnKitchen" type="Button" parent="BottomBar/VBox/DockContainer"]
+[node name="BtnKitchen" type="Button" parent="BottomBar/VBox/DockContainer" unique_id=897079605]
 custom_minimum_size = Vector2(180, 110)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
+theme_override_colors/font_pressed_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
+theme_override_colors/font_hover_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
 theme_override_font_sizes/font_size = 24
-text = "🍳\nCocina"
+theme_override_styles/normal = SubResource("StyleBoxFlat_136eg")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_gss2c")
+theme_override_styles/hover = SubResource("StyleBoxFlat_oj5la")
+theme_override_styles/focus = SubResource("StyleBoxFlat_0mwgc")
+text = "🍳
+Cocina"
 
-[node name="BtnBath" type="Button" parent="BottomBar/VBox/DockContainer"]
+[node name="BtnBath" type="Button" parent="BottomBar/VBox/DockContainer" unique_id=2027461436]
 custom_minimum_size = Vector2(180, 110)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
+theme_override_colors/font_pressed_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
+theme_override_colors/font_hover_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
 theme_override_font_sizes/font_size = 24
-text = "🛁\nBaño"
+theme_override_styles/normal = SubResource("StyleBoxFlat_h022r")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_kicr4")
+theme_override_styles/hover = SubResource("StyleBoxFlat_4jqwt")
+theme_override_styles/focus = SubResource("StyleBoxFlat_mj13f")
+text = "🛁
+Baño"
 
-[node name="BtnPlay" type="Button" parent="BottomBar/VBox/DockContainer"]
+[node name="BtnPlay" type="Button" parent="BottomBar/VBox/DockContainer" unique_id=695840091]
 custom_minimum_size = Vector2(180, 110)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
+theme_override_colors/font_pressed_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
+theme_override_colors/font_hover_color = Color(0.36078432, 0.22745098, 0.12941177, 1)
 theme_override_font_sizes/font_size = 24
-text = "🎮\nJuegos"
+theme_override_styles/normal = SubResource("StyleBoxFlat_0h1do")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_erw67")
+theme_override_styles/hover = SubResource("StyleBoxFlat_4d46k")
+theme_override_styles/focus = SubResource("StyleBoxFlat_gonto")
+text = "🎮
+Juegos"
 
-[node name="LevelUpPopup" type="PanelContainer" parent="."]
+[node name="LevelUpPopup" type="PanelContainer" parent="." unique_id=1839315011]
 visible = false
 z_index = 50
 anchors_preset = 8
@@ -340,39 +576,39 @@ offset_bottom = 250.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Margin" type="MarginContainer" parent="LevelUpPopup"]
+[node name="Margin" type="MarginContainer" parent="LevelUpPopup" unique_id=1771463966]
 layout_mode = 2
 theme_override_constants/margin_left = 40
 theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 40
 
-[node name="VBox" type="VBoxContainer" parent="LevelUpPopup/Margin"]
+[node name="VBox" type="VBoxContainer" parent="LevelUpPopup/Margin" unique_id=260217269]
 layout_mode = 2
 theme_override_constants/separation = 24
 alignment = 1
 
-[node name="Title" type="Label" parent="LevelUpPopup/Margin/VBox"]
+[node name="Title" type="Label" parent="LevelUpPopup/Margin/VBox" unique_id=1302263582]
 layout_mode = 2
 theme_override_font_sizes/font_size = 42
 text = "🎉 ¡SUBISTE DE NIVEL! 🎉"
 horizontal_alignment = 1
 
-[node name="DescLabel" type="Label" parent="LevelUpPopup/Margin/VBox"]
+[node name="DescLabel" type="Label" parent="LevelUpPopup/Margin/VBox" unique_id=1921099043]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "¡Monky ha alcanzado un nuevo nivel!"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="BtnClaim" type="Button" parent="LevelUpPopup/Margin/VBox"]
+[node name="BtnClaim" type="Button" parent="LevelUpPopup/Margin/VBox" unique_id=725782790]
 custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 32
 text = "¡Genial! 🎁"
 
-[node name="ShopPopup" type="Control" parent="."]
+[node name="ShopPopup" type="Control" parent="." unique_id=970011395]
 visible = false
 z_index = 60
 layout_mode = 3
@@ -382,7 +618,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Backdrop" type="ColorRect" parent="ShopPopup"]
+[node name="Backdrop" type="ColorRect" parent="ShopPopup" unique_id=143125452]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -391,7 +627,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.6)
 
-[node name="Panel" type="PanelContainer" parent="ShopPopup"]
+[node name="Panel" type="PanelContainer" parent="ShopPopup" unique_id=1482195499]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -405,114 +641,122 @@ offset_bottom = 650.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Margin" type="MarginContainer" parent="ShopPopup/Panel"]
+[node name="Margin" type="MarginContainer" parent="ShopPopup/Panel" unique_id=412949041]
 layout_mode = 2
 theme_override_constants/margin_left = 36
 theme_override_constants/margin_top = 36
 theme_override_constants/margin_right = 36
 theme_override_constants/margin_bottom = 36
 
-[node name="VBox" type="VBoxContainer" parent="ShopPopup/Panel/Margin"]
+[node name="VBox" type="VBoxContainer" parent="ShopPopup/Panel/Margin" unique_id=2084432162]
 layout_mode = 2
 theme_override_constants/separation = 24
 
-[node name="HeaderRow" type="HBoxContainer" parent="ShopPopup/Panel/Margin/VBox"]
+[node name="HeaderRow" type="HBoxContainer" parent="ShopPopup/Panel/Margin/VBox" unique_id=102590140]
 layout_mode = 2
 
-[node name="Title" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow"]
+[node name="Title" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow" unique_id=938937163]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 36
 text = "🏦 TIENDA DE MONEDAS"
 
-[node name="BalanceLabel" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow"]
+[node name="BalanceLabel" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow" unique_id=1675506350]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "Saldo: 50 🪙"
 
-[node name="BtnCloseShop" type="Button" parent="ShopPopup/Panel/Margin/VBox/HeaderRow"]
+[node name="BtnCloseShop" type="Button" parent="ShopPopup/Panel/Margin/VBox/HeaderRow" unique_id=2097138557]
 custom_minimum_size = Vector2(70, 70)
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "❌"
 
-[node name="Scroll" type="ScrollContainer" parent="ShopPopup/Panel/Margin/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="ShopPopup/Panel/Margin/VBox" unique_id=1652595678]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="ContentVBox" type="VBoxContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll"]
+[node name="ContentVBox" type="VBoxContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll" unique_id=1656736587]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 28
 
-[node name="SecCoinsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox"]
+[node name="SecCoinsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=992513844]
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 text = "✨ PACKS DE MONEDAS ✨"
 horizontal_alignment = 1
 
-[node name="CoinPacksGrid" type="GridContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox"]
+[node name="CoinPacksGrid" type="GridContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=812976052]
 layout_mode = 2
 theme_override_constants/h_separation = 16
 theme_override_constants/v_separation = 16
 columns = 2
 
-[node name="BtnDaily" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid"]
+[node name="BtnDaily" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid" unique_id=1478256057]
 custom_minimum_size = Vector2(420, 160)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 24
-text = "🎁 Recompensa Diaria\n+50 🪙\n[¡RECLAMAR GRATIS!]"
+text = "🎁 Recompensa Diaria
++50 🪙
+[¡RECLAMAR GRATIS!]"
 
-[node name="BtnAd" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid"]
+[node name="BtnAd" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid" unique_id=1927632094]
 custom_minimum_size = Vector2(420, 160)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 24
-text = "🎬 Ver Anuncio Corto\n+100 🪙\n[VER VIDEO]"
+text = "🎬 Ver Anuncio Corto
++100 🪙
+[VER VIDEO]"
 
-[node name="BtnBag" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid"]
+[node name="BtnBag" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid" unique_id=1011798357]
 custom_minimum_size = Vector2(420, 160)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 24
-text = "💰 Bolsa de Oro\n+500 🪙\n[OBTENER]"
+text = "💰 Bolsa de Oro
++500 🪙
+[OBTENER]"
 
-[node name="BtnChest" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid"]
+[node name="BtnChest" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid" unique_id=1523188192]
 custom_minimum_size = Vector2(420, 160)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 24
-text = "💎 Cofre Gigante\n+2,500 🪙\n[OBTENER]"
+text = "💎 Cofre Gigante
++2,500 🪙
+[OBTENER]"
 
-[node name="SecPotionsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox"]
+[node name="SecPotionsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=1330702291]
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 text = "🧪 POCIONES MÁGICAS 🧪"
 horizontal_alignment = 1
 
-[node name="PotionsGrid" type="VBoxContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox"]
+[node name="PotionsGrid" type="VBoxContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=1456274706]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="BtnPotEnergy" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid"]
+[node name="BtnPotEnergy" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid" unique_id=2053219383]
 custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "⚡ Poción Energética Flash (Energía al 100%)\nPrecio: 25 🪙"
+text = "⚡ Poción Energética Flash (Energía al 100%)
+Precio: 25 🪙"
 
-[node name="BtnPotHygiene" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid"]
+[node name="BtnPotHygiene" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid" unique_id=1318306901]
 custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "🧼 Poción de Burbujas Mágicas (Higiene al 100%)\nPrecio: 20 🪙"
+text = "🧼 Poción de Burbujas Mágicas (Higiene al 100%)
+Precio: 20 🪙"
 
-[node name="BtnPotMega" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid"]
+[node name="BtnPotMega" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid" unique_id=1583246066]
 custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "🌟 Poción Suprema (¡Restaura TODO al 100%!)\nPrecio: 50 🪙"
-
-
-
+text = "🌟 Poción Suprema (¡Restaura TODO al 100%!)
+Precio: 50 🪙"

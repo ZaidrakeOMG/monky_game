@@ -69,6 +69,3 @@ func _spawn_floating_text(text: String, global_pos: Vector2, color: Color) -> vo
 	tween.tween_property(label, "position:y", label.position.y - 100, 0.8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tween.tween_property(label, "modulate:a", 0.0, 0.8).set_ease(Tween.EASE_IN)
 	tween.finished.connect(label.queue_free)
-
-
-
