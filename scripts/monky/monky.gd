@@ -36,10 +36,33 @@ func _ready() -> void:
 	if body_area:
 		body_area.area_entered.connect(_on_body_area_entered)
 
+func can_eat() -> bool:
+	if gm:
+		return gm.can_eat_food()
+	return true
+
+func reject_food() -> void:
+	if is_interacting:
+		return
+	is_interacting = true
+	var orig_pos = position
+	var tween = create_tween()
+	tween.tween_property(self, "position:x", orig_pos.x - 25.0, 0.06)
+	tween.tween_property(self, "position:x", orig_pos.x + 25.0, 0.08)
+	tween.tween_property(self, "position:x", orig_pos.x - 18.0, 0.07)
+	tween.tween_property(self, "position:x", orig_pos.x, 0.06)
+	if gm:
+		gm.show_floating_text.emit("¡Estoy lleno! 😋", global_position + Vector2(0, -180), Color(1.0, 0.8, 0.2))
+	await tween.finished
+	is_interacting = false
+
 func _on_mouth_area_entered(other_area: Area2D) -> void:
 	var item = other_area.get_parent()
 	if item and item.has_method("take_bite") and item.get("item_type") == "food":
-		item.take_bite(self)
+		if can_eat():
+			item.take_bite(self)
+		else:
+			reject_food()
 
 func _on_body_area_entered(other_area: Area2D) -> void:
 	var item = other_area.get_parent()
@@ -49,7 +72,6 @@ func _on_body_area_entered(other_area: Area2D) -> void:
 			apply_soap(15.0)
 		elif type == "shower":
 			rinse_water()
-
 
 ## Reacción física a cada mordisco de comida
 func on_bite_received(_food_name: String) -> void:

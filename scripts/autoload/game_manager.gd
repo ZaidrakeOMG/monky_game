@@ -14,6 +14,7 @@ signal food_inventory_changed()
 
 const SAVE_PATH := "user://monky_save.cfg"
 const MAX_STAT := 100.0
+const SLEEP_DURATION_SEC := 3600.0 # 1 hora exacta de sueño en tiempo real para 100% de energía
 
 # Nivel y Experiencia (Curva móvil balanceada)
 var level: int = 1:
@@ -40,6 +41,11 @@ var hunger: float = 100.0:
 		hunger = clampf(val, 0.0, MAX_STAT)
 		stat_changed.emit("hunger", hunger, MAX_STAT)
 
+var protein: float = 100.0:
+	set(val):
+		protein = clampf(val, 0.0, MAX_STAT)
+		stat_changed.emit("protein", protein, MAX_STAT)
+
 var energy: float = 100.0:
 	set(val):
 		energy = clampf(val, 0.0, MAX_STAT)
@@ -60,39 +66,179 @@ var coins: int = 50:
 		coins = maxi(0, val)
 		coins_changed.emit(coins)
 
-# Catálogo oficial de comidas del Mercado
+# Catálogo oficial de comidas del Mercado con propiedades nutricionales y descripción
 const FOOD_CATALOG := [
-	{"id": "apple", "name": "Manzana", "icon": "🍎", "hunger": 15.0, "price": 8, "xp": 4.0, "category": "Frutas"},
-	{"id": "banana", "name": "Plátano", "icon": "🍌", "hunger": 18.0, "price": 10, "xp": 5.0, "category": "Frutas"},
-	{"id": "strawberry", "name": "Fresa", "icon": "🍓", "hunger": 12.0, "price": 8, "xp": 3.0, "category": "Frutas"},
-	{"id": "watermelon", "name": "Sandía", "icon": "🍉", "hunger": 25.0, "price": 15, "xp": 6.0, "category": "Frutas"},
-	{"id": "cookie", "name": "Galleta", "icon": "🍪", "hunger": 20.0, "price": 12, "xp": 4.0, "category": "Dulces"},
-	{"id": "donut", "name": "Dona", "icon": "🍩", "hunger": 22.0, "price": 14, "xp": 5.0, "category": "Dulces"},
-	{"id": "ice_cream", "name": "Helado", "icon": "🍦", "hunger": 30.0, "price": 20, "xp": 6.0, "category": "Dulces"},
-	{"id": "cake", "name": "Pastel", "icon": "🍰", "hunger": 45.0, "price": 35, "xp": 9.0, "category": "Dulces"},
-	{"id": "milk", "name": "Leche", "icon": "🥛", "hunger": 20.0, "price": 10, "xp": 4.0, "category": "Bebidas"},
-	{"id": "juice", "name": "Jugo", "icon": "🧃", "hunger": 22.0, "price": 12, "xp": 5.0, "category": "Bebidas"},
-	{"id": "pizza", "name": "Pizza", "icon": "🍕", "hunger": 35.0, "price": 25, "xp": 7.0, "category": "Comidas"},
-	{"id": "burger", "name": "Hamburguesa", "icon": "🍔", "hunger": 40.0, "price": 30, "xp": 8.0, "category": "Comidas"}
+	{
+		"id": "apple",
+		"name": "Manzana",
+		"icon": "🍎",
+		"hunger": 15.0,
+		"protein": 10.0,
+		"energy": 5.0,
+		"price": 8,
+		"xp": 4.0,
+		"category": "Frutas",
+		"desc": "Fruta crujiente y fresca. Aporta vitaminas esenciales, saciedad ligera y fibra digestiva."
+	},
+	{
+		"id": "banana",
+		"name": "Plátano",
+		"icon": "🍌",
+		"hunger": 20.0,
+		"protein": 12.0,
+		"energy": 12.0,
+		"price": 10,
+		"xp": 5.0,
+		"category": "Frutas",
+		"desc": "Rico en potasio y carbohidratos saludables. Ideal para reponer energías antes de jugar."
+	},
+	{
+		"id": "strawberry",
+		"name": "Fresa",
+		"icon": "🍓",
+		"hunger": 12.0,
+		"protein": 8.0,
+		"energy": 4.0,
+		"price": 8,
+		"xp": 3.0,
+		"category": "Frutas",
+		"desc": "Deliciosa fruta silvestre cargada de antioxidantes y vitamina C."
+	},
+	{
+		"id": "watermelon",
+		"name": "Sandía",
+		"icon": "🍉",
+		"hunger": 25.0,
+		"protein": 6.0,
+		"energy": 8.0,
+		"price": 15,
+		"xp": 6.0,
+		"category": "Frutas",
+		"desc": "Muy jugosa e hidratante. Llena el estómago rápidamente con pocas calorías."
+	},
+	{
+		"id": "egg",
+		"name": "Huevo Duro",
+		"icon": "🥚",
+		"hunger": 22.0,
+		"protein": 38.0,
+		"energy": 10.0,
+		"price": 14,
+		"xp": 6.0,
+		"category": "Proteínas",
+		"desc": "Proteína pura de altísima calidad. Esencial para el crecimiento y fuerza muscular de Monky."
+	},
+	{
+		"id": "fish",
+		"name": "Pescado",
+		"icon": "🐟",
+		"hunger": 34.0,
+		"protein": 42.0,
+		"energy": 12.0,
+		"price": 22,
+		"xp": 8.0,
+		"category": "Proteínas",
+		"desc": "Pescado fresco rico en omega 3 y aminoácidos que fortalecen la salud y vitalidad de Monky."
+	},
+	{
+		"id": "milk",
+		"name": "Leche",
+		"icon": "🥛",
+		"hunger": 18.0,
+		"protein": 28.0,
+		"energy": 10.0,
+		"price": 12,
+		"xp": 5.0,
+		"category": "Bebidas",
+		"desc": "Rica en calcio y proteínas lácteas para mantener huesos sanos y fuertes."
+	},
+	{
+		"id": "juice",
+		"name": "Jugo Natural",
+		"icon": "🧃",
+		"hunger": 16.0,
+		"protein": 8.0,
+		"energy": 15.0,
+		"price": 12,
+		"xp": 5.0,
+		"category": "Bebidas",
+		"desc": "Bebida frutal refrescante que recarga la energía al instante."
+	},
+	{
+		"id": "burger",
+		"name": "Hamburguesa",
+		"icon": "🍔",
+		"hunger": 45.0,
+		"protein": 26.0,
+		"energy": 6.0,
+		"price": 30,
+		"xp": 8.0,
+		"category": "Comidas",
+		"desc": "Comida sustanciosa con carne y pan. Quita el hambre por completo rápidamente."
+	},
+	{
+		"id": "pizza",
+		"name": "Pizza",
+		"icon": "🍕",
+		"hunger": 40.0,
+		"protein": 22.0,
+		"energy": 6.0,
+		"price": 26,
+		"xp": 7.0,
+		"category": "Comidas",
+		"desc": "Porción horneada de queso y salsa. Muy sabrosa y rendidora."
+	},
+	{
+		"id": "cookie",
+		"name": "Galleta",
+		"icon": "🍪",
+		"hunger": 16.0,
+		"protein": 4.0,
+		"energy": 8.0,
+		"price": 10,
+		"xp": 4.0,
+		"category": "Dulces",
+		"desc": "Snack dulce crujiente con chispas. Da alegría pero baja proteína."
+	},
+	{
+		"id": "cake",
+		"name": "Pastel",
+		"icon": "🍰",
+		"hunger": 35.0,
+		"protein": 6.0,
+		"energy": 10.0,
+		"price": 32,
+		"xp": 9.0,
+		"category": "Dulces",
+		"desc": "Porción de tarta esponjosa con crema. Gran premio de felicidad y apetito."
+	}
 ]
 
 # Inventario de Comida del Jugador (Nevera)
 var food_inventory: Dictionary = {
 	"apple": 3,
-	"cookie": 2,
+	"egg": 2,
 	"milk": 2,
 	"banana": 1,
-	"pizza": 1
+	"fish": 1
 }
 
 # Estado actual
 var current_room: String = "dormitorio"
 var is_sleeping: bool = false
 var decay_timer: Timer
+var time_http_req: HTTPRequest = null
 
 func _ready() -> void:
 	load_game()
 	_setup_decay_timer()
+	_setup_network_time_check()
+
+func _process(delta: float) -> void:
+	# Recuperación precisa en tiempo real durante el sueño (1h = 3600 seg para 100%)
+	if is_sleeping and energy < MAX_STAT:
+		var recovery_rate: float = (MAX_STAT / SLEEP_DURATION_SEC) * delta
+		energy = minf(MAX_STAT, energy + recovery_rate)
 
 func _setup_decay_timer() -> void:
 	decay_timer = Timer.new()
@@ -101,15 +247,25 @@ func _setup_decay_timer() -> void:
 	decay_timer.timeout.connect(_on_decay_tick)
 	add_child(decay_timer)
 
+func _setup_network_time_check() -> void:
+	time_http_req = HTTPRequest.new()
+	add_child(time_http_req)
+	time_http_req.request_completed.connect(_on_network_time_received)
+	time_http_req.request("https://www.google.com", PackedStringArray(), HTTPClient.METHOD_HEAD)
+
+func _on_network_time_received(_result: int, _response_code: int, _headers: PackedStringArray, _body: PackedByteArray) -> void:
+	pass
+
 func _on_decay_tick() -> void:
 	if is_sleeping:
-		energy += 2.0
-		hunger -= 0.1
+		hunger -= 0.08
+		protein -= 0.06
 	else:
-		hunger -= 0.25
-		energy -= 0.15
-		fun -= 0.2
-		hygiene -= 0.12
+		hunger -= 0.22
+		protein -= 0.18
+		energy -= 0.12
+		fun -= 0.20
+		hygiene -= 0.10
 
 func add_xp(amount: float) -> void:
 	xp += amount
@@ -117,12 +273,14 @@ func add_xp(amount: float) -> void:
 func get_food_quantity(food_id: String) -> int:
 	return food_inventory.get(food_id, 0)
 
+func get_food_by_id(food_id: String) -> Dictionary:
+	for food in FOOD_CATALOG:
+		if food.id == food_id:
+			return food
+	return {}
+
 func buy_food(food_id: String, amount: int = 1) -> bool:
-	var item_data: Dictionary = {}
-	for item in FOOD_CATALOG:
-		if item.id == food_id:
-			item_data = item
-			break
+	var item_data: Dictionary = get_food_by_id(food_id)
 	if item_data.is_empty():
 		return false
 
@@ -137,6 +295,9 @@ func buy_food(food_id: String, amount: int = 1) -> bool:
 		show_floating_text.emit("¡Faltan monedas! 🪙", Vector2(540, 850), Color(1, 0.4, 0.4))
 		return false
 
+func can_eat_food() -> bool:
+	return hunger < MAX_STAT or protein < MAX_STAT
+
 func feed_item(food: Dictionary) -> bool:
 	var f_id = food.get("id", "")
 	var current_qty = get_food_quantity(f_id)
@@ -144,13 +305,24 @@ func feed_item(food: Dictionary) -> bool:
 		show_floating_text.emit("¡Comida agotada! Compra en el mercado 🛒", Vector2(540, 950), Color(1, 0.4, 0.4))
 		return false
 
+	if not can_eat_food():
+		show_floating_text.emit("¡Monky está lleno! 😋", Vector2(540, 950), Color(1, 0.8, 0.2))
+		return false
+
 	food_inventory[f_id] = current_qty - 1
 	food_inventory_changed.emit()
 
-	hunger += food.get("hunger", 18.0)
+	var h_val = food.get("hunger", 18.0)
+	var p_val = food.get("protein", 10.0)
+	var e_val = food.get("energy", 0.0)
+
+	hunger += h_val
+	protein += p_val
+	if e_val > 0.0:
+		energy += e_val
 	add_xp(food.get("xp", 4.0))
 	monky_state_changed.emit("eating")
-	show_floating_text.emit("+" + str(int(food.get("hunger", 18.0))) + " 🍎", Vector2(540, 950), Color(0.3, 1.0, 0.4))
+	show_floating_text.emit("+" + str(int(h_val)) + "🍖  +" + str(int(p_val)) + "🥩", Vector2(540, 950), Color(0.3, 1.0, 0.4))
 	save_game()
 	return true
 
@@ -162,8 +334,9 @@ func clean(amount: float = 25.0) -> void:
 
 func play_with_monky(amount: float = 20.0) -> void:
 	fun += amount
-	energy -= 1.5
+	energy -= 3.0 # Cansancio progresivo por interacción activa
 	hunger -= 1.0
+	protein -= 0.8
 	add_xp(3.0)
 	monky_state_changed.emit("happy")
 
@@ -171,8 +344,10 @@ func toggle_sleep() -> void:
 	is_sleeping = !is_sleeping
 	if is_sleeping:
 		monky_state_changed.emit("sleeping")
+		show_floating_text.emit("💤 Durmiendo (1h recuperación)", Vector2(540, 850), Color(0.6, 0.8, 1.0))
 	else:
 		monky_state_changed.emit("idle")
+	save_game()
 
 func add_coins(amount: int) -> void:
 	coins += amount
@@ -188,10 +363,11 @@ func change_room(room_name: String) -> void:
 	current_room = room_name
 	room_changed.emit(room_name)
 
-# Guardar y Cargar Partida
+# Guardar y Cargar Partida con Protección Anti-Cheat
 func save_game() -> void:
 	var config := ConfigFile.new()
 	config.set_value("stats", "hunger", hunger)
+	config.set_value("stats", "protein", protein)
 	config.set_value("stats", "energy", energy)
 	config.set_value("stats", "fun", fun)
 	config.set_value("stats", "hygiene", hygiene)
@@ -199,6 +375,7 @@ func save_game() -> void:
 	config.set_value("game", "level", level)
 	config.set_value("game", "xp", xp)
 	config.set_value("game", "current_room", current_room)
+	config.set_value("game", "is_sleeping", is_sleeping)
 	config.set_value("game", "last_timestamp", Time.get_unix_time_from_system())
 	config.set_value("inventory", "foods", food_inventory)
 	config.save(SAVE_PATH)
@@ -210,6 +387,7 @@ func load_game() -> void:
 		return
 
 	hunger = config.get_value("stats", "hunger", 100.0)
+	protein = config.get_value("stats", "protein", 100.0)
 	energy = config.get_value("stats", "energy", 100.0)
 	fun = config.get_value("stats", "fun", 100.0)
 	hygiene = config.get_value("stats", "hygiene", 100.0)
@@ -217,24 +395,38 @@ func load_game() -> void:
 	level = config.get_value("game", "level", 1)
 	xp = config.get_value("game", "xp", 0.0)
 	current_room = config.get_value("game", "current_room", "dormitorio")
+	is_sleeping = config.get_value("game", "is_sleeping", false)
 	food_inventory = config.get_value("inventory", "foods", {
 		"apple": 3,
-		"cookie": 2,
+		"egg": 2,
 		"milk": 2,
 		"banana": 1,
-		"pizza": 1
+		"fish": 1
 	})
 
 	var last_time: int = config.get_value("game", "last_timestamp", 0)
 	if last_time > 0:
 		var current_time: int = Time.get_unix_time_from_system()
 		var elapsed_seconds: int = current_time - last_time
-		if elapsed_seconds > 0:
-			var passed_ticks: float = minf(float(elapsed_seconds) / 10.0, 2880.0)
-			hunger -= passed_ticks * 0.2
-			energy -= passed_ticks * 0.15
-			fun -= passed_ticks * 0.2
-			hygiene -= passed_ticks * 0.1
+		if elapsed_seconds < 0:
+			# Anti-Cheat: El usuario atrasó el reloj de su dispositivo
+			print("[AntiCheat] Timestamp menor al guardado. Bloqueando avance.")
+			show_floating_text.emit("⚠️ ¡Hora del celular alterada!", Vector2(540, 700), Color(1, 0.3, 0.3))
+		elif elapsed_seconds > 0:
+			if is_sleeping:
+				# Recuperación en 1 hora (3600 segundos)
+				var energy_gained: float = (float(elapsed_seconds) / SLEEP_DURATION_SEC) * MAX_STAT
+				energy = minf(MAX_STAT, energy + energy_gained)
+				var passed_ticks: float = minf(float(elapsed_seconds) / 10.0, 2880.0)
+				hunger -= passed_ticks * 0.08
+				protein -= passed_ticks * 0.06
+			else:
+				var passed_ticks: float = minf(float(elapsed_seconds) / 10.0, 2880.0)
+				hunger -= passed_ticks * 0.20
+				protein -= passed_ticks * 0.16
+				energy -= passed_ticks * 0.15
+				fun -= passed_ticks * 0.20
+				hygiene -= passed_ticks * 0.10
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:

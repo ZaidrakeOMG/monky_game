@@ -74,6 +74,8 @@ func _check_rubbing() -> void:
 				parent_node.rinse_water()
 
 
+var is_eating_sequence: bool = false
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_on_release()
@@ -85,38 +87,43 @@ func _on_release() -> void:
 		# Herramientas de baño terminan al soltar
 		finish_and_destroy()
 	else:
-		# Si la comida se suelta y no se ha terminado, desaparece suavemente tras un tiempo o si se suelta lejos
+		if is_eating_sequence or bites_left < total_bites:
+			# Ya comenzó a comer, permitir que termine la secuencia de mordiscos
+			return
+		# Si se soltó lejos sin comer nada
 		finish_and_destroy()
 
 func take_bite(monky_ref: Node2D) -> void:
-	if not can_bite or bites_left <= 0:
+	if bites_left <= 0:
 		return
 
+	is_eating_sequence = true
 	can_bite = false
 	bites_left -= 1
 
 	# Efecto visual de mordisco: reduce escala y rebota
 	var bite_ratio = float(bites_left) / float(total_bites)
-	var target_scale = Vector2.ONE * maxf(0.35, bite_ratio)
+	var target_scale = Vector2.ONE * maxf(0.25, bite_ratio)
 
 	var tween = create_tween()
 	tween.tween_property(self, "scale", target_scale * 1.25, 0.08)
 	tween.tween_property(self, "scale", target_scale, 0.1)
 
 	# Monky reacciona masticando
-	if monky_ref.has_method("on_bite_received"):
+	if is_instance_valid(monky_ref) and monky_ref.has_method("on_bite_received"):
 		monky_ref.on_bite_received(item_data.get("name", "Comida"))
 
-	# Si ya no quedan mordiscos, aplicar la comida completa
+	# Si ya no quedan mordiscos, aplicar la comida completa y descontar del inventario
 	if bites_left <= 0:
 		if gm:
 			gm.feed_item(item_data)
 		item_consumed.emit(item_data)
 		finish_and_destroy()
 	else:
-		# Pequeña pausa entre mordiscos
-		await get_tree().create_timer(0.35).timeout
-		can_bite = true
+		# Secuencia automática continua para terminar de comer
+		await get_tree().create_timer(0.26).timeout
+		if is_instance_valid(self) and is_instance_valid(monky_ref):
+			take_bite(monky_ref)
 
 func finish_and_destroy() -> void:
 	is_dragging = false

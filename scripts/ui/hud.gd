@@ -27,6 +27,7 @@ class_name HUD
 @onready var btn_close_market: Button = $FoodMarketPopup/Panel/Margin/VBox/HeaderRow/BtnCloseMarket
 @onready var market_grid: VBoxContainer = $FoodMarketPopup/Panel/Margin/VBox/Scroll/MarketGrid
 
+@onready var stats_grid: HBoxContainer = $TopBar/VBox/StatsGrid
 @onready var hunger_bar: ProgressBar = $TopBar/VBox/StatsGrid/HungerContainer/HungerBar
 @onready var energy_bar: ProgressBar = $TopBar/VBox/StatsGrid/EnergyContainer/EnergyBar
 @onready var fun_bar: ProgressBar = $TopBar/VBox/StatsGrid/FunContainer/FunBar
@@ -36,6 +37,20 @@ class_name HUD
 @onready var energy_label: Label = $TopBar/VBox/StatsGrid/EnergyContainer/Label
 @onready var fun_label: Label = $TopBar/VBox/StatsGrid/FunContainer/Label
 @onready var hygiene_label: Label = $TopBar/VBox/StatsGrid/HygieneContainer/Label
+
+# Barra dinámica de proteínas
+var protein_container: VBoxContainer = null
+var protein_bar: ProgressBar = null
+var protein_label: Label = null
+
+# Modal de Ficha Técnica / Detalles de Comida
+var food_details_popup: Control = null
+var details_icon_label: Label = null
+var details_title_label: Label = null
+var details_desc_label: Label = null
+var details_stats_label: Label = null
+var details_buy_btn: Button = null
+var current_inspected_food: Dictionary = {}
 
 # Dock de navegación
 @onready var btn_bed: Button = $BottomBar/VBox/DockContainer/BtnBed
@@ -67,6 +82,9 @@ var gm: Node = null
 
 func _ready() -> void:
 	gm = get_tree().root.get_node_or_null("GameManager")
+	_setup_protein_ui()
+	_setup_food_details_popup()
+
 	if gm:
 		gm.stat_changed.connect(_on_stat_changed)
 		gm.coins_changed.connect(_on_coins_changed)
@@ -78,6 +96,7 @@ func _ready() -> void:
 		
 		# Inicializar UI
 		_update_stat_ui("hunger", gm.hunger, gm.MAX_STAT)
+		_update_stat_ui("protein", gm.protein, gm.MAX_STAT)
 		_update_stat_ui("energy", gm.energy, gm.MAX_STAT)
 		_update_stat_ui("fun", gm.fun, gm.MAX_STAT)
 		_update_stat_ui("hygiene", gm.hygiene, gm.MAX_STAT)
@@ -90,6 +109,40 @@ func _ready() -> void:
 	_setup_food_market()
 	_setup_scroll_support()
 	_update_room_view(gm.current_room if gm else "dormitorio")
+
+func _process(_delta: float) -> void:
+	# Cuenta regresiva en vivo del tiempo de sueño de 1h
+	if gm and btn_lamp:
+		if gm.is_sleeping:
+			var missing_energy: float = gm.MAX_STAT - gm.energy
+			var seconds_remaining: int = maxi(0, int((missing_energy / gm.MAX_STAT) * gm.SLEEP_DURATION_SEC))
+			var mins = seconds_remaining / 60
+			var secs = seconds_remaining % 60
+			btn_lamp.text = "☀️\n\nDespertar\n(%02d:%02d)" % [mins, secs]
+		else:
+			btn_lamp.text = "🌙\n\nDormir\n(1 hora)"
+
+func _setup_protein_ui() -> void:
+	if not stats_grid:
+		return
+	protein_container = VBoxContainer.new()
+	protein_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	protein_label = Label.new()
+	protein_label.text = "🥩 100%"
+	protein_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	protein_label.add_theme_font_size_override("font_size", 20)
+	protein_container.add_child(protein_label)
+
+	protein_bar = ProgressBar.new()
+	protein_bar.custom_minimum_size = Vector2(0, 20)
+	protein_bar.show_percentage = false
+	protein_bar.value = gm.protein if gm else 100.0
+	protein_container.add_child(protein_bar)
+
+	# Insertar después del Hambre
+	stats_grid.add_child(protein_container)
+	stats_grid.move_child(protein_container, 1)
 
 func _setup_scroll_support() -> void:
 	if food_scroll:
@@ -147,14 +200,13 @@ func _setup_action_drawers() -> void:
 
 	# Configurar acciones de dormitorio
 	btn_lamp.custom_minimum_size = Vector2(320, 180)
-	btn_lamp.text = "🌙\n\nDormir"
-	btn_lamp.add_theme_font_size_override("font_size", 28)
+	btn_lamp.text = "🌙\n\nDormir\n(1 hora)"
+	btn_lamp.add_theme_font_size_override("font_size", 26)
 	btn_lamp.add_theme_color_override("font_color", Color(0.25, 0.2, 0.45))
 	btn_lamp.add_theme_stylebox_override("normal", lamp_style)
 	btn_lamp.pressed.connect(func():
 		if gm:
 			gm.toggle_sleep()
-			btn_lamp.text = "☀️\n\nDespertar" if gm.is_sleeping else "🌙\n\nDormir"
 	)
 
 	# Configurar acciones de juego
@@ -202,11 +254,15 @@ func _refresh_kitchen_inventory() -> void:
 	var any_food_owned = false
 	for food in catalog:
 		var qty: int = gm.get_food_quantity(food.id) if gm else 0
-		# SOLO mostrar alimentos que el jugador tiene en existencias (qty > 0)
 		if qty > 0:
 			any_food_owned = true
+			
+			# Contenedor de tarjeta de comida con botón de info
+			var card_root = Control.new()
+			card_root.custom_minimum_size = Vector2(200, 200)
+
 			var card = Button.new()
-			card.custom_minimum_size = Vector2(200, 200)
+			card.anchors_preset = Control.PRESET_FULL_RECT
 			card.text = food.icon + "\n\n" + food.name + "\n(" + str(qty) + ")"
 			card.add_theme_font_size_override("font_size", 26)
 			card.add_theme_color_override("font_color", Color(0.35, 0.22, 0.12))
@@ -214,7 +270,20 @@ func _refresh_kitchen_inventory() -> void:
 			card.pressed.connect(func():
 				_spawn_draggable("food", food)
 			)
-			food_items_grid.add_child(card)
+			card_root.add_child(card)
+
+			# Botón ℹ️ para ver detalles y proteínas
+			var info_btn = Button.new()
+			info_btn.custom_minimum_size = Vector2(46, 46)
+			info_btn.text = "ℹ️"
+			info_btn.add_theme_font_size_override("font_size", 20)
+			info_btn.position = Vector2(148, 8)
+			info_btn.pressed.connect(func():
+				_open_food_details(food)
+			)
+			card_root.add_child(info_btn)
+
+			food_items_grid.add_child(card_root)
 
 	if not any_food_owned:
 		var empty_lbl = Label.new()
@@ -297,13 +366,26 @@ func _populate_market_grid() -> void:
 
 		var qty = gm.get_food_quantity(food.id) if gm else 0
 		var desc_lbl = Label.new()
-		desc_lbl.text = "+" + str(int(food.hunger)) + "% Hambre | +" + str(int(food.xp)) + " XP   •   En nevera: " + str(qty)
+		desc_lbl.text = "+" + str(int(food.get("hunger", 15))) + "🍖  +" + str(int(food.get("protein", 10))) + "🥩  •  En nevera: " + str(qty)
 		desc_lbl.add_theme_font_size_override("font_size", 24)
 		desc_lbl.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95))
 		vbox.add_child(desc_lbl)
 
+		# Botón Detalles ℹ️
+		var info_btn = Button.new()
+		info_btn.custom_minimum_size = Vector2(130, 80)
+		info_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		info_btn.text = "ℹ️ Info"
+		info_btn.add_theme_font_size_override("font_size", 24)
+		info_btn.add_theme_stylebox_override("normal", _create_card_style(Color(0.25, 0.35, 0.6), Color(1, 1, 1, 0.5)))
+		info_btn.pressed.connect(func():
+			_open_food_details(food)
+		)
+		hbox.add_child(info_btn)
+
+		# Botón Comprar ➕
 		var buy_btn = Button.new()
-		buy_btn.custom_minimum_size = Vector2(210, 80)
+		buy_btn.custom_minimum_size = Vector2(190, 80)
 		buy_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		buy_btn.text = "➕ " + str(food.price) + " 🪙"
 		buy_btn.add_theme_font_size_override("font_size", 28)
@@ -311,11 +393,161 @@ func _populate_market_grid() -> void:
 		buy_btn.pressed.connect(func():
 			if gm and gm.buy_food(food.id, 1):
 				_update_market_balance()
-				desc_lbl.text = "+" + str(int(food.hunger)) + "% Hambre | +" + str(int(food.xp)) + " XP   •   En nevera: " + str(gm.get_food_quantity(food.id))
+				desc_lbl.text = "+" + str(int(food.get("hunger", 15))) + "🍖  +" + str(int(food.get("protein", 10))) + "🥩  •  En nevera: " + str(gm.get_food_quantity(food.id))
 		)
 		hbox.add_child(buy_btn)
 
 		market_grid.add_child(item_card)
+
+# Modal de Ficha Técnica de Alimentos
+func _setup_food_details_popup() -> void:
+	food_details_popup = Control.new()
+	food_details_popup.name = "FoodDetailsPopup"
+	food_details_popup.visible = false
+	food_details_popup.z_index = 80
+	food_details_popup.anchors_preset = Control.PRESET_FULL_RECT
+	add_child(food_details_popup)
+
+	var backdrop = ColorRect.new()
+	backdrop.anchors_preset = Control.PRESET_FULL_RECT
+	backdrop.color = Color(0, 0, 0, 0.65)
+	food_details_popup.add_child(backdrop)
+
+	var panel = PanelContainer.new()
+	panel.name = "Panel"
+	panel.anchors_preset = Control.PRESET_CENTER
+	panel.custom_minimum_size = Vector2(850, 750)
+	panel.offset_left = -425
+	panel.offset_right = 425
+	panel.offset_top = -375
+	panel.offset_bottom = 375
+	panel.add_theme_stylebox_override("panel", _create_card_style(Color(0.16, 0.14, 0.22, 0.98), Color(0.8, 0.65, 0.35)))
+	food_details_popup.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 36)
+	margin.add_theme_constant_override("margin_right", 36)
+	margin.add_theme_constant_override("margin_top", 32)
+	margin.add_theme_constant_override("margin_bottom", 32)
+	panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.theme_override_constants.separation = 20
+	margin.add_child(vbox)
+
+	# Header con botón cerrar
+	var header_row = HBoxContainer.new()
+	vbox.add_child(header_row)
+
+	var title_top = Label.new()
+	title_top.text = "📋 FICHA NUTRICIONAL"
+	title_top.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_top.add_theme_font_size_override("font_size", 32)
+	title_top.add_theme_color_override("font_color", Color(1, 0.9, 0.4))
+	header_row.add_child(title_top)
+
+	var close_btn = Button.new()
+	close_btn.custom_minimum_size = Vector2(60, 60)
+	close_btn.text = "❌"
+	close_btn.add_theme_font_size_override("font_size", 28)
+	close_btn.pressed.connect(_close_food_details)
+	header_row.add_child(close_btn)
+
+	# Icono y Nombre
+	var food_header = HBoxContainer.new()
+	food_header.theme_override_constants.separation = 24
+	food_header.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(food_header)
+
+	details_icon_label = Label.new()
+	details_icon_label.text = "🍎"
+	details_icon_label.add_theme_font_size_override("font_size", 85)
+	food_header.add_child(details_icon_label)
+
+	var name_box = VBoxContainer.new()
+	name_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	details_title_label = Label.new()
+	details_title_label.text = "Manzana"
+	details_title_label.add_theme_font_size_override("font_size", 36)
+	details_title_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	name_box.add_child(details_title_label)
+	food_header.add_child(name_box)
+
+	# Valores Nutricionales
+	var stats_box = PanelContainer.new()
+	stats_box.add_theme_stylebox_override("panel", _create_card_style(Color(0.22, 0.2, 0.3), Color(0.4, 0.4, 0.55)))
+	var stats_margin = MarginContainer.new()
+	stats_margin.add_theme_constant_override("margin_left", 20)
+	stats_margin.add_theme_constant_override("margin_right", 20)
+	stats_margin.add_theme_constant_override("margin_top", 16)
+	stats_margin.add_theme_constant_override("margin_bottom", 16)
+	stats_box.add_child(stats_margin)
+
+	details_stats_label = Label.new()
+	details_stats_label.text = "🍖 Hambre: +15%   |   🥩 Proteínas: +10%\n⚡ Energía: +5%   |   ⭐ XP: +4 XP"
+	details_stats_label.add_theme_font_size_override("font_size", 26)
+	details_stats_label.add_theme_color_override("font_color", Color(0.9, 0.95, 1.0))
+	details_stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stats_margin.add_child(details_stats_label)
+	vbox.add_child(stats_box)
+
+	# Descripción
+	details_desc_label = Label.new()
+	details_desc_label.text = "Fruta fresca y saludable."
+	details_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	details_desc_label.add_theme_font_size_override("font_size", 24)
+	details_desc_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.9))
+	vbox.add_child(details_desc_label)
+
+	# Botón comprar / acción rápida
+	details_buy_btn = Button.new()
+	details_buy_btn.custom_minimum_size = Vector2(0, 80)
+	details_buy_btn.text = "🛒 Comprar por 8 🪙"
+	details_buy_btn.add_theme_font_size_override("font_size", 28)
+	details_buy_btn.add_theme_stylebox_override("normal", _create_card_style(Color(0.2, 0.65, 0.35), Color(1, 1, 1, 0.6)))
+	details_buy_btn.pressed.connect(func():
+		if gm and not current_inspected_food.is_empty():
+			if gm.buy_food(current_inspected_food.id, 1):
+				_update_food_details_view()
+	)
+	vbox.add_child(details_buy_btn)
+
+func _open_food_details(food_data: Dictionary) -> void:
+	current_inspected_food = food_data
+	_update_food_details_view()
+	food_details_popup.visible = true
+	var panel = food_details_popup.get_node("Panel")
+	panel.scale = Vector2(0.7, 0.7)
+	panel.pivot_offset = panel.size / 2.0
+	var tween = create_tween()
+	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _update_food_details_view() -> void:
+	if current_inspected_food.is_empty():
+		return
+	var f = current_inspected_food
+	details_icon_label.text = f.get("icon", "🍎")
+	details_title_label.text = f.get("name", "Comida") + " (" + f.get("category", "General") + ")"
+	
+	var h_val = int(f.get("hunger", 15))
+	var p_val = int(f.get("protein", 10))
+	var e_val = int(f.get("energy", 0))
+	var xp_val = int(f.get("xp", 4))
+	var qty = gm.get_food_quantity(f.id) if gm else 0
+
+	details_stats_label.text = "🍖 Hambre: +" + str(h_val) + "%   |   🥩 Proteína: +" + str(p_val) + "%\n⚡ Energía: +" + str(e_val) + "%   |   ⭐ XP: +" + str(xp_val) + "   |   En nevera: " + str(qty)
+	details_desc_label.text = f.get("desc", "Alimento delicioso para nutrir a Monky.")
+	details_buy_btn.text = "🛒 Comprar 1 unidad (" + str(f.get("price", 10)) + " 🪙)"
+
+func _close_food_details() -> void:
+	if not food_details_popup:
+		return
+	var panel = food_details_popup.get_node("Panel")
+	var tween = create_tween()
+	tween.tween_property(panel, "scale", Vector2(0.7, 0.7), 0.15).set_ease(Tween.EASE_IN)
+	tween.finished.connect(func():
+		food_details_popup.visible = false
+	)
 
 func _create_card_style(bg_col: Color, border_col: Color) -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
@@ -400,6 +632,7 @@ func _setup_shop_modal() -> void:
 	btn_pot_mega.pressed.connect(func():
 		if gm and gm.spend_coins(50):
 			gm.hunger = 100.0
+			gm.protein = 100.0
 			gm.energy = 100.0
 			gm.fun = 100.0
 			gm.hygiene = 100.0
@@ -439,6 +672,9 @@ func _update_stat_ui(stat_name: String, value: float, max_val: float) -> void:
 		"hunger":
 			target_bar = hunger_bar
 			target_label = hunger_label
+		"protein":
+			target_bar = protein_bar
+			target_label = protein_label
 		"energy":
 			target_bar = energy_bar
 			target_label = energy_label
@@ -454,7 +690,17 @@ func _update_stat_ui(stat_name: String, value: float, max_val: float) -> void:
 		var tween = create_tween()
 		tween.tween_property(target_bar, "value", value, 0.25)
 		if target_label:
-			target_label.text = str(int(value)) + "%"
+			match stat_name:
+				"hunger":
+					target_label.text = "🍎 " + str(int(value)) + "%"
+				"protein":
+					target_label.text = "🥩 " + str(int(value)) + "%"
+				"energy":
+					target_label.text = "⚡ " + str(int(value)) + "%"
+				"fun":
+					target_label.text = "⚽ " + str(int(value)) + "%"
+				"hygiene":
+					target_label.text = "🧼 " + str(int(value)) + "%"
 
 func _on_coins_changed(new_coins: int) -> void:
 	coins_label.text = str(new_coins)
