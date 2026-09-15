@@ -123,26 +123,8 @@ func _process(_delta: float) -> void:
 			btn_lamp.text = "🌙\n\nDormir\n(1 hora)"
 
 func _setup_protein_ui() -> void:
-	if not stats_grid:
-		return
-	protein_container = VBoxContainer.new()
-	protein_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	protein_label = Label.new()
-	protein_label.text = "🥩 100%"
-	protein_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	protein_label.add_theme_font_size_override("font_size", 20)
-	protein_container.add_child(protein_label)
-
-	protein_bar = ProgressBar.new()
-	protein_bar.custom_minimum_size = Vector2(0, 20)
-	protein_bar.show_percentage = false
-	protein_bar.value = gm.protein if gm else 100.0
-	protein_container.add_child(protein_bar)
-
-	# Insertar después del Hambre
-	stats_grid.add_child(protein_container)
-	stats_grid.move_child(protein_container, 1)
+	# Las 4 barras clásicas se mantienen limpias y amplias en TopBar
+	pass
 
 func _setup_scroll_support() -> void:
 	if food_scroll:
@@ -238,7 +220,7 @@ func _refresh_kitchen_inventory() -> void:
 	for child in food_items_grid.get_children():
 		child.queue_free()
 
-	# Botón para abrir el Mercado de Comidas
+	# Botón 1: Abrir Mercado de Comidas
 	var market_btn = Button.new()
 	market_btn.custom_minimum_size = Vector2(200, 200)
 	market_btn.text = "🛒\n\nMercado\n(Comprar)"
@@ -247,6 +229,20 @@ func _refresh_kitchen_inventory() -> void:
 	market_btn.add_theme_stylebox_override("normal", _create_card_style(Color(0.85, 0.98, 0.88), Color(0.3, 0.75, 0.45)))
 	market_btn.pressed.connect(_open_food_market)
 	food_items_grid.add_child(market_btn)
+
+	# Botón 2: Ficha de Nutrición / Proteínas
+	var info_btn = Button.new()
+	info_btn.custom_minimum_size = Vector2(200, 200)
+	var p_val = int(gm.protein) if gm else 100
+	info_btn.text = "🥩\n\nProteínas\n(" + str(p_val) + "%)"
+	info_btn.add_theme_font_size_override("font_size", 24)
+	info_btn.add_theme_color_override("font_color", Color(0.5, 0.2, 0.1))
+	info_btn.add_theme_stylebox_override("normal", _create_card_style(Color(1.0, 0.9, 0.85), Color(0.85, 0.45, 0.3)))
+	info_btn.pressed.connect(func():
+		var first_food = gm.FOOD_CATALOG[0] if (gm and not gm.FOOD_CATALOG.is_empty()) else {}
+		_open_food_details(first_food)
+	)
+	food_items_grid.add_child(info_btn)
 
 	var catalog = gm.FOOD_CATALOG if gm else []
 	var food_style = _create_card_style(Color(1.0, 0.96, 0.88), Color(0.8, 0.65, 0.4))
@@ -257,12 +253,9 @@ func _refresh_kitchen_inventory() -> void:
 		if qty > 0:
 			any_food_owned = true
 			
-			# Contenedor de tarjeta de comida con botón de info
-			var card_root = Control.new()
-			card_root.custom_minimum_size = Vector2(200, 200)
-
+			# Tarjetas grandes y bonitas (200x200)
 			var card = Button.new()
-			card.anchors_preset = Control.PRESET_FULL_RECT
+			card.custom_minimum_size = Vector2(200, 200)
 			card.text = food.icon + "\n\n" + food.name + "\n(" + str(qty) + ")"
 			card.add_theme_font_size_override("font_size", 26)
 			card.add_theme_color_override("font_color", Color(0.35, 0.22, 0.12))
@@ -270,20 +263,7 @@ func _refresh_kitchen_inventory() -> void:
 			card.pressed.connect(func():
 				_spawn_draggable("food", food)
 			)
-			card_root.add_child(card)
-
-			# Botón ℹ️ para ver detalles y proteínas
-			var info_btn = Button.new()
-			info_btn.custom_minimum_size = Vector2(46, 46)
-			info_btn.text = "ℹ️"
-			info_btn.add_theme_font_size_override("font_size", 20)
-			info_btn.position = Vector2(148, 8)
-			info_btn.pressed.connect(func():
-				_open_food_details(food)
-			)
-			card_root.add_child(info_btn)
-
-			food_items_grid.add_child(card_root)
+			food_items_grid.add_child(card)
 
 	if not any_food_owned:
 		var empty_lbl = Label.new()
@@ -372,16 +352,16 @@ func _populate_market_grid() -> void:
 		vbox.add_child(desc_lbl)
 
 		# Botón Detalles ℹ️
-		var info_btn = Button.new()
-		info_btn.custom_minimum_size = Vector2(130, 80)
-		info_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		info_btn.text = "ℹ️ Info"
-		info_btn.add_theme_font_size_override("font_size", 24)
-		info_btn.add_theme_stylebox_override("normal", _create_card_style(Color(0.25, 0.35, 0.6), Color(1, 1, 1, 0.5)))
-		info_btn.pressed.connect(func():
+		var d_btn = Button.new()
+		d_btn.custom_minimum_size = Vector2(130, 80)
+		d_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		d_btn.text = "ℹ️ Info"
+		d_btn.add_theme_font_size_override("font_size", 24)
+		d_btn.add_theme_stylebox_override("normal", _create_card_style(Color(0.25, 0.35, 0.6), Color(1, 1, 1, 0.5)))
+		d_btn.pressed.connect(func():
 			_open_food_details(food)
 		)
-		hbox.add_child(info_btn)
+		hbox.add_child(d_btn)
 
 		# Botón Comprar ➕
 		var buy_btn = Button.new()
@@ -405,23 +385,22 @@ func _setup_food_details_popup() -> void:
 	food_details_popup.name = "FoodDetailsPopup"
 	food_details_popup.visible = false
 	food_details_popup.z_index = 80
-	food_details_popup.anchors_preset = Control.PRESET_FULL_RECT
+	food_details_popup.set_anchors_preset(Control.PRESET_FULL_RECT)
+	food_details_popup.size = Vector2(1080, 1920)
 	add_child(food_details_popup)
 
 	var backdrop = ColorRect.new()
-	backdrop.anchors_preset = Control.PRESET_FULL_RECT
-	backdrop.color = Color(0, 0, 0, 0.65)
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.size = Vector2(1080, 1920)
+	backdrop.color = Color(0, 0, 0, 0.7)
 	food_details_popup.add_child(backdrop)
 
 	var panel = PanelContainer.new()
 	panel.name = "Panel"
-	panel.anchors_preset = Control.PRESET_CENTER
-	panel.custom_minimum_size = Vector2(850, 750)
-	panel.offset_left = -425
-	panel.offset_right = 425
-	panel.offset_top = -375
-	panel.offset_bottom = 375
-	panel.add_theme_stylebox_override("panel", _create_card_style(Color(0.16, 0.14, 0.22, 0.98), Color(0.8, 0.65, 0.35)))
+	panel.custom_minimum_size = Vector2(860, 800)
+	panel.size = Vector2(860, 800)
+	panel.position = Vector2(110, 560)
+	panel.add_theme_stylebox_override("panel", _create_card_style(Color(0.16, 0.14, 0.24, 0.98), Color(0.85, 0.7, 0.35)))
 	food_details_popup.add_child(panel)
 
 	var margin = MarginContainer.new()
@@ -511,8 +490,13 @@ func _setup_food_details_popup() -> void:
 				_update_food_details_view()
 	)
 	vbox.add_child(details_buy_btn)
+	
+	# Asegurar que inicie oculto
+	food_details_popup.visible = false
 
 func _open_food_details(food_data: Dictionary) -> void:
+	if food_data.is_empty() and gm and not gm.FOOD_CATALOG.is_empty():
+		food_data = gm.FOOD_CATALOG[0]
 	current_inspected_food = food_data
 	_update_food_details_view()
 	food_details_popup.visible = true
