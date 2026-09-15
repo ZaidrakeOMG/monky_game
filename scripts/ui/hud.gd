@@ -45,7 +45,9 @@ class_name HUD
 @onready var room_title: Label = $BottomBar/VBox/RoomTitle
 
 # Paneles de interacción
+@onready var action_drawers: Control = $ActionDrawers
 @onready var kitchen_drawer: PanelContainer = $ActionDrawers/KitchenDrawer
+@onready var food_scroll: ScrollContainer = $ActionDrawers/KitchenDrawer/Margin/FoodScroll
 @onready var food_items_grid: HBoxContainer = $ActionDrawers/KitchenDrawer/Margin/FoodScroll/FoodGrid
 @onready var bath_drawer: PanelContainer = $ActionDrawers/BathDrawer
 @onready var btn_soap: Button = $ActionDrawers/BathDrawer/Margin/HBox/BtnSoap
@@ -86,7 +88,18 @@ func _ready() -> void:
 	_setup_action_drawers()
 	_setup_shop_modal()
 	_setup_food_market()
+	_setup_scroll_support()
 	_update_room_view(gm.current_room if gm else "dormitorio")
+
+func _setup_scroll_support() -> void:
+	if food_scroll:
+		food_scroll.gui_input.connect(func(event: InputEvent):
+			if event is InputEventMouseButton:
+				if event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_LEFT:
+					food_scroll.scroll_horizontal = maxi(0, food_scroll.scroll_horizontal - 120)
+				elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN or event.button_index == MOUSE_BUTTON_WHEEL_RIGHT:
+					food_scroll.scroll_horizontal += 120
+		)
 
 func _setup_dock_buttons() -> void:
 	btn_bed.pressed.connect(func(): _select_room("dormitorio"))
@@ -114,14 +127,18 @@ func _setup_action_drawers() -> void:
 	_refresh_kitchen_inventory()
 
 	# Configurar acciones de baño
-	btn_soap.text = "🧼\nEnjabonar"
+	btn_soap.custom_minimum_size = Vector2(250, 180)
+	btn_soap.text = "🧼\n\nEnjabonar"
+	btn_soap.add_theme_font_size_override("font_size", 26)
 	btn_soap.add_theme_color_override("font_color", Color(0.15, 0.35, 0.5))
 	btn_soap.add_theme_stylebox_override("normal", soap_style)
 	btn_soap.pressed.connect(func():
 		_spawn_draggable("soap")
 	)
 
-	btn_shower.text = "🚿\nEnjuagar"
+	btn_shower.custom_minimum_size = Vector2(250, 180)
+	btn_shower.text = "🚿\n\nEnjuagar"
+	btn_shower.add_theme_font_size_override("font_size", 26)
 	btn_shower.add_theme_color_override("font_color", Color(0.15, 0.3, 0.55))
 	btn_shower.add_theme_stylebox_override("normal", shower_style)
 	btn_shower.pressed.connect(func():
@@ -129,24 +146,30 @@ func _setup_action_drawers() -> void:
 	)
 
 	# Configurar acciones de dormitorio
-	btn_lamp.text = "🌙\nDormir"
+	btn_lamp.custom_minimum_size = Vector2(320, 180)
+	btn_lamp.text = "🌙\n\nDormir"
+	btn_lamp.add_theme_font_size_override("font_size", 28)
 	btn_lamp.add_theme_color_override("font_color", Color(0.25, 0.2, 0.45))
 	btn_lamp.add_theme_stylebox_override("normal", lamp_style)
 	btn_lamp.pressed.connect(func():
 		if gm:
 			gm.toggle_sleep()
-			btn_lamp.text = "☀️\nDespertar" if gm.is_sleeping else "🌙\nDormir"
+			btn_lamp.text = "☀️\n\nDespertar" if gm.is_sleeping else "🌙\n\nDormir"
 	)
 
 	# Configurar acciones de juego
-	btn_ball.text = "⚽\nLanzar Pelota"
+	btn_ball.custom_minimum_size = Vector2(250, 180)
+	btn_ball.text = "⚽\n\nLanzar Pelota"
+	btn_ball.add_theme_font_size_override("font_size", 26)
 	btn_ball.add_theme_color_override("font_color", Color(0.4, 0.25, 0.1))
 	btn_ball.add_theme_stylebox_override("normal", ball_style)
 	btn_ball.pressed.connect(func():
 		_spawn_bouncing_ball()
 	)
 
-	btn_game.text = "🎮\nMinijuegos"
+	btn_game.custom_minimum_size = Vector2(250, 180)
+	btn_game.text = "🎮\n\nMinijuegos"
+	btn_game.add_theme_font_size_override("font_size", 26)
 	btn_game.add_theme_color_override("font_color", Color(0.3, 0.18, 0.5))
 	btn_game.add_theme_stylebox_override("normal", game_style)
 	btn_game.pressed.connect(func():
@@ -165,9 +188,9 @@ func _refresh_kitchen_inventory() -> void:
 
 	# Botón para abrir el Mercado de Comidas
 	var market_btn = Button.new()
-	market_btn.custom_minimum_size = Vector2(170, 180)
-	market_btn.text = "🛒\nMercado\n(Comprar)"
-	market_btn.add_theme_font_size_override("font_size", 22)
+	market_btn.custom_minimum_size = Vector2(200, 200)
+	market_btn.text = "🛒\n\nMercado\n(Comprar)"
+	market_btn.add_theme_font_size_override("font_size", 24)
 	market_btn.add_theme_color_override("font_color", Color(0.1, 0.45, 0.25))
 	market_btn.add_theme_stylebox_override("normal", _create_card_style(Color(0.85, 0.98, 0.88), Color(0.3, 0.75, 0.45)))
 	market_btn.pressed.connect(_open_food_market)
@@ -175,28 +198,31 @@ func _refresh_kitchen_inventory() -> void:
 
 	var catalog = gm.FOOD_CATALOG if gm else []
 	var food_style = _create_card_style(Color(1.0, 0.96, 0.88), Color(0.8, 0.65, 0.4))
-	var empty_food_style = _create_card_style(Color(0.92, 0.9, 0.88), Color(0.65, 0.65, 0.65))
 
+	var any_food_owned = false
 	for food in catalog:
 		var qty: int = gm.get_food_quantity(food.id) if gm else 0
-		var card = Button.new()
-		card.custom_minimum_size = Vector2(170, 180)
-		card.text = food.icon + "\n" + food.name + "\n" + ("x" + str(qty) if qty > 0 else "x0 (Agotado)")
-		card.add_theme_font_size_override("font_size", 20)
+		# SOLO mostrar alimentos que el jugador tiene en existencias (qty > 0)
 		if qty > 0:
+			any_food_owned = true
+			var card = Button.new()
+			card.custom_minimum_size = Vector2(200, 200)
+			card.text = food.icon + "\n\n" + food.name + "\n(" + str(qty) + ")"
+			card.add_theme_font_size_override("font_size", 26)
 			card.add_theme_color_override("font_color", Color(0.35, 0.22, 0.12))
 			card.add_theme_stylebox_override("normal", food_style)
 			card.pressed.connect(func():
 				_spawn_draggable("food", food)
 			)
-		else:
-			card.add_theme_color_override("font_color", Color(0.6, 0.3, 0.3))
-			card.add_theme_stylebox_override("normal", empty_food_style)
-			card.pressed.connect(func():
-				if gm:
-					gm.show_floating_text.emit("¡Se agotó! Toca Mercado 🛒 para comprar", get_viewport().get_mouse_position(), Color(1, 0.4, 0.4))
-			)
-		food_items_grid.add_child(card)
+			food_items_grid.add_child(card)
+
+	if not any_food_owned:
+		var empty_lbl = Label.new()
+		empty_lbl.text = "👈 ¡Nevera vacía! Toca Mercado para comprar comida"
+		empty_lbl.add_theme_font_size_override("font_size", 26)
+		empty_lbl.add_theme_color_override("font_color", Color(1, 1, 1, 0.9))
+		empty_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		food_items_grid.add_child(empty_lbl)
 
 func _setup_food_market() -> void:
 	if not food_market_popup:
@@ -238,53 +264,54 @@ func _populate_market_grid() -> void:
 	var catalog = gm.FOOD_CATALOG if gm else []
 	for food in catalog:
 		var item_card = PanelContainer.new()
-		item_card.custom_minimum_size = Vector2(0, 110)
-		item_card.add_theme_stylebox_override("panel", _create_card_style(Color(0.18, 0.15, 0.26, 0.9), Color(0.7, 0.55, 0.3)))
+		item_card.custom_minimum_size = Vector2(0, 130)
+		item_card.add_theme_stylebox_override("panel", _create_card_style(Color(0.18, 0.15, 0.26, 0.95), Color(0.7, 0.55, 0.3)))
 
 		var margin = MarginContainer.new()
-		margin.add_theme_constant_override("margin_left", 20)
-		margin.add_theme_constant_override("margin_right", 20)
-		margin.add_theme_constant_override("margin_top", 12)
-		margin.add_theme_constant_override("margin_bottom", 12)
+		margin.add_theme_constant_override("margin_left", 24)
+		margin.add_theme_constant_override("margin_right", 24)
+		margin.add_theme_constant_override("margin_top", 16)
+		margin.add_theme_constant_override("margin_bottom", 16)
 		item_card.add_child(margin)
 
 		var hbox = HBoxContainer.new()
-		hbox.add_theme_constant_override("separation", 16)
+		hbox.add_theme_constant_override("separation", 20)
 		margin.add_child(hbox)
 
 		var icon_lbl = Label.new()
 		icon_lbl.text = food.icon
-		icon_lbl.add_theme_font_size_override("font_size", 55)
+		icon_lbl.add_theme_font_size_override("font_size", 70)
 		hbox.add_child(icon_lbl)
 
 		var vbox = VBoxContainer.new()
 		vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		vbox.add_theme_constant_override("separation", 6)
 		hbox.add_child(vbox)
 
 		var name_lbl = Label.new()
-		name_lbl.text = food.name + " (" + food.category + ")"
-		name_lbl.add_theme_font_size_override("font_size", 26)
+		name_lbl.text = food.name + "  (" + food.category + ")"
+		name_lbl.add_theme_font_size_override("font_size", 30)
 		name_lbl.add_theme_color_override("font_color", Color(1, 0.9, 0.4))
 		vbox.add_child(name_lbl)
 
 		var qty = gm.get_food_quantity(food.id) if gm else 0
 		var desc_lbl = Label.new()
-		desc_lbl.text = "+" + str(int(food.hunger)) + "% Hambre | +" + str(int(food.xp)) + " XP  •  En nevera: " + str(qty)
-		desc_lbl.add_theme_font_size_override("font_size", 20)
-		desc_lbl.add_theme_color_override("font_color", Color(0.8, 0.85, 0.9))
+		desc_lbl.text = "+" + str(int(food.hunger)) + "% Hambre | +" + str(int(food.xp)) + " XP   •   En nevera: " + str(qty)
+		desc_lbl.add_theme_font_size_override("font_size", 24)
+		desc_lbl.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95))
 		vbox.add_child(desc_lbl)
 
 		var buy_btn = Button.new()
-		buy_btn.custom_minimum_size = Vector2(190, 70)
+		buy_btn.custom_minimum_size = Vector2(210, 80)
 		buy_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		buy_btn.text = "➕ " + str(food.price) + " 🪙"
-		buy_btn.add_theme_font_size_override("font_size", 24)
-		buy_btn.add_theme_stylebox_override("normal", _create_card_style(Color(0.2, 0.65, 0.35), Color(1, 1, 1, 0.5)))
+		buy_btn.add_theme_font_size_override("font_size", 28)
+		buy_btn.add_theme_stylebox_override("normal", _create_card_style(Color(0.2, 0.65, 0.35), Color(1, 1, 1, 0.6)))
 		buy_btn.pressed.connect(func():
 			if gm and gm.buy_food(food.id, 1):
 				_update_market_balance()
-				desc_lbl.text = "+" + str(int(food.hunger)) + "% Hambre | +" + str(int(food.xp)) + " XP  •  En nevera: " + str(gm.get_food_quantity(food.id))
+				desc_lbl.text = "+" + str(int(food.hunger)) + "% Hambre | +" + str(int(food.xp)) + " XP   •   En nevera: " + str(gm.get_food_quantity(food.id))
 		)
 		hbox.add_child(buy_btn)
 
@@ -295,9 +322,9 @@ func _create_card_style(bg_col: Color, border_col: Color) -> StyleBoxFlat:
 	style.bg_color = bg_col
 	style.border_color = border_col
 	style.set_border_width_all(3)
-	style.set_corner_radius_all(20)
-	style.shadow_color = Color(0, 0, 0, 0.2)
-	style.shadow_size = 4
+	style.set_corner_radius_all(22)
+	style.shadow_color = Color(0, 0, 0, 0.25)
+	style.shadow_size = 5
 	return style
 
 func _spawn_bouncing_ball() -> void:
