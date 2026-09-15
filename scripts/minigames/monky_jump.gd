@@ -241,13 +241,15 @@ func _trigger_game_over() -> void:
 
 	# Recompensas al GameManager
 	if gm:
-		gm.add_coins(coins_earned + int(score / 15.0))
+		var extra_coins = int(float(score) / 30.0)
+		gm.add_coins(coins_earned + extra_coins)
 		gm.play_with_monky(100.0)
-		gm.add_xp(score * 0.4)
+		gm.add_xp(minf(score * 0.15, 20.0))
 
 	final_score_label.text = str(score) + " m"
-	final_coins_label.text = "+" + str(coins_earned + int(score / 15.0)) + " 🪙"
+	final_coins_label.text = "+" + str(coins_earned + int(float(score) / 30.0)) + " 🪙"
 	high_score_label.text = str(score) + " m"
+
 
 	game_over_modal.visible = true
 	game_over_modal.scale = Vector2(0.5, 0.5)

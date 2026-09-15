@@ -56,6 +56,12 @@ func _physics_process(delta: float) -> void:
 		velocity.x *= 0.94 # Fricción con el suelo
 		_play_squash()
 
+	# Rebote en el techo (para que nunca se salga de la pantalla)
+	if position.y <= 140.0:
+		position.y = 140.0
+		velocity.y = abs(velocity.y) * BOUNCE_RESTITUTION
+		_play_squash()
+
 	# Rebote en paredes
 	if position.x <= LEFT_WALL_X:
 		position.x = LEFT_WALL_X
@@ -65,6 +71,7 @@ func _physics_process(delta: float) -> void:
 		position.x = RIGHT_WALL_X
 		velocity.x = -abs(velocity.x) * BOUNCE_RESTITUTION
 		_play_squash()
+
 
 	# Comprobar colisión con Monky
 	_check_monky_collision()

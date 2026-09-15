@@ -2,7 +2,7 @@ extends CanvasLayer
 class_name HUD
 
 ## Controlador del HUD y Sistema de Interfaz Avanzado
-## Maneja barras de estado, nivel, monedas, dock de cuartos y paneles de interacción.
+## Maneja barras de estado, nivel, monedas, dock de cuartos, inventario de comida y mercado.
 
 @onready var level_label: Label = $TopBar/VBox/HeaderRow/LevelContainer/LevelLabel
 @onready var xp_bar: ProgressBar = $TopBar/VBox/HeaderRow/LevelContainer/XPBar
@@ -20,6 +20,12 @@ class_name HUD
 @onready var btn_pot_energy: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid/BtnPotEnergy
 @onready var btn_pot_hygiene: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid/BtnPotHygiene
 @onready var btn_pot_mega: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid/BtnPotMega
+
+# Modal de Mercado de Comidas
+@onready var food_market_popup: Control = $FoodMarketPopup
+@onready var market_balance_label: Label = $FoodMarketPopup/Panel/Margin/VBox/HeaderRow/BalanceLabel
+@onready var btn_close_market: Button = $FoodMarketPopup/Panel/Margin/VBox/HeaderRow/BtnCloseMarket
+@onready var market_grid: VBoxContainer = $FoodMarketPopup/Panel/Margin/VBox/Scroll/MarketGrid
 
 @onready var hunger_bar: ProgressBar = $TopBar/VBox/StatsGrid/HungerContainer/HungerBar
 @onready var energy_bar: ProgressBar = $TopBar/VBox/StatsGrid/EnergyContainer/EnergyBar
@@ -65,6 +71,8 @@ func _ready() -> void:
 		gm.xp_changed.connect(_on_xp_changed)
 		gm.level_up.connect(_on_level_up)
 		gm.room_changed.connect(_on_room_changed)
+		if gm.has_signal("food_inventory_changed"):
+			gm.food_inventory_changed.connect(_refresh_kitchen_inventory)
 		
 		# Inicializar UI
 		_update_stat_ui("hunger", gm.hunger, gm.MAX_STAT)
@@ -77,6 +85,7 @@ func _ready() -> void:
 	_setup_dock_buttons()
 	_setup_action_drawers()
 	_setup_shop_modal()
+	_setup_food_market()
 	_update_room_view(gm.current_room if gm else "dormitorio")
 
 func _setup_dock_buttons() -> void:
@@ -90,43 +99,21 @@ func _select_room(r_name: String) -> void:
 		gm.change_room(r_name)
 
 func _setup_action_drawers() -> void:
-	# Quitar fondo oscuro por defecto de los cajones
 	var empty_panel = StyleBoxEmpty.new()
 	kitchen_drawer.add_theme_stylebox_override("panel", empty_panel)
 	bath_drawer.add_theme_stylebox_override("panel", empty_panel)
 	bed_drawer.add_theme_stylebox_override("panel", empty_panel)
 	play_drawer.add_theme_stylebox_override("panel", empty_panel)
 
-	# Estilo base para botones de acción
-	var food_style = _create_card_style(Color(1.0, 0.96, 0.88), Color(0.8, 0.65, 0.4))
 	var ball_style = _create_card_style(Color(1.0, 0.92, 0.78), Color(0.88, 0.62, 0.25))
 	var game_style = _create_card_style(Color(0.92, 0.88, 1.0), Color(0.65, 0.5, 0.9))
 	var soap_style = _create_card_style(Color(0.85, 0.96, 1.0), Color(0.3, 0.75, 0.9))
 	var shower_style = _create_card_style(Color(0.85, 0.9, 1.0), Color(0.4, 0.6, 0.95))
 	var lamp_style = _create_card_style(Color(0.88, 0.88, 0.98), Color(0.5, 0.5, 0.85))
 
+	_refresh_kitchen_inventory()
 
-	# Configurar comidas en la cocina (Arrastrables con mordiscos físicos)
-	for child in food_items_grid.get_children():
-		child.queue_free()
-
-	var catalog = gm.FOOD_CATALOG if gm else []
-	for food in catalog:
-		var card = Button.new()
-		card.custom_minimum_size = Vector2(170, 180)
-		card.text = food.icon + "\n" + food.name + "\n" + (str(food.price) + " 🪙" if food.price > 0 else "GRATIS")
-		card.add_theme_font_size_override("font_size", 22)
-		card.add_theme_color_override("font_color", Color(0.35, 0.22, 0.12))
-		card.add_theme_stylebox_override("normal", food_style)
-		card.pressed.connect(func():
-			if gm and food.price > 0 and gm.coins < food.price:
-				gm.show_floating_text.emit("¡No tienes suficientes monedas! 🪙", get_viewport().get_mouse_position(), Color(1, 0.4, 0.4))
-			else:
-				_spawn_draggable("food", food)
-		)
-		food_items_grid.add_child(card)
-
-	# Configurar acciones de baño (Arrastrables interactivos: Jabón y Ducha)
+	# Configurar acciones de baño
 	btn_soap.text = "🧼\nEnjabonar"
 	btn_soap.add_theme_color_override("font_color", Color(0.15, 0.35, 0.5))
 	btn_soap.add_theme_stylebox_override("normal", soap_style)
@@ -151,7 +138,7 @@ func _setup_action_drawers() -> void:
 			btn_lamp.text = "☀️\nDespertar" if gm.is_sleeping else "🌙\nDormir"
 	)
 
-	# Configurar acciones de juego (Pelota física y Selector de Minijuegos)
+	# Configurar acciones de juego
 	btn_ball.text = "⚽\nLanzar Pelota"
 	btn_ball.add_theme_color_override("font_color", Color(0.4, 0.25, 0.1))
 	btn_ball.add_theme_stylebox_override("normal", ball_style)
@@ -163,13 +150,145 @@ func _setup_action_drawers() -> void:
 	btn_game.add_theme_color_override("font_color", Color(0.3, 0.18, 0.5))
 	btn_game.add_theme_stylebox_override("normal", game_style)
 	btn_game.pressed.connect(func():
-		# Abrir Selector / Hub de Minijuegos
 		get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/minigames_menu.tscn")
 	)
 
 	btn_close_level.pressed.connect(func():
 		level_popup.visible = false
 	)
+
+func _refresh_kitchen_inventory() -> void:
+	if not food_items_grid:
+		return
+	for child in food_items_grid.get_children():
+		child.queue_free()
+
+	# Botón para abrir el Mercado de Comidas
+	var market_btn = Button.new()
+	market_btn.custom_minimum_size = Vector2(170, 180)
+	market_btn.text = "🛒\nMercado\n(Comprar)"
+	market_btn.add_theme_font_size_override("font_size", 22)
+	market_btn.add_theme_color_override("font_color", Color(0.1, 0.45, 0.25))
+	market_btn.add_theme_stylebox_override("normal", _create_card_style(Color(0.85, 0.98, 0.88), Color(0.3, 0.75, 0.45)))
+	market_btn.pressed.connect(_open_food_market)
+	food_items_grid.add_child(market_btn)
+
+	var catalog = gm.FOOD_CATALOG if gm else []
+	var food_style = _create_card_style(Color(1.0, 0.96, 0.88), Color(0.8, 0.65, 0.4))
+	var empty_food_style = _create_card_style(Color(0.92, 0.9, 0.88), Color(0.65, 0.65, 0.65))
+
+	for food in catalog:
+		var qty: int = gm.get_food_quantity(food.id) if gm else 0
+		var card = Button.new()
+		card.custom_minimum_size = Vector2(170, 180)
+		card.text = food.icon + "\n" + food.name + "\n" + ("x" + str(qty) if qty > 0 else "x0 (Agotado)")
+		card.add_theme_font_size_override("font_size", 20)
+		if qty > 0:
+			card.add_theme_color_override("font_color", Color(0.35, 0.22, 0.12))
+			card.add_theme_stylebox_override("normal", food_style)
+			card.pressed.connect(func():
+				_spawn_draggable("food", food)
+			)
+		else:
+			card.add_theme_color_override("font_color", Color(0.6, 0.3, 0.3))
+			card.add_theme_stylebox_override("normal", empty_food_style)
+			card.pressed.connect(func():
+				if gm:
+					gm.show_floating_text.emit("¡Se agotó! Toca Mercado 🛒 para comprar", get_viewport().get_mouse_position(), Color(1, 0.4, 0.4))
+			)
+		food_items_grid.add_child(card)
+
+func _setup_food_market() -> void:
+	if not food_market_popup:
+		return
+	btn_close_market.pressed.connect(_close_food_market)
+
+func _open_food_market() -> void:
+	if not food_market_popup:
+		return
+	_populate_market_grid()
+	_update_market_balance()
+	food_market_popup.visible = true
+	var panel = food_market_popup.get_node("Panel")
+	panel.scale = Vector2(0.7, 0.7)
+	panel.pivot_offset = panel.size / 2.0
+	var tween = create_tween()
+	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _close_food_market() -> void:
+	if not food_market_popup:
+		return
+	var panel = food_market_popup.get_node("Panel")
+	var tween = create_tween()
+	tween.tween_property(panel, "scale", Vector2(0.7, 0.7), 0.15).set_ease(Tween.EASE_IN)
+	tween.finished.connect(func():
+		food_market_popup.visible = false
+	)
+
+func _update_market_balance() -> void:
+	if gm and market_balance_label:
+		market_balance_label.text = "Saldo: " + str(gm.coins) + " 🪙"
+
+func _populate_market_grid() -> void:
+	if not market_grid:
+		return
+	for child in market_grid.get_children():
+		child.queue_free()
+
+	var catalog = gm.FOOD_CATALOG if gm else []
+	for food in catalog:
+		var item_card = PanelContainer.new()
+		item_card.custom_minimum_size = Vector2(0, 110)
+		item_card.add_theme_stylebox_override("panel", _create_card_style(Color(0.18, 0.15, 0.26, 0.9), Color(0.7, 0.55, 0.3)))
+
+		var margin = MarginContainer.new()
+		margin.add_theme_constant_override("margin_left", 20)
+		margin.add_theme_constant_override("margin_right", 20)
+		margin.add_theme_constant_override("margin_top", 12)
+		margin.add_theme_constant_override("margin_bottom", 12)
+		item_card.add_child(margin)
+
+		var hbox = HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 16)
+		margin.add_child(hbox)
+
+		var icon_lbl = Label.new()
+		icon_lbl.text = food.icon
+		icon_lbl.add_theme_font_size_override("font_size", 55)
+		hbox.add_child(icon_lbl)
+
+		var vbox = VBoxContainer.new()
+		vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		hbox.add_child(vbox)
+
+		var name_lbl = Label.new()
+		name_lbl.text = food.name + " (" + food.category + ")"
+		name_lbl.add_theme_font_size_override("font_size", 26)
+		name_lbl.add_theme_color_override("font_color", Color(1, 0.9, 0.4))
+		vbox.add_child(name_lbl)
+
+		var qty = gm.get_food_quantity(food.id) if gm else 0
+		var desc_lbl = Label.new()
+		desc_lbl.text = "+" + str(int(food.hunger)) + "% Hambre | +" + str(int(food.xp)) + " XP  •  En nevera: " + str(qty)
+		desc_lbl.add_theme_font_size_override("font_size", 20)
+		desc_lbl.add_theme_color_override("font_color", Color(0.8, 0.85, 0.9))
+		vbox.add_child(desc_lbl)
+
+		var buy_btn = Button.new()
+		buy_btn.custom_minimum_size = Vector2(190, 70)
+		buy_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		buy_btn.text = "➕ " + str(food.price) + " 🪙"
+		buy_btn.add_theme_font_size_override("font_size", 24)
+		buy_btn.add_theme_stylebox_override("normal", _create_card_style(Color(0.2, 0.65, 0.35), Color(1, 1, 1, 0.5)))
+		buy_btn.pressed.connect(func():
+			if gm and gm.buy_food(food.id, 1):
+				_update_market_balance()
+				desc_lbl.text = "+" + str(int(food.hunger)) + "% Hambre | +" + str(int(food.xp)) + " XP  •  En nevera: " + str(gm.get_food_quantity(food.id))
+		)
+		hbox.add_child(buy_btn)
+
+		market_grid.add_child(item_card)
 
 func _create_card_style(bg_col: Color, border_col: Color) -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
@@ -180,7 +299,6 @@ func _create_card_style(bg_col: Color, border_col: Color) -> StyleBoxFlat:
 	style.shadow_color = Color(0, 0, 0, 0.2)
 	style.shadow_size = 4
 	return style
-
 
 func _spawn_bouncing_ball() -> void:
 	var scene_root = get_tree().current_scene
@@ -196,7 +314,6 @@ func _spawn_bouncing_ball() -> void:
 	if gm:
 		gm.show_floating_text.emit("⚽ ¡Patea o lanza la pelota a Monky!", Vector2(540, 720), Color(1, 0.85, 0.2))
 
-
 func _spawn_draggable(type: String, data: Dictionary = {}) -> void:
 	var scene_root = get_tree().current_scene
 	if not scene_root:
@@ -210,9 +327,6 @@ func _spawn_draggable(type: String, data: Dictionary = {}) -> void:
 	item.global_position = get_viewport().get_mouse_position()
 	item.setup(type, data)
 
-
-
-
 func _setup_shop_modal() -> void:
 	btn_coins.pressed.connect(func():
 		_open_shop()
@@ -224,12 +338,12 @@ func _setup_shop_modal() -> void:
 	# Packs de Monedas
 	btn_pack_daily.pressed.connect(func():
 		if gm:
-			gm.add_coins(50)
+			gm.add_coins(25)
 			_update_shop_balance()
 	)
 	btn_pack_ad.pressed.connect(func():
 		if gm:
-			gm.add_coins(100)
+			gm.add_coins(50)
 			_update_shop_balance()
 	)
 	btn_pack_bag.pressed.connect(func():
@@ -273,7 +387,7 @@ func _open_shop() -> void:
 	panel.scale = Vector2(0.7, 0.7)
 	panel.pivot_offset = panel.size / 2.0
 	var tween = create_tween()
-	tween.tween_property(panel, "scale", Vector2(1.0, 1.0), 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _close_shop() -> void:
 	var panel = shop_popup.get_node("Panel")
@@ -286,7 +400,6 @@ func _close_shop() -> void:
 func _update_shop_balance() -> void:
 	if gm and shop_balance_label:
 		shop_balance_label.text = "Saldo: " + str(gm.coins) + " 🪙"
-
 
 func _on_stat_changed(stat_name: String, current_value: float, max_value: float) -> void:
 	_update_stat_ui(stat_name, current_value, max_value)
@@ -318,6 +431,8 @@ func _update_stat_ui(stat_name: String, value: float, max_val: float) -> void:
 
 func _on_coins_changed(new_coins: int) -> void:
 	coins_label.text = str(new_coins)
+	_update_shop_balance()
+	_update_market_balance()
 
 func _on_xp_changed(cur_xp: float, max_xp: float, lvl: int) -> void:
 	level_label.text = "⭐ NIV. " + str(lvl)
@@ -325,12 +440,12 @@ func _on_xp_changed(cur_xp: float, max_xp: float, lvl: int) -> void:
 	xp_bar.value = cur_xp
 
 func _on_level_up(new_level: int) -> void:
-	level_popup_label.text = "¡Monky ha alcanzado el Nivel " + str(new_level) + "!\nHas ganado " + str(new_level * 10) + " 🪙 de bonificación."
+	level_popup_label.text = "¡Monky ha alcanzado el Nivel " + str(new_level) + "!\nHas ganado " + str(new_level * 5) + " 🪙 de bonificación."
 	level_popup.visible = true
 	var tween = create_tween()
 	level_popup.scale = Vector2(0.5, 0.5)
 	level_popup.pivot_offset = level_popup.size / 2.0
-	tween.tween_property(level_popup, "scale", Vector2(1.0, 1.0), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(level_popup, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _on_room_changed(room_name: String) -> void:
 	_update_room_view(room_name)

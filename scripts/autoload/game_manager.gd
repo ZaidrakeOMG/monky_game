@@ -10,11 +10,12 @@ signal level_up(new_level: int)
 signal room_changed(room_name: String)
 signal monky_state_changed(new_state: String)
 signal show_floating_text(text: String, global_pos: Vector2, color: Color)
+signal food_inventory_changed()
 
 const SAVE_PATH := "user://monky_save.cfg"
 const MAX_STAT := 100.0
 
-# Nivel y Experiencia
+# Nivel y Experiencia (Curva móvil balanceada)
 var level: int = 1:
 	set(val):
 		level = maxi(1, val)
@@ -27,11 +28,11 @@ var xp: float = 0.0:
 			xp -= get_xp_needed()
 			level += 1
 			level_up.emit(level)
-			add_coins(level * 10)
+			add_coins(level * 5)
 		xp_changed.emit(xp, get_xp_needed(), level)
 
 func get_xp_needed() -> float:
-	return float(level * 50 + 50)
+	return 120.0 * pow(float(level), 1.35) + 180.0
 
 # Estadísticas de Monky (0 a 100)
 var hunger: float = 100.0:
@@ -59,15 +60,30 @@ var coins: int = 50:
 		coins = maxi(0, val)
 		coins_changed.emit(coins)
 
-# Catálogo de comidas
+# Catálogo oficial de comidas del Mercado
 const FOOD_CATALOG := [
-	{"id": "apple", "name": "Manzana", "icon": "🍎", "hunger": 15.0, "price": 0, "xp": 10.0},
-	{"id": "cookie", "name": "Galleta", "icon": "🍪", "hunger": 20.0, "price": 5, "xp": 15.0},
-	{"id": "milk", "name": "Leche", "icon": "🥛", "hunger": 25.0, "price": 8, "xp": 20.0},
-	{"id": "pizza", "name": "Pizza", "icon": "🍕", "hunger": 40.0, "price": 15, "xp": 30.0},
-	{"id": "cake", "name": "Pastel", "icon": "🍰", "hunger": 50.0, "price": 25, "xp": 45.0},
-	{"id": "ice_cream", "name": "Helado", "icon": "🍦", "hunger": 35.0, "price": 12, "xp": 25.0}
+	{"id": "apple", "name": "Manzana", "icon": "🍎", "hunger": 15.0, "price": 8, "xp": 4.0, "category": "Frutas"},
+	{"id": "banana", "name": "Plátano", "icon": "🍌", "hunger": 18.0, "price": 10, "xp": 5.0, "category": "Frutas"},
+	{"id": "strawberry", "name": "Fresa", "icon": "🍓", "hunger": 12.0, "price": 8, "xp": 3.0, "category": "Frutas"},
+	{"id": "watermelon", "name": "Sandía", "icon": "🍉", "hunger": 25.0, "price": 15, "xp": 6.0, "category": "Frutas"},
+	{"id": "cookie", "name": "Galleta", "icon": "🍪", "hunger": 20.0, "price": 12, "xp": 4.0, "category": "Dulces"},
+	{"id": "donut", "name": "Dona", "icon": "🍩", "hunger": 22.0, "price": 14, "xp": 5.0, "category": "Dulces"},
+	{"id": "ice_cream", "name": "Helado", "icon": "🍦", "hunger": 30.0, "price": 20, "xp": 6.0, "category": "Dulces"},
+	{"id": "cake", "name": "Pastel", "icon": "🍰", "hunger": 45.0, "price": 35, "xp": 9.0, "category": "Dulces"},
+	{"id": "milk", "name": "Leche", "icon": "🥛", "hunger": 20.0, "price": 10, "xp": 4.0, "category": "Bebidas"},
+	{"id": "juice", "name": "Jugo", "icon": "🧃", "hunger": 22.0, "price": 12, "xp": 5.0, "category": "Bebidas"},
+	{"id": "pizza", "name": "Pizza", "icon": "🍕", "hunger": 35.0, "price": 25, "xp": 7.0, "category": "Comidas"},
+	{"id": "burger", "name": "Hamburguesa", "icon": "🍔", "hunger": 40.0, "price": 30, "xp": 8.0, "category": "Comidas"}
 ]
+
+# Inventario de Comida del Jugador (Nevera)
+var food_inventory: Dictionary = {
+	"apple": 3,
+	"cookie": 2,
+	"milk": 2,
+	"banana": 1,
+	"pizza": 1
+}
 
 # Estado actual
 var current_room: String = "dormitorio"
@@ -80,18 +96,16 @@ func _ready() -> void:
 
 func _setup_decay_timer() -> void:
 	decay_timer = Timer.new()
-	decay_timer.wait_time = 3.0 # Cada 3 segundos se actualizan necesidades
+	decay_timer.wait_time = 3.0
 	decay_timer.autostart = true
 	decay_timer.timeout.connect(_on_decay_tick)
 	add_child(decay_timer)
 
 func _on_decay_tick() -> void:
 	if is_sleeping:
-		# Si duerme, recupera energía
-		energy += 2.5
+		energy += 2.0
 		hunger -= 0.1
 	else:
-		# Pérdida pasiva natural con el tiempo
 		hunger -= 0.25
 		energy -= 0.15
 		fun -= 0.2
@@ -100,32 +114,57 @@ func _on_decay_tick() -> void:
 func add_xp(amount: float) -> void:
 	xp += amount
 
-# Métodos de interacción
-func feed_item(food: Dictionary) -> bool:
-	if food.price > 0 and coins < food.price:
-		show_floating_text.emit("¡Faltan monedas!", Vector2(540, 1000), Color(1, 0.3, 0.3))
+func get_food_quantity(food_id: String) -> int:
+	return food_inventory.get(food_id, 0)
+
+func buy_food(food_id: String, amount: int = 1) -> bool:
+	var item_data: Dictionary = {}
+	for item in FOOD_CATALOG:
+		if item.id == food_id:
+			item_data = item
+			break
+	if item_data.is_empty():
 		return false
 
-	if food.price > 0:
-		spend_coins(food.price)
+	var total_cost = item_data.price * amount
+	if spend_coins(total_cost):
+		food_inventory[food_id] = food_inventory.get(food_id, 0) + amount
+		food_inventory_changed.emit()
+		save_game()
+		show_floating_text.emit("¡Compraste " + item_data.name + "! " + item_data.icon, Vector2(540, 850), Color(0.3, 1.0, 0.4))
+		return true
+	else:
+		show_floating_text.emit("¡Faltan monedas! 🪙", Vector2(540, 850), Color(1, 0.4, 0.4))
+		return false
 
-	hunger += food.hunger
-	add_xp(food.xp)
+func feed_item(food: Dictionary) -> bool:
+	var f_id = food.get("id", "")
+	var current_qty = get_food_quantity(f_id)
+	if current_qty <= 0:
+		show_floating_text.emit("¡Comida agotada! Compra en el mercado 🛒", Vector2(540, 950), Color(1, 0.4, 0.4))
+		return false
+
+	food_inventory[f_id] = current_qty - 1
+	food_inventory_changed.emit()
+
+	hunger += food.get("hunger", 18.0)
+	add_xp(food.get("xp", 4.0))
 	monky_state_changed.emit("eating")
-	show_floating_text.emit("+" + str(int(food.hunger)) + " 🍎", Vector2(540, 950), Color(0.3, 1.0, 0.4))
+	show_floating_text.emit("+" + str(int(food.get("hunger", 18.0))) + " 🍎", Vector2(540, 950), Color(0.3, 1.0, 0.4))
+	save_game()
 	return true
 
 func clean(amount: float = 25.0) -> void:
 	hygiene += amount
-	add_xp(15.0)
+	add_xp(4.0)
 	monky_state_changed.emit("happy")
 	show_floating_text.emit("+" + str(int(amount)) + " 🧼", Vector2(540, 950), Color(0.3, 0.8, 1.0))
 
 func play_with_monky(amount: float = 20.0) -> void:
 	fun += amount
-	energy -= 2.0
-	hunger -= 1.5
-	add_xp(10.0)
+	energy -= 1.5
+	hunger -= 1.0
+	add_xp(3.0)
 	monky_state_changed.emit("happy")
 
 func toggle_sleep() -> void:
@@ -161,6 +200,7 @@ func save_game() -> void:
 	config.set_value("game", "xp", xp)
 	config.set_value("game", "current_room", current_room)
 	config.set_value("game", "last_timestamp", Time.get_unix_time_from_system())
+	config.set_value("inventory", "foods", food_inventory)
 	config.save(SAVE_PATH)
 
 func load_game() -> void:
@@ -177,6 +217,13 @@ func load_game() -> void:
 	level = config.get_value("game", "level", 1)
 	xp = config.get_value("game", "xp", 0.0)
 	current_room = config.get_value("game", "current_room", "dormitorio")
+	food_inventory = config.get_value("inventory", "foods", {
+		"apple": 3,
+		"cookie": 2,
+		"milk": 2,
+		"banana": 1,
+		"pizza": 1
+	})
 
 	var last_time: int = config.get_value("game", "last_timestamp", 0)
 	if last_time > 0:
