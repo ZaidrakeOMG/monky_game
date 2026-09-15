@@ -127,4 +127,13 @@ func play_reaction_bounce(target_scale: Vector2) -> void:
 	tween.tween_property(self, "scale", original_scale * target_scale, 0.15)
 	tween.tween_property(self, "scale", original_scale, 0.2)
 
+## Reacción física cuando la pelota golpea a Monky (cabezazo / volea)
+func on_ball_hit(_ball_vel: Vector2) -> void:
+	play_reaction_bounce(Vector2(1.25, 0.8))
+	if gm:
+		gm.play_with_monky(12.0)
+		gm.add_coins(2)
+		gm.show_floating_text.emit("⚽ ¡Buen pase! +2🪙", global_position + Vector2(0, -180), Color(0.3, 0.9, 1.0))
+
+
 

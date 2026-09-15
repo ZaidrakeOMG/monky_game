@@ -23,10 +23,11 @@ extends Node2D
 @onready var btn_restart: Button = $HUD/GameOverModal/Margin/VBox/Buttons/BtnRestart
 @onready var btn_home: Button = $HUD/GameOverModal/Margin/VBox/Buttons/BtnHome
 
-const GRAVITY: float = 1800.0
-const JUMP_POWER: float = -950.0
-const SUPER_JUMP_POWER: float = -1450.0
+const GRAVITY: float = 1750.0
+const JUMP_POWER: float = -1180.0
+const SUPER_JUMP_POWER: float = -1680.0
 const SCREEN_WIDTH: float = 1080.0
+
 
 var velocity: Vector2 = Vector2.ZERO
 var max_altitude: float = 0.0
@@ -132,9 +133,25 @@ func _process(delta: float) -> void:
 	if player.position.y > (camera.position.y + 1050.0):
 		_trigger_game_over()
 
+func _unhandled_input(event: InputEvent) -> void:
+	if is_game_over:
+		return
+	var is_tap = false
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		is_tap = true
+	elif event is InputEventScreenTouch and event.pressed:
+		is_tap = true
+
+	# Toque en pantalla da un pequeño aleteo/impulso extra hacia arriba
+	if is_tap and velocity.y > -400.0:
+		velocity.y = -680.0
+		var tween = create_tween()
+		tween.tween_property(player, "scale", Vector2(0.9, 1.2), 0.08)
+		tween.tween_property(player, "scale", Vector2.ONE, 0.1)
+
 func _spawn_next_platform() -> void:
-	highest_platform_y -= randf_range(160.0, 240.0)
-	var spawn_x = randf_range(120.0, 960.0)
+	highest_platform_y -= randf_range(130.0, 185.0)
+	var spawn_x = randf_range(140.0, 940.0)
 	var p_type = "normal"
 	var roll = randf()
 	if roll < 0.25:
@@ -145,6 +162,7 @@ func _spawn_next_platform() -> void:
 		p_type = "coin"
 
 	_create_platform(Vector2(spawn_x, highest_platform_y), p_type)
+
 
 func _create_platform(pos: Vector2, p_type: String) -> void:
 	var plat = Area2D.new()

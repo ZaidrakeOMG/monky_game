@@ -90,6 +90,22 @@ func _select_room(r_name: String) -> void:
 		gm.change_room(r_name)
 
 func _setup_action_drawers() -> void:
+	# Quitar fondo oscuro por defecto de los cajones
+	var empty_panel = StyleBoxEmpty.new()
+	kitchen_drawer.add_theme_stylebox_override("panel", empty_panel)
+	bath_drawer.add_theme_stylebox_override("panel", empty_panel)
+	bed_drawer.add_theme_stylebox_override("panel", empty_panel)
+	play_drawer.add_theme_stylebox_override("panel", empty_panel)
+
+	# Estilo base para botones de acción
+	var food_style = _create_card_style(Color(1.0, 0.96, 0.88), Color(0.8, 0.65, 0.4))
+	var ball_style = _create_card_style(Color(1.0, 0.92, 0.78), Color(0.88, 0.62, 0.25))
+	var game_style = _create_card_style(Color(0.92, 0.88, 1.0), Color(0.65, 0.5, 0.9))
+	var soap_style = _create_card_style(Color(0.85, 0.96, 1.0), Color(0.3, 0.75, 0.9))
+	var shower_style = _create_card_style(Color(0.85, 0.9, 1.0), Color(0.4, 0.6, 0.95))
+	var lamp_style = _create_card_style(Color(0.88, 0.88, 0.98), Color(0.5, 0.5, 0.85))
+
+
 	# Configurar comidas en la cocina (Arrastrables con mordiscos físicos)
 	for child in food_items_grid.get_children():
 		child.queue_free()
@@ -97,9 +113,11 @@ func _setup_action_drawers() -> void:
 	var catalog = gm.FOOD_CATALOG if gm else []
 	for food in catalog:
 		var card = Button.new()
-		card.custom_minimum_size = Vector2(160, 180)
+		card.custom_minimum_size = Vector2(170, 180)
 		card.text = food.icon + "\n" + food.name + "\n" + (str(food.price) + " 🪙" if food.price > 0 else "GRATIS")
 		card.add_theme_font_size_override("font_size", 22)
+		card.add_theme_color_override("font_color", Color(0.35, 0.22, 0.12))
+		card.add_theme_stylebox_override("normal", food_style)
 		card.pressed.connect(func():
 			if gm and food.price > 0 and gm.coins < food.price:
 				gm.show_floating_text.emit("¡No tienes suficientes monedas! 🪙", get_viewport().get_mouse_position(), Color(1, 0.4, 0.4))
@@ -109,35 +127,75 @@ func _setup_action_drawers() -> void:
 		food_items_grid.add_child(card)
 
 	# Configurar acciones de baño (Arrastrables interactivos: Jabón y Ducha)
+	btn_soap.text = "🧼\nEnjabonar"
+	btn_soap.add_theme_color_override("font_color", Color(0.15, 0.35, 0.5))
+	btn_soap.add_theme_stylebox_override("normal", soap_style)
 	btn_soap.pressed.connect(func():
 		_spawn_draggable("soap")
 	)
+
+	btn_shower.text = "🚿\nEnjuagar"
+	btn_shower.add_theme_color_override("font_color", Color(0.15, 0.3, 0.55))
+	btn_shower.add_theme_stylebox_override("normal", shower_style)
 	btn_shower.pressed.connect(func():
 		_spawn_draggable("shower")
 	)
 
 	# Configurar acciones de dormitorio
+	btn_lamp.text = "🌙\nDormir"
+	btn_lamp.add_theme_color_override("font_color", Color(0.25, 0.2, 0.45))
+	btn_lamp.add_theme_stylebox_override("normal", lamp_style)
 	btn_lamp.pressed.connect(func():
 		if gm:
 			gm.toggle_sleep()
-			btn_lamp.text = "☀️ Despertar" if gm.is_sleeping else "🌙 Dormir"
+			btn_lamp.text = "☀️\nDespertar" if gm.is_sleeping else "🌙\nDormir"
 	)
 
-	# Configurar acciones de juego
+	# Configurar acciones de juego (Pelota física y Selector de Minijuegos)
+	btn_ball.text = "⚽\nLanzar Pelota"
+	btn_ball.add_theme_color_override("font_color", Color(0.4, 0.25, 0.1))
+	btn_ball.add_theme_stylebox_override("normal", ball_style)
 	btn_ball.pressed.connect(func():
-		if gm:
-			gm.play_with_monky(25.0)
-			gm.add_coins(3)
+		_spawn_bouncing_ball()
 	)
+
+	btn_game.text = "🎮\nMinijuegos"
+	btn_game.add_theme_color_override("font_color", Color(0.3, 0.18, 0.5))
+	btn_game.add_theme_stylebox_override("normal", game_style)
 	btn_game.pressed.connect(func():
 		# Abrir Selector / Hub de Minijuegos
 		get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/minigames_menu.tscn")
 	)
 
-
 	btn_close_level.pressed.connect(func():
 		level_popup.visible = false
 	)
+
+func _create_card_style(bg_col: Color, border_col: Color) -> StyleBoxFlat:
+	var style = StyleBoxFlat.new()
+	style.bg_color = bg_col
+	style.border_color = border_col
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(20)
+	style.shadow_color = Color(0, 0, 0, 0.2)
+	style.shadow_size = 4
+	return style
+
+
+func _spawn_bouncing_ball() -> void:
+	var scene_root = get_tree().current_scene
+	if not scene_root:
+		return
+	for child in scene_root.get_children():
+		if child is BouncingBall:
+			child.queue_free()
+	var ball_scene = preload("res://scenes/monky/bouncing_ball.tscn")
+	var ball = ball_scene.instantiate()
+	scene_root.add_child(ball)
+	ball.global_position = Vector2(540, 850)
+	if gm:
+		gm.show_floating_text.emit("⚽ ¡Patea o lanza la pelota a Monky!", Vector2(540, 720), Color(1, 0.85, 0.2))
+
 
 func _spawn_draggable(type: String, data: Dictionary = {}) -> void:
 	var scene_root = get_tree().current_scene
