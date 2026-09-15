@@ -1,4 +1,4 @@
-﻿extends Node2D
+extends Node2D
 
 ## Controlador del Minijuego "¡Atrapa la Fruta!" (Fruit Catcher)
 ## Sala de Juegos - Minijuego arcade táctil con frutas, monedas, bombas y recompensas reales.
@@ -11,18 +11,19 @@
 @onready var spawn_timer: Timer = $SpawnTimer
 
 # UI Nodes
-@onready var score_label: Label = $HUD/TopBar/ScoreBox/ScoreLabel
-@onready var coins_label: Label = $HUD/TopBar/CoinsBox/CoinsLabel
-@onready var lives_label: Label = $HUD/TopBar/LivesBox/LivesLabel
-@onready var btn_exit: Button = $HUD/TopBar/BtnExit
+@onready var score_label: Label = $HUD/TopBar/HBox/ScoreBox/ScoreLabel
+@onready var coins_label: Label = $HUD/TopBar/HBox/CoinsBox/CoinsLabel
+@onready var lives_label: Label = $HUD/TopBar/HBox/LivesBox/LivesLabel
+@onready var btn_exit: Button = $HUD/TopBar/HBox/BtnExit
 
 # Game Over Modal
 @onready var game_over_modal: PanelContainer = $HUD/GameOverModal
-@onready var final_score_label: Label = $HUD/GameOverModal/Margin/VBox/StatsGrid/ScoreValue
-@onready var final_coins_label: Label = $HUD/GameOverModal/Margin/VBox/StatsGrid/CoinsValue
-@onready var high_score_label: Label = $HUD/GameOverModal/Margin/VBox/StatsGrid/HighScoreValue
+@onready var final_score_label: Label = $HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxScore/ScoreValue
+@onready var final_coins_label: Label = $HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxCoins/CoinsValue
+@onready var high_score_label: Label = $HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxHigh/HighScoreValue
 @onready var btn_restart: Button = $HUD/GameOverModal/Margin/VBox/Buttons/BtnRestart
 @onready var btn_home: Button = $HUD/GameOverModal/Margin/VBox/Buttons/BtnHome
+
 
 const FRUIT_TYPES := [
 	{"icon": "🍎", "name": "Manzana", "points": 10, "is_bomb": false, "is_coin": false},

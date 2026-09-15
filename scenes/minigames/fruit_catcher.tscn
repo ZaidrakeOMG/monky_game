@@ -1,7 +1,8 @@
-﻿[gd_scene load_steps=8 format=3 uid="uid://c7fruitcatcher01"]
+[gd_scene load_steps=8 format=3 uid="uid://c7fruitcatcher01"]
 
 [ext_resource type="Script" path="res://scripts/minigames/fruit_catcher.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://bfrh6k32gq58y" path="res://assets/backgrounds/sala_juegos.jpg" id="2_bg"]
+[ext_resource type="Texture2D" uid="uid://cts7l3u1cw1s6" path="res://assets/backgrounds/sala_juegos.jpg" id="2_bg"]
+
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_basket"]
 size = Vector2(220, 70)
