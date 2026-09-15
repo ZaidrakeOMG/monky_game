@@ -1,8 +1,8 @@
 extends Node2D
 class_name Monky
 
-## Controlador visual e interactivo de Monky
-## Maneja las animaciones, estados y eventos táctiles (caricias / toques).
+## Controlador visual e interactivo de Monky.
+## Maneja animaciones, sueño, comida, baño y reacciones táctiles.
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var touch_area: Area2D = $TouchArea
@@ -16,111 +16,92 @@ var is_interacting: bool = false
 var original_scale: Vector2
 var gm: Node = null
 var soap_level: float = 0.0
-var body_dirt_level: float = 0.0
-var dirt_overlay: Node2D = null
+var bath_animation_time: float = 0.0
+var is_rinsing: bool = false
+
 
 func _ready() -> void:
 	original_scale = scale
 	gm = get_tree().root.get_node_or_null("GameManager")
-	if animated_sprite and animated_sprite.sprite_frames and animated_sprite.sprite_frames.has_animation("pensando"):
-		animated_sprite.play("pensando")
+
+	if animated_sprite:
+		if not animated_sprite.animation_finished.is_connected(_on_animation_finished):
+			animated_sprite.animation_finished.connect(_on_animation_finished)
+
+		if gm and gm.is_sleeping:
+			_play_sleep_animation()
+		else:
+			_play_idle_animation()
 
 	if gm:
-		body_dirt_level = clampf((100.0 - gm.hygiene) / 100.0, 0.0, 1.0)
-	_setup_dirt_overlay()
-
-	# Conectar con el GameManager
-	if gm:
-		gm.monky_state_changed.connect(_on_monky_state_changed)
-		gm.stat_changed.connect(_on_stat_changed)
+		if not gm.monky_state_changed.is_connected(_on_monky_state_changed):
+			gm.monky_state_changed.connect(_on_monky_state_changed)
 
 	if touch_area:
-		touch_area.input_event.connect(_on_touch_area_input_event)
+		if not touch_area.input_event.is_connected(_on_touch_area_input_event):
+			touch_area.input_event.connect(_on_touch_area_input_event)
 
 	if mouth_area:
-		mouth_area.area_entered.connect(_on_mouth_area_entered)
+		if not mouth_area.area_entered.is_connected(_on_mouth_area_entered):
+			mouth_area.area_entered.connect(_on_mouth_area_entered)
 
 	if body_area:
-		body_area.area_entered.connect(_on_body_area_entered)
+		if not body_area.area_entered.is_connected(_on_body_area_entered):
+			body_area.area_entered.connect(_on_body_area_entered)
 
-func _setup_dirt_overlay() -> void:
-	dirt_overlay = Node2D.new()
-	dirt_overlay.name = "DirtOverlay"
-	dirt_overlay.z_index = 2
-	add_child(dirt_overlay)
 
-	var patch_positions = [
-		Vector2(-90, -40), # Mejilla izquierda
-		Vector2(100, -30), # Mejilla derecha
-		Vector2(10, -130), # Frente
-		Vector2(-60, 90),  # Pancita izquierda
-		Vector2(70, 110),  # Pancita derecha
-		Vector2(-10, 160)  # Abajo
-	]
-	var patch_sizes = [
-		Vector2(32, 24),
-		Vector2(28, 26),
-		Vector2(36, 20),
-		Vector2(40, 28),
-		Vector2(34, 25),
-		Vector2(45, 22)
-	]
+func _process(delta: float) -> void:
+	# La animación de baño permanece mientras se usa la herramienta y
+	# vuelve a Pensando poco después de dejar de frotar.
+	if bath_animation_time > 0.0:
+		bath_animation_time = maxf(0.0, bath_animation_time - delta)
+		if bath_animation_time <= 0.0 and not is_rinsing:
+			if animated_sprite and animated_sprite.animation == &"bano_jabon":
+				_play_idle_animation()
 
-	for i in range(patch_positions.size()):
-		var patch = Panel.new()
-		var p_style = StyleBoxFlat.new()
-		p_style.bg_color = Color(0.42, 0.28, 0.15, 0.78) # Manchas de barro / suciedad
-		p_style.set_corner_radius_all(14)
-		patch.add_theme_stylebox_override("panel", p_style)
-		patch.size = patch_sizes[i]
-		patch.position = patch_positions[i] - (patch_sizes[i] / 2.0)
-		patch.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		dirt_overlay.add_child(patch)
-
-	update_dirt_visuals()
-
-func update_dirt_visuals() -> void:
-	if not dirt_overlay:
-		return
-	var target_alpha = 0.0
-	if body_dirt_level > 0.08:
-		target_alpha = clampf((body_dirt_level - 0.08) / 0.85, 0.0, 1.0)
-	
-	var tween = create_tween()
-	tween.tween_property(dirt_overlay, "modulate:a", target_alpha, 0.3)
-
-func _on_stat_changed(stat_name: String, cur_val: float, _max_val: float) -> void:
-	if stat_name == "hygiene":
-		if cur_val < 70.0:
-			var calculated_dirt = (100.0 - cur_val) / 100.0
-			body_dirt_level = maxf(body_dirt_level, calculated_dirt)
-			update_dirt_visuals()
 
 func can_eat() -> bool:
 	if gm:
 		return gm.can_eat_food()
 	return true
 
+
 func reject_food() -> void:
 	if is_interacting:
 		return
+
 	is_interacting = true
-	var orig_pos = position
+
+	if animated_sprite and animated_sprite.sprite_frames:
+		if animated_sprite.sprite_frames.has_animation("rechazar_comida"):
+			animated_sprite.modulate = Color.WHITE
+			animated_sprite.play("rechazar_comida")
+
+	var orig_pos: Vector2 = position
 	var tween = create_tween()
 	tween.tween_property(self, "position:x", orig_pos.x - 25.0, 0.06)
 	tween.tween_property(self, "position:x", orig_pos.x + 25.0, 0.08)
 	tween.tween_property(self, "position:x", orig_pos.x - 18.0, 0.07)
 	tween.tween_property(self, "position:x", orig_pos.x, 0.06)
+
 	if gm:
-		gm.show_floating_text.emit("¡Estoy lleno! 😋", global_position + Vector2(0, -180), Color(1.0, 0.8, 0.2))
+		gm.show_floating_text.emit(
+			"¡Estoy lleno!",
+			global_position + Vector2(0, -180),
+			Color(1.0, 0.8, 0.2)
+		)
+
 	await tween.finished
 	is_interacting = false
+
 
 func _on_mouth_area_entered(other_area: Area2D) -> void:
 	var item = other_area.get_parent()
 	if not item:
 		return
+
 	var type = item.get("item_type")
+
 	if item.has_method("take_bite") and type == "food":
 		if can_eat():
 			item.take_bite(self)
@@ -128,6 +109,7 @@ func _on_mouth_area_entered(other_area: Area2D) -> void:
 			reject_food()
 	elif type == "toothbrush":
 		brush_teeth(15.0)
+
 
 func _on_body_area_entered(other_area: Area2D) -> void:
 	var item = other_area.get_parent()
@@ -138,40 +120,71 @@ func _on_body_area_entered(other_area: Area2D) -> void:
 		elif type == "shower":
 			rinse_water()
 
-## Cepillado de dientes con brillo en la boca (NO limpia el barro del cuerpo)
+
+func _play_bath_animation(duration: float = 0.65) -> void:
+	bath_animation_time = maxf(bath_animation_time, duration)
+	if not animated_sprite or not animated_sprite.sprite_frames:
+		return
+	if animated_sprite.sprite_frames.has_animation("bano_jabon"):
+		animated_sprite.modulate = Color.WHITE
+		if animated_sprite.animation != &"bano_jabon":
+			animated_sprite.play("bano_jabon")
+
+
+## Cepillado de dientes.
 func brush_teeth(amount: float = 15.0) -> void:
+	_play_bath_animation(0.65)
+
 	if sparkle_particles:
 		sparkle_particles.emitting = true
+
 	if gm:
 		gm.brush_teeth_action(amount)
-	play_reaction_bounce(Vector2(1.12, 0.9))
 
-## Reacción física a cada mordisco de comida
+	play_reaction_bounce(Vector2(1.08, 0.94))
+
+
+## Reacción física y animación a cada mordisco de comida.
 func on_bite_received(_food_name: String) -> void:
-	var tween = create_tween()
-	tween.tween_property(self, "scale", original_scale * Vector2(1.18, 0.82), 0.08)
-	tween.tween_property(self, "scale", original_scale * Vector2(0.92, 1.08), 0.1)
-	tween.tween_property(self, "scale", original_scale, 0.12)
+	if animated_sprite and animated_sprite.sprite_frames:
+		if animated_sprite.sprite_frames.has_animation("comer"):
+			animated_sprite.modulate = Color.WHITE
+			if animated_sprite.animation != &"comer":
+				animated_sprite.play("comer")
 
-## Aplicar jabón y generar burbujas en el cuerpo (disuelve el barro progresivamente)
+	var tween = create_tween()
+	tween.tween_property(self, "scale", original_scale * Vector2(1.12, 0.88), 0.07)
+	tween.tween_property(self, "scale", original_scale * Vector2(0.96, 1.04), 0.08)
+	tween.tween_property(self, "scale", original_scale, 0.10)
+
+
+## Aplicar jabón. No se dibujan manchas sobre el personaje.
 func apply_soap(amount: float = 15.0) -> void:
 	soap_level = minf(soap_level + amount, 100.0)
-	# El jabón disuelve las manchas de barro a medida que se frota
-	body_dirt_level = maxf(0.0, body_dirt_level - 0.20)
-	update_dirt_visuals()
+	_play_bath_animation(0.70)
+
 	if soap_particles:
 		soap_particles.emitting = true
+
 	if gm:
 		gm.clean(amount * 0.4)
-	play_reaction_bounce(Vector2(1.08, 1.08))
 
-## Enjuagar con agua y limpiar toda la espuma y suciedad del cuerpo
+	play_reaction_bounce(Vector2(1.04, 1.04))
+
+
+## Enjuagar con agua. Se evita lanzar varios enjuagues simultáneos.
 func rinse_water() -> void:
+	if is_rinsing:
+		return
+
+	is_rinsing = true
+	_play_bath_animation(0.95)
+
 	if water_particles:
 		water_particles.emitting = true
-	
+
 	await get_tree().create_timer(0.6).timeout
-	
+
 	if soap_particles:
 		soap_particles.emitting = false
 	if water_particles:
@@ -180,83 +193,147 @@ func rinse_water() -> void:
 		sparkle_particles.emitting = true
 
 	if gm:
-		var was_dirty: bool = (body_dirt_level > 0.05 or soap_level > 20.0 or gm.hygiene < 85.0)
+		var was_dirty: bool = soap_level > 20.0 or gm.hygiene < 85.0
 		gm.wash_body(50.0)
+
 		if was_dirty:
 			gm.add_coins(3)
-			gm.show_floating_text.emit("✨ ¡Monky está limpio! +3 🪙", global_position + Vector2(0, -180), Color(0.4, 0.9, 1.0))
+			gm.show_floating_text.emit(
+				"¡Monky está limpio! +3",
+				global_position + Vector2(0, -180),
+				Color(0.4, 0.9, 1.0)
+			)
 		else:
-			gm.show_floating_text.emit("✨ ¡Monky está reluciente! ✨", global_position + Vector2(0, -180), Color(0.4, 0.9, 1.0))
-	
-	soap_level = 0.0
-	body_dirt_level = 0.0
-	update_dirt_visuals()
+			gm.show_floating_text.emit(
+				"¡Monky está reluciente!",
+				global_position + Vector2(0, -180),
+				Color(0.4, 0.9, 1.0)
+			)
 
-func _on_touch_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
+	soap_level = 0.0
+	is_rinsing = false
+	bath_animation_time = 0.0
+
+	if gm and gm.is_sleeping:
+		_play_sleep_animation()
+	else:
+		_play_idle_animation()
+
+
+func _on_touch_area_input_event(
+	_viewport: Node,
+	event: InputEvent,
+	_shape_idx: int
+) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		on_tapped()
 	elif event is InputEventScreenTouch and event.pressed:
 		on_tapped()
 
-## Reacción al tocar o acariciar a Monky (cosquillas / caricias)
+
+## Reacción al tocar o acariciar a Monky.
 func on_tapped() -> void:
 	if is_interacting:
 		return
-	is_interacting = true
 
-	# Efecto visual de rebote (Squash & Stretch)
+	is_interacting = true
 	var tween = create_tween()
 	tween.tween_property(self, "scale", original_scale * Vector2(1.15, 0.85), 0.1)
 	tween.tween_property(self, "scale", original_scale * Vector2(0.9, 1.1), 0.1)
 	tween.tween_property(self, "scale", original_scale, 0.15)
-	
-	# Dar felicidad a Monky al acariciarlo
+
 	if gm:
 		gm.play_with_monky(3.0)
 
 	await tween.finished
 	is_interacting = false
 
+
 func _on_monky_state_changed(new_state: String) -> void:
 	match new_state:
 		"eating":
-			play_reaction_bounce(Vector2(1.1, 1.1))
-			if animated_sprite and (not gm or gm.energy > 0):
-				animated_sprite.modulate = Color.WHITE
+			if animated_sprite and animated_sprite.sprite_frames:
+				if animated_sprite.sprite_frames.has_animation("comer"):
+					animated_sprite.modulate = Color.WHITE
+					animated_sprite.play("comer")
 		"happy":
-			play_reaction_bounce(Vector2(1.15, 1.15))
 			if animated_sprite and (not gm or gm.energy > 0):
 				animated_sprite.modulate = Color.WHITE
 		"tired":
-			# Tono suave de descanso sin oscurecer excesivamente el sprite
 			if animated_sprite:
 				animated_sprite.modulate = Color(0.92, 0.90, 0.96)
 		"sleeping":
-			if animated_sprite:
-				animated_sprite.modulate = Color(0.70, 0.70, 0.85)
+			_play_sleep_animation()
 		"idle":
-			if animated_sprite:
-				if gm and gm.energy <= 0.0:
-					animated_sprite.modulate = Color(0.92, 0.90, 0.96)
-				else:
-					animated_sprite.modulate = Color.WHITE
+			_play_idle_animation()
+
+
+## Primero reproduce la entrada de sueño y después queda durmiendo en bucle.
+func _play_sleep_animation() -> void:
+	if not animated_sprite or not animated_sprite.sprite_frames:
+		return
+
+	animated_sprite.modulate = Color.WHITE
+
+	if animated_sprite.sprite_frames.has_animation("dormir_entrada"):
+		animated_sprite.play("dormir_entrada")
+	elif animated_sprite.sprite_frames.has_animation("durmiendo"):
+		animated_sprite.play("durmiendo")
+
+
+func _on_animation_finished() -> void:
+	if not animated_sprite:
+		return
+
+	if animated_sprite.animation == &"dormir_entrada":
+		if gm and gm.is_sleeping and animated_sprite.sprite_frames.has_animation("durmiendo"):
+			animated_sprite.play("durmiendo")
+		return
+
+	if animated_sprite.animation == &"comer" or animated_sprite.animation == &"rechazar_comida":
+		if gm and gm.is_sleeping:
+			_play_sleep_animation()
+		else:
+			_play_idle_animation()
+
+
+func _play_idle_animation() -> void:
+	if not animated_sprite or not animated_sprite.sprite_frames:
+		return
+
+	if gm and gm.energy <= 0.0:
+		animated_sprite.modulate = Color(0.92, 0.90, 0.96)
+	else:
+		animated_sprite.modulate = Color.WHITE
+
+	if animated_sprite.sprite_frames.has_animation("pensando"):
+		animated_sprite.play("pensando")
+
 
 func play_reaction_bounce(target_scale: Vector2) -> void:
 	var tween = create_tween()
 	tween.tween_property(self, "scale", original_scale * target_scale, 0.15)
 	tween.tween_property(self, "scale", original_scale, 0.2)
 
-## Reacción física cuando la pelota golpea a Monky (cabezazo / volea)
+
+## Reacción física cuando la pelota golpea a Monky.
 func on_ball_hit(_ball_vel: Vector2) -> void:
 	play_reaction_bounce(Vector2(1.25, 0.8))
+
 	if gm:
-		var needs_fun: bool = (gm.fun < 90.0)
+		var needs_fun: bool = gm.fun < 90.0
 		gm.play_with_monky(12.0)
+
 		if needs_fun:
 			gm.add_coins(1)
-			gm.show_floating_text.emit("⚽ ¡Buen pase! +1🪙", global_position + Vector2(0, -180), Color(0.3, 0.9, 1.0))
+			gm.show_floating_text.emit(
+				"¡Buen pase! +1",
+				global_position + Vector2(0, -180),
+				Color(0.3, 0.9, 1.0)
+			)
 		else:
-			gm.show_floating_text.emit("⚽ ¡Buen pase!", global_position + Vector2(0, -180), Color(0.3, 0.9, 1.0))
-
-
-
+			gm.show_floating_text.emit(
+				"¡Buen pase!",
+				global_position + Vector2(0, -180),
+				Color(0.3, 0.9, 1.0)
+			)

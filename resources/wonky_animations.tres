@@ -1,0 +1,778 @@
+[gd_resource type="SpriteFrames" load_steps=147 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_001.png" id="p001"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_002.png" id="p002"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_003.png" id="p003"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_004.png" id="p004"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_005.png" id="p005"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_006.png" id="p006"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_007.png" id="p007"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_008.png" id="p008"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_009.png" id="p009"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_010.png" id="p010"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_011.png" id="p011"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_012.png" id="p012"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_013.png" id="p013"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_014.png" id="p014"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_015.png" id="p015"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_016.png" id="p016"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_017.png" id="p017"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_018.png" id="p018"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_019.png" id="p019"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_020.png" id="p020"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_021.png" id="p021"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_022.png" id="p022"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_023.png" id="p023"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_024.png" id="p024"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_025.png" id="p025"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_026.png" id="p026"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_027.png" id="p027"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_028.png" id="p028"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_029.png" id="p029"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_030.png" id="p030"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_031.png" id="p031"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_032.png" id="p032"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_033.png" id="p033"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_034.png" id="p034"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_035.png" id="p035"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_036.png" id="p036"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_037.png" id="p037"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_038.png" id="p038"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_039.png" id="p039"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_040.png" id="p040"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_041.png" id="p041"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_042.png" id="p042"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_043.png" id="p043"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_044.png" id="p044"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_045.png" id="p045"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_046.png" id="p046"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_047.png" id="p047"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_048.png" id="p048"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_049.png" id="p049"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_050.png" id="p050"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_051.png" id="p051"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_052.png" id="p052"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_053.png" id="p053"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_054.png" id="p054"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_055.png" id="p055"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_056.png" id="p056"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_057.png" id="p057"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_058.png" id="p058"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_059.png" id="p059"]
+[ext_resource type="Texture2D" path="res://assets/wonky/pensando/frame_060.png" id="p060"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_001.png" id="s001"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_002.png" id="s002"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_003.png" id="s003"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_004.png" id="s004"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_005.png" id="s005"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_006.png" id="s006"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_007.png" id="s007"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_008.png" id="s008"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_009.png" id="s009"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_010.png" id="s010"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_011.png" id="s011"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_012.png" id="s012"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_013.png" id="s013"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_014.png" id="s014"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_015.png" id="s015"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_016.png" id="s016"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_017.png" id="s017"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_018.png" id="s018"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_019.png" id="s019"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_020.png" id="s020"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_021.png" id="s021"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_022.png" id="s022"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_023.png" id="s023"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_024.png" id="s024"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_025.png" id="s025"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_026.png" id="s026"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_027.png" id="s027"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_028.png" id="s028"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_029.png" id="s029"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_030.png" id="s030"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_031.png" id="s031"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_032.png" id="s032"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_033.png" id="s033"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_034.png" id="s034"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_035.png" id="s035"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_036.png" id="s036"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_037.png" id="s037"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_038.png" id="s038"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_039.png" id="s039"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_040.png" id="s040"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_041.png" id="s041"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_042.png" id="s042"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_043.png" id="s043"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_044.png" id="s044"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_045.png" id="s045"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_046.png" id="s046"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_047.png" id="s047"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_048.png" id="s048"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_049.png" id="s049"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_050.png" id="s050"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_051.png" id="s051"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_052.png" id="s052"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_053.png" id="s053"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_054.png" id="s054"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_055.png" id="s055"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_056.png" id="s056"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_057.png" id="s057"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_058.png" id="s058"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_059.png" id="s059"]
+[ext_resource type="Texture2D" path="res://assets/wonky/durmiendo/frame_060.png" id="s060"]
+[ext_resource type="Texture2D" path="res://assets/wonky/comer/frame_01.png" id="e01"]
+[ext_resource type="Texture2D" path="res://assets/wonky/comer/frame_02.png" id="e02"]
+[ext_resource type="Texture2D" path="res://assets/wonky/comer/frame_03.png" id="e03"]
+[ext_resource type="Texture2D" path="res://assets/wonky/comer/frame_04.png" id="e04"]
+[ext_resource type="Texture2D" path="res://assets/wonky/comer/frame_05.png" id="e05"]
+[ext_resource type="Texture2D" path="res://assets/wonky/comer/frame_06.png" id="e06"]
+[ext_resource type="Texture2D" path="res://assets/wonky/comer/frame_07.png" id="e07"]
+[ext_resource type="Texture2D" path="res://assets/wonky/comer/frame_08.png" id="e08"]
+[ext_resource type="Texture2D" path="res://assets/wonky/rechazar_comida/frame_01.png" id="r01"]
+[ext_resource type="Texture2D" path="res://assets/wonky/rechazar_comida/frame_02.png" id="r02"]
+[ext_resource type="Texture2D" path="res://assets/wonky/rechazar_comida/frame_03.png" id="r03"]
+[ext_resource type="Texture2D" path="res://assets/wonky/rechazar_comida/frame_04.png" id="r04"]
+[ext_resource type="Texture2D" path="res://assets/wonky/rechazar_comida/frame_05.png" id="r05"]
+[ext_resource type="Texture2D" path="res://assets/wonky/rechazar_comida/frame_06.png" id="r06"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_01.png" id="b01"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_02.png" id="b02"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_03.png" id="b03"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_04.png" id="b04"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_05.png" id="b05"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_06.png" id="b06"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_07.png" id="b07"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_08.png" id="b08"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_09.png" id="b09"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_10.png" id="b10"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_11.png" id="b11"]
+[ext_resource type="Texture2D" path="res://assets/wonky/bano_jabon/frame_12.png" id="b12"]
+
+[resource]
+animations = [
+{
+"frames": [
+{
+"duration": 1.0,
+"texture": ExtResource("p001")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p002")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p003")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p004")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p005")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p006")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p007")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p008")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p009")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p010")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p011")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p012")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p013")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p014")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p015")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p016")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p017")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p018")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p019")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p020")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p021")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p022")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p023")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p024")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p025")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p026")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p027")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p028")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p029")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p030")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p031")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p032")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p033")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p034")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p035")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p036")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p037")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p038")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p039")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p040")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p041")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p042")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p043")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p044")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p045")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p046")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p047")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p048")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p049")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p050")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p051")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p052")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p053")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p054")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p055")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p056")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p057")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p058")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p059")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("p060")
+}
+],
+"loop": true,
+"name": &"pensando",
+"speed": 12.0
+},
+{
+"frames": [
+{
+"duration": 1.0,
+"texture": ExtResource("s001")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s002")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s003")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s004")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s005")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s006")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s007")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s008")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s009")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s010")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s011")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s012")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s013")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s014")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s015")
+}
+],
+"loop": false,
+"name": &"dormir_entrada",
+"speed": 12.0
+},
+{
+"frames": [
+{
+"duration": 1.0,
+"texture": ExtResource("s016")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s017")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s018")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s019")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s020")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s021")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s022")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s023")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s024")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s025")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s026")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s027")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s028")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s029")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s030")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s031")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s032")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s033")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s034")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s035")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s036")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s037")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s038")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s039")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s040")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s041")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s042")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s043")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s044")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s045")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s046")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s047")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s048")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s049")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s050")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s051")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s052")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s053")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s054")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s055")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s056")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s057")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s058")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s059")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("s060")
+}
+],
+"loop": true,
+"name": &"durmiendo",
+"speed": 10.0
+},
+{
+"frames": [
+{
+"duration": 1.0,
+"texture": ExtResource("e01")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("e02")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("e03")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("e04")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("e05")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("e06")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("e07")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("e08")
+}
+],
+"loop": false,
+"name": &"comer",
+"speed": 12.0
+},
+{
+"frames": [
+{
+"duration": 1.0,
+"texture": ExtResource("r01")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("r02")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("r03")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("r04")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("r05")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("r06")
+}
+],
+"loop": false,
+"name": &"rechazar_comida",
+"speed": 12.0
+},
+{
+"frames": [
+{
+"duration": 1.0,
+"texture": ExtResource("b01")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("b02")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("b03")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("b04")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("b05")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("b06")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("b07")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("b08")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("b09")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("b10")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("b11")
+},
+{
+"duration": 1.0,
+"texture": ExtResource("b12")
+}
+],
+"loop": true,
+"name": &"bano_jabon",
+"speed": 12.0
+}
+]

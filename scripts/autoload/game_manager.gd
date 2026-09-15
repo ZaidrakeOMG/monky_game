@@ -14,7 +14,6 @@ signal show_floating_text(text: String, global_pos: Vector2, color: Color)
 signal food_inventory_changed()
 signal poop_spawned(pos: Vector2)
 signal poop_removed()
-signal settings_changed()
 
 const SAVE_PATH := "user://monky_save.cfg"
 const MAX_STAT := 100.0
@@ -92,7 +91,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "fish",
 		"name": "Pescado",
-		"icon": "🐟",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/pescado.png",
 		"category": "Proteínas",
 		"protein_g": 24.0,
 		"calories_kcal": 175,
@@ -107,7 +107,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "egg",
 		"name": "Huevo Duro",
-		"icon": "🥚",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/huevo.png",
 		"category": "Proteínas",
 		"protein_g": 6.5,
 		"calories_kcal": 78,
@@ -122,7 +123,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "milk",
 		"name": "Leche",
-		"icon": "🥛",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/leche.png",
 		"category": "Bebidas",
 		"protein_g": 8.2,
 		"calories_kcal": 122,
@@ -137,7 +139,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "burger",
 		"name": "Hamburguesa",
-		"icon": "🍔",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/hamburguesa.png",
 		"category": "Comidas",
 		"protein_g": 18.5,
 		"calories_kcal": 380,
@@ -152,7 +155,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "pizza",
 		"name": "Pizza",
-		"icon": "🍕",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/pizza.png",
 		"category": "Comidas",
 		"protein_g": 11.5,
 		"calories_kcal": 285,
@@ -167,7 +171,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "banana",
 		"name": "Plátano",
-		"icon": "🍌",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/platano.png",
 		"category": "Frutas",
 		"protein_g": 1.3,
 		"calories_kcal": 105,
@@ -182,7 +187,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "apple",
 		"name": "Manzana",
-		"icon": "🍎",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/manzana.png",
 		"category": "Frutas",
 		"protein_g": 0.5,
 		"calories_kcal": 52,
@@ -197,7 +203,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "strawberry",
 		"name": "Fresa",
-		"icon": "🍓",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/fresa.png",
 		"category": "Frutas",
 		"protein_g": 0.8,
 		"calories_kcal": 33,
@@ -212,7 +219,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "watermelon",
 		"name": "Sandía",
-		"icon": "🍉",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/sandia.png",
 		"category": "Frutas",
 		"protein_g": 0.6,
 		"calories_kcal": 30,
@@ -227,7 +235,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "juice",
 		"name": "Jugo Natural",
-		"icon": "🧃",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/jugo.png",
 		"category": "Bebidas",
 		"protein_g": 0.5,
 		"calories_kcal": 95,
@@ -242,7 +251,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "cookie",
 		"name": "Galleta",
-		"icon": "🍪",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/galleta.png",
 		"category": "Dulces",
 		"protein_g": 1.8,
 		"calories_kcal": 160,
@@ -257,7 +267,8 @@ const FOOD_CATALOG := [
 	{
 		"id": "cake",
 		"name": "Pastel",
-		"icon": "🍰",
+		"icon": "",
+		"image": "res://imagenes/opt/alimentos/pastel.png",
 		"category": "Dulces",
 		"protein_g": 3.2,
 		"calories_kcal": 260,
@@ -285,6 +296,7 @@ var current_room: String = "dormitorio"
 var is_sleeping: bool = false
 var decay_timer: Timer
 var time_http_req: HTTPRequest = null
+var sleep_update_accumulator: float = 0.0
 
 func _ready() -> void:
 	load_game()
@@ -292,10 +304,17 @@ func _ready() -> void:
 	_setup_network_time_check()
 
 func _process(delta: float) -> void:
-	# Recuperación precisa en tiempo real durante el sueño (1h = 3600 seg para 100%)
+	# En Android evitamos emitir cambios de UI 60 veces por segundo.
+	# Acumulamos el tiempo y actualizamos el sueño 4 veces por segundo.
 	if is_sleeping and energy < MAX_STAT:
-		var recovery_rate: float = (MAX_STAT / SLEEP_DURATION_SEC) * delta
-		energy = minf(MAX_STAT, energy + recovery_rate)
+		sleep_update_accumulator += delta
+		if sleep_update_accumulator >= 0.25:
+			var elapsed: float = sleep_update_accumulator
+			sleep_update_accumulator = 0.0
+			var recovery_rate: float = (MAX_STAT / SLEEP_DURATION_SEC) * elapsed
+			energy = minf(MAX_STAT, energy + recovery_rate)
+	else:
+		sleep_update_accumulator = 0.0
 
 func _setup_decay_timer() -> void:
 	decay_timer = Timer.new()
@@ -346,10 +365,10 @@ func buy_food(food_id: String, amount: int = 1) -> bool:
 		food_inventory[food_id] = food_inventory.get(food_id, 0) + amount
 		food_inventory_changed.emit()
 		save_game()
-		show_floating_text.emit("¡Compraste " + item_data.name + "! " + item_data.icon, Vector2(540, 850), Color(0.3, 1.0, 0.4))
+		show_floating_text.emit("¡Compraste " + item_data.name + "!", Vector2(540, 850), Color(0.3, 1.0, 0.4))
 		return true
 	else:
-		show_floating_text.emit("¡Faltan monedas! 🪙", Vector2(540, 850), Color(1, 0.4, 0.4))
+		show_floating_text.emit("¡Faltan monedas!", Vector2(540, 850), Color(1, 0.4, 0.4))
 		return false
 
 func can_eat_food() -> bool:
@@ -359,11 +378,11 @@ func feed_item(food: Dictionary) -> bool:
 	var f_id = food.get("id", "")
 	var current_qty = get_food_quantity(f_id)
 	if current_qty <= 0:
-		show_floating_text.emit("¡Comida agotada! Compra en el mercado 🛒", Vector2(540, 950), Color(1, 0.4, 0.4))
+		show_floating_text.emit("¡Comida agotada! Compra en el mercado", Vector2(540, 950), Color(1, 0.4, 0.4))
 		return false
 
 	if not can_eat_food():
-		show_floating_text.emit("¡Monky está lleno! 😋", Vector2(540, 950), Color(1, 0.8, 0.2))
+		show_floating_text.emit("¡Monky está lleno!", Vector2(540, 950), Color(1, 0.8, 0.2))
 		return false
 
 	food_inventory[f_id] = current_qty - 1
@@ -379,23 +398,20 @@ func feed_item(food: Dictionary) -> bool:
 		energy += e_val
 	add_xp(food.get("xp", 4.0))
 	monky_state_changed.emit("eating")
-	show_floating_text.emit("+" + str(int(h_val)) + "🍖  +" + str(int(p_val)) + "🥩", Vector2(540, 950), Color(0.3, 1.0, 0.4))
+	show_floating_text.emit("Comida +" + str(int(h_val)) + "%  Proteína +" + str(int(p_val)) + "%", Vector2(540, 950), Color(0.3, 1.0, 0.4))
 	save_game()
 	return true
 
 func clean(amount: float = 25.0) -> void:
 	hygiene += amount
-	add_xp(4.0)
+	add_xp(1.0)
 	monky_state_changed.emit("happy")
-	show_floating_text.emit("+" + str(int(amount)) + " 🧼", Vector2(540, 950), Color(0.3, 0.8, 1.0))
-	save_game()
 
 func brush_teeth_action(amount: float = 15.0) -> void:
-	# El cepillado da frescura bucal y XP pero no limpia las manchas de barro del cuerpo
+	# El cepillado da frescura bucal. El guardado se hace al soltar la herramienta.
 	hygiene = minf(MAX_STAT, hygiene + amount * 0.3)
-	add_xp(2.0)
+	add_xp(0.5)
 	monky_state_changed.emit("happy")
-	save_game()
 
 func wash_body(amount: float = 50.0) -> void:
 	# El baño completo con jabón y agua deja a Monky 100% limpio
@@ -417,13 +433,13 @@ func toggle_sleep() -> void:
 	is_sleeping = !is_sleeping
 	if is_sleeping:
 		monky_state_changed.emit("sleeping")
-		show_floating_text.emit("💤 Durmiendo (1h recuperación)", Vector2(540, 850), Color(0.6, 0.8, 1.0))
+		show_floating_text.emit("Durmiendo (1h de recuperación)", Vector2(540, 850), Color(0.6, 0.8, 1.0))
 	else:
 		monky_state_changed.emit("idle")
 		# Al despertar, Monky hace popis y se despierta necesitando baño
 		hygiene = maxf(0.0, hygiene - 15.0)
 		spawn_poop()
-		show_floating_text.emit("💩 ¡Monky hizo popis al despertar!", Vector2(540, 850), Color(0.8, 0.55, 0.2))
+		show_floating_text.emit("¡Monky hizo popis al despertar!", Vector2(540, 850), Color(0.8, 0.55, 0.2))
 	save_game()
 
 func spawn_poop(custom_pos = null) -> void:
@@ -441,7 +457,7 @@ func remove_poop() -> void:
 
 func add_coins(amount: int) -> void:
 	coins += amount
-	show_floating_text.emit("+" + str(amount) + " 🪙", Vector2(540, 850), Color(1.0, 0.9, 0.2))
+	show_floating_text.emit("+" + str(amount) + " monedas", Vector2(540, 850), Color(1.0, 0.9, 0.2))
 
 func spend_coins(amount: int) -> bool:
 	if coins >= amount:
@@ -451,7 +467,7 @@ func spend_coins(amount: int) -> bool:
 
 func add_diamonds(amount: int) -> void:
 	diamonds += amount
-	show_floating_text.emit("+" + str(amount) + " 💎", Vector2(540, 850), Color(0.3, 0.8, 1.0))
+	show_floating_text.emit("+" + str(amount) + " diamantes", Vector2(540, 850), Color(0.3, 0.8, 1.0))
 
 func spend_diamonds(amount: int) -> bool:
 	if diamonds >= amount:
@@ -521,12 +537,12 @@ func load_game() -> void:
 
 	var last_time: int = config.get_value("game", "last_timestamp", 0)
 	if last_time > 0:
-		var current_time: int = Time.get_unix_time_from_system()
+		var current_time: int = int(Time.get_unix_time_from_system())
 		var elapsed_seconds: int = current_time - last_time
 		if elapsed_seconds < 0:
 			# Anti-Cheat: El usuario atrasó el reloj de su dispositivo
 			print("[AntiCheat] Timestamp menor al guardado. Bloqueando avance.")
-			show_floating_text.emit("⚠️ ¡Hora del celular alterada!", Vector2(540, 700), Color(1, 0.3, 0.3))
+			show_floating_text.emit("¡Hora del celular alterada!", Vector2(540, 700), Color(1, 0.3, 0.3))
 		elif elapsed_seconds > 0:
 			if is_sleeping:
 				# Recuperación en 1 hora (3600 segundos)

@@ -211,7 +211,7 @@ anchor_right = 1.0
 offset_left = 30.0
 offset_top = 40.0
 offset_right = -30.0
-offset_bottom = 240.0
+offset_bottom = 300.0
 grow_horizontal = 2
 
 [node name="VBox" type="VBoxContainer" parent="TopBar" unique_id=481232040]
@@ -229,10 +229,10 @@ size_flags_horizontal = 3
 [node name="LevelLabel" type="Label" parent="TopBar/VBox/HeaderRow/LevelContainer" unique_id=1771129188]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "⭐ NIV. 1"
+text = "NIV. 1"
 
 [node name="XPBar" type="ProgressBar" parent="TopBar/VBox/HeaderRow/LevelContainer" unique_id=434084309]
-custom_minimum_size = Vector2(180, 14)
+custom_minimum_size = Vector2(180, 32)
 layout_mode = 2
 size_flags_horizontal = 0
 show_percentage = false
@@ -257,7 +257,7 @@ alignment = 1
 [node name="CoinsIcon" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox" unique_id=150336515]
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
-text = "🪙"
+text = ""
 
 [node name="CoinsLabel" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox" unique_id=1100631869]
 layout_mode = 2
@@ -267,7 +267,7 @@ text = "50"
 [node name="PlusBadge" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox" unique_id=1134654222]
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = " ➕"
+text = ""
 
 [node name="BtnDiamonds" type="Button" parent="TopBar/VBox/HeaderRow" unique_id=110866288]
 custom_minimum_size = Vector2(150, 68)
@@ -289,7 +289,7 @@ alignment = 1
 [node name="DiamondsIcon" type="Label" parent="TopBar/VBox/HeaderRow/BtnDiamonds/HBox" unique_id=150336516]
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
-text = "💎"
+text = ""
 
 [node name="DiamondsLabel" type="Label" parent="TopBar/VBox/HeaderRow/BtnDiamonds/HBox" unique_id=1100631870]
 layout_mode = 2
@@ -299,13 +299,13 @@ text = "5"
 [node name="PlusBadge" type="Label" parent="TopBar/VBox/HeaderRow/BtnDiamonds/HBox" unique_id=1134654223]
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = " ➕"
+text = ""
 
 [node name="BtnSettings" type="Button" parent="TopBar/VBox/HeaderRow" unique_id=1498192837]
 custom_minimum_size = Vector2(72, 68)
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
-text = "⚙️"
+text = ""
 
 [node name="StatsGrid" type="HBoxContainer" parent="TopBar/VBox" unique_id=2126513594]
 layout_mode = 2
@@ -318,12 +318,28 @@ size_flags_horizontal = 3
 
 [node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/HungerContainer" unique_id=310855642]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "🍎 100%"
+theme_override_font_sizes/font_size = 24
+text = "HAMBRE 100%"
 horizontal_alignment = 1
 
 [node name="HungerBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/HungerContainer" unique_id=1660913576]
-custom_minimum_size = Vector2(0, 20)
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="ProteinContainer" type="VBoxContainer" parent="TopBar/VBox/StatsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/ProteinContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "PROTEÍNA 100%"
+horizontal_alignment = 1
+
+[node name="ProteinBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/ProteinContainer"]
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 value = 100.0
 show_percentage = false
@@ -334,12 +350,12 @@ size_flags_horizontal = 3
 
 [node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/EnergyContainer" unique_id=1988759332]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "⚡ 100%"
+theme_override_font_sizes/font_size = 24
+text = "SUEÑO 100%"
 horizontal_alignment = 1
 
 [node name="EnergyBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/EnergyContainer" unique_id=1405971321]
-custom_minimum_size = Vector2(0, 20)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 value = 100.0
 show_percentage = false
@@ -350,12 +366,12 @@ size_flags_horizontal = 3
 
 [node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/FunContainer" unique_id=338426872]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "⚽ 100%"
+theme_override_font_sizes/font_size = 24
+text = "DIVERSIÓN 100%"
 horizontal_alignment = 1
 
 [node name="FunBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/FunContainer" unique_id=1218702684]
-custom_minimum_size = Vector2(0, 20)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 value = 100.0
 show_percentage = false
@@ -366,12 +382,12 @@ size_flags_horizontal = 3
 
 [node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/HygieneContainer" unique_id=321727504]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "🧼 100%"
+theme_override_font_sizes/font_size = 24
+text = "HIGIENE 100%"
 horizontal_alignment = 1
 
 [node name="HygieneBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/HygieneContainer" unique_id=1960785982]
-custom_minimum_size = Vector2(0, 20)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 value = 100.0
 show_percentage = false
@@ -439,21 +455,21 @@ alignment = 1
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "🪥
+text = "
 Cepillar"
 
 [node name="BtnSoap" type="Button" parent="ActionDrawers/BathDrawer/Margin/HBox" unique_id=1859711105]
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "🧼
+text = "
 Enjabonar"
 
 [node name="BtnShower" type="Button" parent="ActionDrawers/BathDrawer/Margin/HBox" unique_id=1753131413]
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "🚿
+text = "
 Enjuagar"
 
 [node name="BedDrawer" type="PanelContainer" parent="ActionDrawers" unique_id=1188537546]
@@ -482,7 +498,7 @@ alignment = 1
 custom_minimum_size = Vector2(300, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
-text = "🌙 Dormir"
+text = "Dormir"
 
 [node name="PlayDrawer" type="PanelContainer" parent="ActionDrawers" unique_id=1442392542]
 visible = false
@@ -511,15 +527,15 @@ alignment = 1
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "⚽
-Pelota (+3🪙)"
+text = "
+Pelota (+3)"
 
 [node name="BtnGame" type="Button" parent="ActionDrawers/PlayDrawer/Margin/HBox" unique_id=224597947]
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "🎮
-Minijuego (+15🪙)"
+text = "
+Minijuego (+15)"
 
 [node name="BottomBar" type="MarginContainer" parent="." unique_id=761474792]
 anchors_preset = 12
@@ -561,7 +577,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_h0628")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_8qguk")
 theme_override_styles/hover = SubResource("StyleBoxFlat_bo48s")
 theme_override_styles/focus = SubResource("StyleBoxFlat_hqnrr")
-text = "🛏️
+text = "
 Cuarto"
 
 [node name="BtnKitchen" type="Button" parent="BottomBar/VBox/DockContainer" unique_id=897079605]
@@ -576,8 +592,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_136eg")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_gss2c")
 theme_override_styles/hover = SubResource("StyleBoxFlat_oj5la")
 theme_override_styles/focus = SubResource("StyleBoxFlat_0mwgc")
-text = "🍳
-Cocina"
+text = "Cocina"
 
 [node name="BtnBath" type="Button" parent="BottomBar/VBox/DockContainer" unique_id=2027461436]
 custom_minimum_size = Vector2(180, 110)
@@ -591,8 +606,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_h022r")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_kicr4")
 theme_override_styles/hover = SubResource("StyleBoxFlat_4jqwt")
 theme_override_styles/focus = SubResource("StyleBoxFlat_mj13f")
-text = "🛁
-Baño"
+text = "Baño"
 
 [node name="BtnPlay" type="Button" parent="BottomBar/VBox/DockContainer" unique_id=695840091]
 custom_minimum_size = Vector2(180, 110)
@@ -606,8 +620,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_0h1do")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_erw67")
 theme_override_styles/hover = SubResource("StyleBoxFlat_4d46k")
 theme_override_styles/focus = SubResource("StyleBoxFlat_gonto")
-text = "🎮
-Juegos"
+text = "Juegos"
 
 [node name="LevelUpPopup" type="PanelContainer" parent="." unique_id=1839315011]
 visible = false
@@ -639,7 +652,7 @@ alignment = 1
 [node name="Title" type="Label" parent="LevelUpPopup/Margin/VBox" unique_id=1302263582]
 layout_mode = 2
 theme_override_font_sizes/font_size = 42
-text = "🎉 ¡SUBISTE DE NIVEL! 🎉"
+text = "¡SUBISTE DE NIVEL!"
 horizontal_alignment = 1
 
 [node name="DescLabel" type="Label" parent="LevelUpPopup/Margin/VBox" unique_id=1921099043]
@@ -654,7 +667,7 @@ custom_minimum_size = Vector2(300, 80)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 32
-text = "¡Genial! 🎁"
+text = "¡Genial!"
 
 [node name="ShopPopup" type="Control" parent="." unique_id=970011395]
 visible = false
@@ -708,7 +721,7 @@ theme_override_constants/separation = 16
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 32
-text = "🏪 TIENDA EXCLUSIVA"
+text = "TIENDA EXCLUSIVA"
 
 [node name="BalanceContainer" type="HBoxContainer" parent="ShopPopup/Panel/Margin/VBox/HeaderRow" unique_id=1675506350]
 layout_mode = 2
@@ -717,18 +730,18 @@ theme_override_constants/separation = 12
 [node name="CoinsBalanceLabel" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow/BalanceContainer" unique_id=1675506351]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "50 🪙"
+text = "50 "
 
 [node name="DiamondsBalanceLabel" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow/BalanceContainer" unique_id=1675506352]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "5 💎"
+text = "5 "
 
 [node name="BtnCloseShop" type="Button" parent="ShopPopup/Panel/Margin/VBox/HeaderRow" unique_id=2097138557]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "❌"
+text = ""
 
 [node name="Scroll" type="ScrollContainer" parent="ShopPopup/Panel/Margin/VBox" unique_id=1652595678]
 layout_mode = 2
@@ -743,7 +756,7 @@ theme_override_constants/separation = 24
 [node name="SecIapTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=992513844]
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
-text = "💎 COMPRAR DIAMANTES ($ USD)"
+text = " COMPRAR DIAMANTES ($ USD)"
 horizontal_alignment = 1
 
 [node name="IapGrid" type="GridContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=812976052]
@@ -757,7 +770,7 @@ custom_minimum_size = Vector2(280, 140)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 22
-text = "💎 50 Diamantes
+text = " 50 Diamantes
 $0.99 USD
 [COMPRAR]"
 
@@ -766,23 +779,23 @@ custom_minimum_size = Vector2(280, 140)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 22
-text = "💎 300 Diamantes
+text = " 300 Diamantes
 $2.99 USD
-⭐ POPULAR"
+ POPULAR"
 
 [node name="BtnIap1000" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/IapGrid" unique_id=1523188193]
 custom_minimum_size = Vector2(280, 140)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 22
-text = "💎 1,000 Diamantes
+text = " 1,000 Diamantes
 $7.99 USD
-🔥 MEJOR VALOR"
+ MEJOR VALOR"
 
 [node name="SecExchangeTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=992513845]
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
-text = "🪙 CANJEAR DIAMANTES POR MONEDAS"
+text = " CANJEAR DIAMANTES POR MONEDAS"
 horizontal_alignment = 1
 
 [node name="ExchangeGrid" type="GridContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=812976053]
@@ -796,8 +809,8 @@ custom_minimum_size = Vector2(280, 130)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 22
-text = "🪙 +250 Monedas
-Costo: 10 💎
+text = " +250 Monedas
+Costo: 10 
 [CANJEAR]"
 
 [node name="BtnExch1000" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/ExchangeGrid" unique_id=1523188194]
@@ -805,8 +818,8 @@ custom_minimum_size = Vector2(280, 130)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 22
-text = "🪙 +1,000 Monedas
-Costo: 30 💎
+text = " +1,000 Monedas
+Costo: 30 
 [CANJEAR]"
 
 [node name="BtnExch3500" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/ExchangeGrid" unique_id=1523188195]
@@ -814,14 +827,14 @@ custom_minimum_size = Vector2(280, 130)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 22
-text = "🪙 +3,500 Monedas
-Costo: 80 💎
+text = " +3,500 Monedas
+Costo: 80 
 [CANJEAR]"
 
 [node name="SecPotionsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=1330702291]
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
-text = "🧪 POCIONES MÁGICAS"
+text = " POCIONES MÁGICAS"
 horizontal_alignment = 1
 
 [node name="PotionsGrid" type="VBoxContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=1456274706]
@@ -832,24 +845,24 @@ theme_override_constants/separation = 14
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "⚡ Poción Flash (Energía 100%) — 80 🪙 ó 4 💎"
+text = " Poción Flash (Energía 100%) — 80  ó 4 "
 
 [node name="BtnPotHygiene" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid" unique_id=1318306901]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "🧼 Poción Burbujas (Higiene 100%) — 60 🪙 ó 3 💎"
+text = " Poción Burbujas (Higiene 100%) — 60  ó 3 "
 
 [node name="BtnPotMega" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid" unique_id=1583246066]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "🌟 Poción Suprema (¡TODO al 100%!) — 200 🪙 ó 10 💎"
+text = " Poción Suprema (¡TODO al 100%!) — 200  ó 10 "
 
 [node name="SecRewardsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=992513846]
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
-text = "🎁 RECOMPENSAS GRATIS"
+text = "RECOMPENSAS GRATIS"
 horizontal_alignment = 1
 
 [node name="RewardsGrid" type="GridContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=812976054]
@@ -863,8 +876,8 @@ custom_minimum_size = Vector2(420, 130)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 22
-text = "🎁 Recompensa Diaria
-+20 🪙  +1 💎
+text = " Recompensa Diaria
++20   +1 
 [¡RECLAMAR!]"
 
 [node name="BtnAd" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/RewardsGrid" unique_id=1927632094]
@@ -872,8 +885,8 @@ custom_minimum_size = Vector2(420, 130)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 22
-text = "🎬 Ver Anuncio
-+15 🪙
+text = " Ver Anuncio
++15 
 [VER VIDEO]"
 
 [node name="FoodMarketPopup" type="Control" parent="." unique_id=1988231456]
@@ -927,19 +940,19 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 34
-text = "🛒 MERCADO DE COMIDAS"
+text = " MERCADO DE COMIDAS"
 
 [node name="BalanceLabel" type="Label" parent="FoodMarketPopup/Panel/Margin/VBox/HeaderRow" unique_id=1988231463]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 28
-text = "Saldo: 50 🪙"
+text = "Saldo: 50 "
 
 [node name="BtnCloseMarket" type="Button" parent="FoodMarketPopup/Panel/Margin/VBox/HeaderRow" unique_id=1988231464]
 custom_minimum_size = Vector2(70, 70)
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = "❌"
+text = ""
 
 [node name="Scroll" type="ScrollContainer" parent="FoodMarketPopup/Panel/Margin/VBox" unique_id=1988231465]
 layout_mode = 2

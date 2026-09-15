@@ -99,7 +99,7 @@ offset_bottom = 60.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 110
-text = "🧺"
+text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -130,7 +130,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_hud")
 [node name="ScoreLabel" type="Label" parent="HUD/TopBar/HBox/ScoreBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 36
-text = "🍎 0"
+text = "PUNTOS 0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -143,7 +143,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_hud")
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 36
-text = "🪙 +0"
+text = "MONEDAS +0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -156,7 +156,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_hud")
 [node name="LivesLabel" type="Label" parent="HUD/TopBar/HBox/LivesBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = "❤️ ❤️ ❤️"
+text = "VIDAS 3/3"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -165,7 +165,7 @@ custom_minimum_size = Vector2(90, 80)
 layout_mode = 2
 theme_override_font_sizes/font_size = 38
 theme_override_styles/normal = SubResource("StyleBoxFlat_hud")
-text = "🏠"
+text = ""
 
 [node name="GameOverModal" type="PanelContainer" parent="HUD"]
 visible = false
@@ -199,14 +199,14 @@ alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 46
-text = "🎮 ¡JUEGO TERMINADO!"
+text = "¡JUEGO TERMINADO!"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="HUD/GameOverModal/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 28
-text = "✨ ¡Monky se divirtió al 100%! ✨"
+text = "¡Monky se divirtió al 100%!"
 horizontal_alignment = 1
 
 [node name="StatsGrid" type="VBoxContainer" parent="HUD/GameOverModal/Margin/VBox"]
@@ -241,7 +241,7 @@ text = "Monedas Ganadas:"
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 34
-text = "+0 🪙"
+text = "+0 monedas"
 
 [node name="HBoxHigh" type="HBoxContainer" parent="HUD/GameOverModal/Margin/VBox/StatsGrid"]
 layout_mode = 2
@@ -268,11 +268,11 @@ custom_minimum_size = Vector2(360, 90)
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_restart")
-text = "🔄 Jugar Otra Vez"
+text = "Jugar otra vez"
 
 [node name="BtnHome" type="Button" parent="HUD/GameOverModal/Margin/VBox/Buttons"]
 custom_minimum_size = Vector2(360, 90)
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_home")
-text = "🏠 Volver a la Sala"
+text = " Volver a la Sala"

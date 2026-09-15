@@ -1,7 +1,6 @@
 extends Node2D
 class_name MonkyPoop
 
-@onready var icon_label: Label = $IconLabel
 @onready var touch_area: Area2D = $Area2D
 @onready var sparkle_particles: CPUParticles2D = $SparkleParticles
 
@@ -36,7 +35,7 @@ func clean_up() -> void:
 		gm.clean(8.0)
 		if gm.has_method("remove_poop"):
 			gm.remove_poop()
-		gm.show_floating_text.emit("✨ ¡Limpio! +5 🪙", global_position + Vector2(0, -60), Color(1, 0.9, 0.2))
+		gm.show_floating_text.emit("¡Limpio! +5 monedas", global_position + Vector2(0, -60), Color(1, 0.9, 0.2))
 
 	if sparkle_particles:
 		sparkle_particles.emitting = true

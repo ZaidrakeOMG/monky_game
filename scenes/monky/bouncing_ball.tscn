@@ -1,6 +1,7 @@
-[gd_scene format=3 uid="uid://ci0aar3hcjbyu"]
+[gd_scene load_steps=4 format=3 uid="uid://ci0aar3hcjbyu"]
 
 [ext_resource type="Script" path="res://scripts/monky/bouncing_ball.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://imagenes/opt/juegos/pelota.png" id="2_ball"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ball"]
 radius = 65.0
@@ -8,22 +9,10 @@ radius = 65.0
 [node name="BouncingBall" type="CharacterBody2D"]
 script = ExtResource("1_script")
 
-[node name="BallLabel" type="Label" parent="."]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -65.0
-offset_top = -65.0
-offset_right = 65.0
-offset_bottom = 65.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_font_sizes/font_size = 110
-text = "⚽"
-horizontal_alignment = 1
-vertical_alignment = 1
+[node name="BallSprite" type="Sprite2D" parent="."]
+texture = ExtResource("2_ball")
+scale = Vector2(0.46, 0.46)
+texture_filter = 1
 
 [node name="Area2D" type="Area2D" parent="."]
 

@@ -10,11 +10,11 @@ extends Control
 const NEXT_SCENE := "res://scenes/Intro/intro.tscn"
 
 const TIPS: Array[String] = [
-	"Preparando la casita de Monky... 🏡",
-	"Llenando el refrigerador de frutas y pizza... 🍎🍕",
-	"Acomodando los peluches y la consola arcade... 🎮",
-	"Preparando las burbujas para el baño... 🧼🛁",
-	"¡Todo listo para la diversión! ⭐"
+	"Preparando la casita de Monky... ",
+	"Llenando el refrigerador de frutas y pizza... ",
+	"Acomodando los peluches y la consola arcade... ",
+	"Preparando las burbujas para el baño... ",
+	"¡Todo listo para la diversión! "
 ]
 
 var progress: float = 0.0

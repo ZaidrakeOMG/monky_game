@@ -40,8 +40,28 @@ var gm: Node = null
 func _ready() -> void:
 	gm = get_tree().root.get_node_or_null("GameManager")
 	_setup_background()
+	_setup_game_ui_icons()
 	_setup_signals()
 	reset_game()
+
+
+func _set_game_button_icon(button: Button, image_path: String, width: int = 50) -> void:
+	if not button:
+		return
+	var tex = load(image_path) as Texture2D
+	if tex:
+		button.icon = tex
+		button.expand_icon = true
+		button.add_theme_constant_override("icon_max_width", width)
+
+func _setup_game_ui_icons() -> void:
+	if btn_exit:
+		btn_exit.text = ""
+		_set_game_button_icon(btn_exit, "res://imagenes/opt/navegacion/inicio.png", 48)
+	if btn_home:
+		_set_game_button_icon(btn_home, "res://imagenes/opt/navegacion/inicio.png", 42)
+	if btn_restart:
+		_set_game_button_icon(btn_restart, "res://imagenes/opt/configuracion/reiniciar.png", 42)
 
 func _setup_background() -> void:
 	if background and background.texture:
@@ -191,14 +211,12 @@ func _spawn_pipe_obstacle() -> void:
 	coin_col.shape = coin_shape
 	coin_area.add_child(coin_col)
 
-	var coin_label = Label.new()
-	coin_label.text = "🪙"
-	coin_label.offset_left = -30
-	coin_label.offset_top = -30
-	coin_label.offset_right = 30
-	coin_label.offset_bottom = 30
-	coin_label.add_theme_font_size_override("font_size", 50)
-	coin_area.add_child(coin_label)
+	var coin_sprite = Sprite2D.new()
+	coin_sprite.texture = load("res://imagenes/opt/hud/moneda.png") as Texture2D
+	if coin_sprite.texture:
+		var size = coin_sprite.texture.get_size()
+		coin_sprite.scale = Vector2.ONE * (70.0 / maxf(size.x, size.y))
+	coin_area.add_child(coin_sprite)
 	pipe_pair.add_child(coin_area)
 
 	pipes_container.add_child(pipe_pair)
@@ -209,7 +227,7 @@ func _on_player_area_entered(area: Area2D) -> void:
 
 	if area.has_meta("coin"):
 		coins_earned += 1
-		_spawn_floating_text("+1 🪙", area.global_position, Color(1, 0.85, 0.2))
+		_spawn_floating_text("+1 moneda", area.global_position, Color(1, 0.85, 0.2))
 		area.queue_free()
 		_update_hud()
 	elif area.has_meta("obstacle"):
@@ -230,7 +248,7 @@ func _trigger_game_over() -> void:
 		gm.add_xp(minf(score * 0.8, 20.0))
 
 	final_score_label.text = str(score) + " pts"
-	final_coins_label.text = "+" + str(coins_earned + int(float(score) / 5.0)) + " 🪙"
+	final_coins_label.text = "+" + str(coins_earned + int(float(score) / 5.0)) + " monedas"
 	high_score_label.text = str(score) + " pts"
 
 
@@ -256,8 +274,8 @@ func _spawn_floating_text(text: String, pos: Vector2, color: Color) -> void:
 	tween.finished.connect(label.queue_free)
 
 func _update_hud() -> void:
-	score_label.text = "🏆 " + str(score)
-	coins_label.text = "🪙 +" + str(coins_earned)
+	score_label.text = "PUNTOS " + str(score)
+	coins_label.text = "MONEDAS +" + str(coins_earned)
 
 func _on_btn_home_pressed() -> void:
 	get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/minigames_menu.tscn")

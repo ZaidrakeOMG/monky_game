@@ -13,6 +13,7 @@ config_version=5
 config/name="Wonky"
 run/main_scene="res://scenes/loading/loading_screen.tscn"
 config/features=PackedStringArray("4.7")
+run/max_fps=60
 
 [autoload]
 

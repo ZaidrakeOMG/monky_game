@@ -4,7 +4,6 @@ class_name BouncingBall
 ## Pelota Física Interactiva para la Sala de Juegos
 ## Permite lanzar, arrastrar, rebotar en paredes y jugar pases con Monky.
 
-@onready var ball_label: Label = $BallLabel
 @onready var area: Area2D = $Area2D
 
 const GRAVITY: float = 1900.0

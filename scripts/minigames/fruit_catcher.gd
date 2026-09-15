@@ -5,7 +5,7 @@ extends Node2D
 
 @onready var background: Sprite2D = $Background
 @onready var player_basket: Area2D = $PlayerBasket
-@onready var basket_sprite: Label = $PlayerBasket/BasketLabel
+@onready var basket_label: Label = $PlayerBasket/BasketLabel
 @onready var monky_sprite: AnimatedSprite2D = $PlayerBasket/MonkySprite
 @onready var items_container: Node2D = $ItemsContainer
 
@@ -27,16 +27,15 @@ extends Node2D
 
 
 const FRUIT_TYPES := [
-	{"icon": "🍎", "name": "Manzana", "points": 10, "is_bomb": false, "is_coin": false},
-	{"icon": "🍌", "name": "Plátano", "points": 15, "is_bomb": false, "is_coin": false},
-	{"icon": "🍓", "name": "Fresa", "points": 20, "is_bomb": false, "is_coin": false},
-	{"icon": "🍉", "name": "Sandía", "points": 25, "is_bomb": false, "is_coin": false},
-	{"icon": "🍍", "name": "Piña", "points": 30, "is_bomb": false, "is_coin": false},
-	{"icon": "⭐", "name": "Estrella", "points": 50, "is_bomb": false, "is_coin": false},
-	{"icon": "🪙", "name": "Moneda", "points": 10, "is_bomb": false, "is_coin": true},
-	{"icon": "💣", "name": "Bomba", "points": 0, "is_bomb": true, "is_coin": false}
+	{"image": "res://imagenes/opt/alimentos/manzana.png", "name": "Manzana", "points": 10, "is_bomb": false, "is_coin": false},
+	{"image": "res://imagenes/opt/alimentos/platano.png", "name": "Plátano", "points": 15, "is_bomb": false, "is_coin": false},
+	{"image": "res://imagenes/opt/alimentos/fresa.png", "name": "Fresa", "points": 20, "is_bomb": false, "is_coin": false},
+	{"image": "res://imagenes/opt/alimentos/sandia.png", "name": "Sandía", "points": 25, "is_bomb": false, "is_coin": false},
+	{"image": "res://imagenes/opt/alimentos/pina.png", "name": "Piña", "points": 30, "is_bomb": false, "is_coin": false},
+	{"image": "res://imagenes/opt/hud/nivel.png", "name": "Estrella", "points": 50, "is_bomb": false, "is_coin": false},
+	{"image": "res://imagenes/opt/hud/moneda.png", "name": "Moneda", "points": 10, "is_bomb": false, "is_coin": true},
+	{"image": "res://imagenes/opt/minijuegos/bomba.png", "name": "Bomba", "points": 0, "is_bomb": true, "is_coin": false}
 ]
-
 var score: int = 0
 var coins_earned: int = 0
 var lives: int = 3
@@ -54,8 +53,29 @@ const BASKET_Y: float = 1620.0
 func _ready() -> void:
 	gm = get_tree().root.get_node_or_null("GameManager")
 	_setup_background()
+	_setup_game_ui_icons()
+	_setup_basket_visual()
 	_setup_signals()
 	start_game()
+
+
+func _set_game_button_icon(button: Button, image_path: String, width: int = 50) -> void:
+	if not button:
+		return
+	var tex = load(image_path) as Texture2D
+	if tex:
+		button.icon = tex
+		button.expand_icon = true
+		button.add_theme_constant_override("icon_max_width", width)
+
+func _setup_game_ui_icons() -> void:
+	if btn_exit:
+		btn_exit.text = ""
+		_set_game_button_icon(btn_exit, "res://imagenes/opt/navegacion/inicio.png", 48)
+	if btn_home:
+		_set_game_button_icon(btn_home, "res://imagenes/opt/navegacion/inicio.png", 42)
+	if btn_restart:
+		_set_game_button_icon(btn_restart, "res://imagenes/opt/configuracion/reiniciar.png", 42)
 
 func _setup_background() -> void:
 	if background and background.texture:
@@ -63,6 +83,21 @@ func _setup_background() -> void:
 		if tex_size.x > 0 and tex_size.y > 0:
 			var scale_factor = maxf(1080.0 / tex_size.x, 1920.0 / tex_size.y)
 			background.scale = Vector2(scale_factor, scale_factor)
+
+
+func _setup_basket_visual() -> void:
+	if not basket_label:
+		return
+	basket_label.text = ""
+	var basket = Sprite2D.new()
+	basket.texture = load("res://imagenes/opt/minijuegos/canasta.png") as Texture2D
+	if basket.texture:
+		var size = basket.texture.get_size()
+		var factor = 150.0 / maxf(size.x, size.y)
+		basket.scale = Vector2.ONE * factor
+	basket.position = Vector2(0, 30)
+	basket.z_index = 3
+	player_basket.add_child(basket)
 
 func _setup_signals() -> void:
 	spawn_timer.timeout.connect(_on_spawn_timer_timeout)
@@ -150,17 +185,15 @@ func _spawn_falling_item() -> void:
 	col.shape = shape
 	item_area.add_child(col)
 
-	# Visual Icon Label
-	var label = Label.new()
-	label.text = chosen_data.icon
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.offset_left = -50
-	label.offset_top = -50
-	label.offset_right = 50
-	label.offset_bottom = 50
-	label.add_theme_font_size_override("font_size", 80)
-	item_area.add_child(label)
+	# Visual con imagen real del objeto.
+	var sprite = Sprite2D.new()
+	sprite.texture = load(str(chosen_data["image"])) as Texture2D
+	if sprite.texture:
+		var size = sprite.texture.get_size()
+		var factor = 96.0 / maxf(size.x, size.y)
+		sprite.scale = Vector2.ONE * factor
+	sprite.z_index = 4
+	item_area.add_child(sprite)
 
 	items_container.add_child(item_area)
 
@@ -177,24 +210,24 @@ func _on_basket_area_entered(area: Area2D) -> void:
 	elif data.is_coin:
 		_on_coin_caught(hit_pos, data.points)
 	else:
-		_on_fruit_caught(hit_pos, data.points, data.icon)
+		_on_fruit_caught(hit_pos, int(data.points))
 
-func _on_fruit_caught(pos: Vector2, pts: int, icon: String) -> void:
+func _on_fruit_caught(pos: Vector2, pts: int) -> void:
 	score += pts
-	_spawn_floating_popup("+" + str(pts) + " " + icon, pos, Color(0.3, 1.0, 0.4))
+	_spawn_floating_popup("+" + str(pts), pos, Color(0.3, 1.0, 0.4))
 	_bounce_basket(Vector2(1.15, 0.85))
 	_update_hud()
 
 func _on_coin_caught(pos: Vector2, pts: int) -> void:
 	score += pts
 	coins_earned += 1
-	_spawn_floating_popup("+1 🪙", pos, Color(1.0, 0.85, 0.1))
+	_spawn_floating_popup("+1 moneda", pos, Color(1.0, 0.85, 0.1))
 	_bounce_basket(Vector2(1.2, 0.8))
 	_update_hud()
 
 func _on_bomb_caught(pos: Vector2) -> void:
 	lives -= 1
-	_spawn_floating_popup("💥 ¡BOOM!", pos, Color(1.0, 0.2, 0.2))
+	_spawn_floating_popup("¡BOOM!", pos, Color(1.0, 0.2, 0.2))
 	_screen_shake()
 	_bounce_basket(Vector2(0.8, 1.2))
 	_update_hud()
@@ -230,16 +263,10 @@ func _spawn_floating_popup(text: String, pos: Vector2, color: Color) -> void:
 	tween.finished.connect(label.queue_free)
 
 func _update_hud() -> void:
-	score_label.text = "🍎 " + str(score)
-	coins_label.text = "🪙 +" + str(coins_earned)
+	score_label.text = "PUNTOS " + str(score)
+	coins_label.text = "MONEDAS +" + str(coins_earned)
 	
-	var hearts = ""
-	for i in range(max_lives):
-		if i < lives:
-			hearts += "❤️ "
-		else:
-			hearts += "🖤 "
-	lives_label.text = hearts.strip_edges()
+	lives_label.text = "VIDAS " + str(lives) + "/" + str(max_lives)
 
 func _trigger_game_over() -> void:
 	is_game_over = true
@@ -255,7 +282,7 @@ func _trigger_game_over() -> void:
 
 	# Actualizar modal de Game Over
 	final_score_label.text = str(score) + " pts"
-	final_coins_label.text = "+" + str(coins_earned + int(float(score) / 40.0)) + " 🪙"
+	final_coins_label.text = "+" + str(coins_earned + int(float(score) / 40.0)) + " monedas"
 	high_score_label.text = str(score) + " pts"
 
 
