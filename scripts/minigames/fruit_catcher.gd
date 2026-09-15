@@ -77,6 +77,7 @@ func start_game() -> void:
 	coins_earned = 0
 	lives = max_lives
 	fall_speed = 550.0
+	background.position = Vector2(540, 960)
 	game_over_modal.visible = false
 
 	# Limpiar items existentes
@@ -249,6 +250,7 @@ func _trigger_game_over() -> void:
 		var extra_coins = int(float(score) / 40.0)
 		gm.add_coins(coins_earned + extra_coins)
 		gm.play_with_monky(100.0) # 100% de Diversión
+		gm.hygiene = maxf(0.0, gm.hygiene - 8.0) # Se ensucia jugando
 		gm.add_xp(minf(score * 0.1, 20.0))
 
 	# Actualizar modal de Game Over

@@ -220,6 +220,7 @@ theme_override_constants/separation = 12
 
 [node name="HeaderRow" type="HBoxContainer" parent="TopBar/VBox" unique_id=1160974416]
 layout_mode = 2
+theme_override_constants/separation = 16
 
 [node name="LevelContainer" type="VBoxContainer" parent="TopBar/VBox/HeaderRow" unique_id=1855331572]
 layout_mode = 2
@@ -237,6 +238,7 @@ size_flags_horizontal = 0
 show_percentage = false
 
 [node name="BtnCoins" type="Button" parent="TopBar/VBox/HeaderRow" unique_id=910866287]
+custom_minimum_size = Vector2(170, 68)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 
@@ -245,26 +247,65 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 12.0
-offset_right = -12.0
+offset_left = 10.0
+offset_right = -10.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 6
 alignment = 1
 
 [node name="CoinsIcon" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox" unique_id=150336515]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 26
 text = "🪙"
 
 [node name="CoinsLabel" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox" unique_id=1100631869]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 26
 text = "50"
 
 [node name="PlusBadge" type="Label" parent="TopBar/VBox/HeaderRow/BtnCoins/HBox" unique_id=1134654222]
 layout_mode = 2
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 22
 text = " ➕"
+
+[node name="BtnDiamonds" type="Button" parent="TopBar/VBox/HeaderRow" unique_id=110866288]
+custom_minimum_size = Vector2(150, 68)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+
+[node name="HBox" type="HBoxContainer" parent="TopBar/VBox/HeaderRow/BtnDiamonds" unique_id=1481798481]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_right = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="DiamondsIcon" type="Label" parent="TopBar/VBox/HeaderRow/BtnDiamonds/HBox" unique_id=150336516]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "💎"
+
+[node name="DiamondsLabel" type="Label" parent="TopBar/VBox/HeaderRow/BtnDiamonds/HBox" unique_id=1100631870]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "5"
+
+[node name="PlusBadge" type="Label" parent="TopBar/VBox/HeaderRow/BtnDiamonds/HBox" unique_id=1134654223]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = " ➕"
+
+[node name="BtnSettings" type="Button" parent="TopBar/VBox/HeaderRow" unique_id=1498192837]
+custom_minimum_size = Vector2(72, 68)
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "⚙️"
 
 [node name="StatsGrid" type="HBoxContainer" parent="TopBar/VBox" unique_id=2126513594]
 layout_mode = 2
@@ -393,6 +434,13 @@ theme_override_constants/margin_bottom = 20
 layout_mode = 2
 theme_override_constants/separation = 30
 alignment = 1
+
+[node name="BtnToothbrush" type="Button" parent="ActionDrawers/BathDrawer/Margin/HBox" unique_id=1948201948]
+custom_minimum_size = Vector2(240, 160)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "🪥
+Cepillar"
 
 [node name="BtnSoap" type="Button" parent="ActionDrawers/BathDrawer/Margin/HBox" unique_id=1859711105]
 custom_minimum_size = Vector2(240, 160)
@@ -634,42 +682,52 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -480.0
-offset_top = -650.0
-offset_right = 480.0
-offset_bottom = 650.0
+offset_left = -500.0
+offset_top = -680.0
+offset_right = 500.0
+offset_bottom = 680.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Margin" type="MarginContainer" parent="ShopPopup/Panel" unique_id=412949041]
 layout_mode = 2
-theme_override_constants/margin_left = 36
-theme_override_constants/margin_top = 36
-theme_override_constants/margin_right = 36
-theme_override_constants/margin_bottom = 36
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 32
 
 [node name="VBox" type="VBoxContainer" parent="ShopPopup/Panel/Margin" unique_id=2084432162]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 20
 
 [node name="HeaderRow" type="HBoxContainer" parent="ShopPopup/Panel/Margin/VBox" unique_id=102590140]
 layout_mode = 2
+theme_override_constants/separation = 16
 
 [node name="Title" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow" unique_id=938937163]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 36
-text = "🏦 TIENDA DE MONEDAS"
+theme_override_font_sizes/font_size = 32
+text = "🏪 TIENDA EXCLUSIVA"
 
-[node name="BalanceLabel" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow" unique_id=1675506350]
+[node name="BalanceContainer" type="HBoxContainer" parent="ShopPopup/Panel/Margin/VBox/HeaderRow" unique_id=1675506350]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "Saldo: 50 🪙"
+theme_override_constants/separation = 12
+
+[node name="CoinsBalanceLabel" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow/BalanceContainer" unique_id=1675506351]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "50 🪙"
+
+[node name="DiamondsBalanceLabel" type="Label" parent="ShopPopup/Panel/Margin/VBox/HeaderRow/BalanceContainer" unique_id=1675506352]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "5 💎"
 
 [node name="BtnCloseShop" type="Button" parent="ShopPopup/Panel/Margin/VBox/HeaderRow" unique_id=2097138557]
-custom_minimum_size = Vector2(70, 70)
+custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 28
 text = "❌"
 
 [node name="Scroll" type="ScrollContainer" parent="ShopPopup/Panel/Margin/VBox" unique_id=1652595678]
@@ -680,86 +738,143 @@ horizontal_scroll_mode = 0
 [node name="ContentVBox" type="VBoxContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll" unique_id=1656736587]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 28
+theme_override_constants/separation = 24
 
-[node name="SecCoinsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=992513844]
+[node name="SecIapTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=992513844]
 layout_mode = 2
-theme_override_font_sizes/font_size = 30
-text = "✨ PACKS DE MONEDAS ✨"
+theme_override_font_sizes/font_size = 26
+text = "💎 COMPRAR DIAMANTES ($ USD)"
 horizontal_alignment = 1
 
-[node name="CoinPacksGrid" type="GridContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=812976052]
+[node name="IapGrid" type="GridContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=812976052]
 layout_mode = 2
-theme_override_constants/h_separation = 16
-theme_override_constants/v_separation = 16
-columns = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 3
 
-[node name="BtnDaily" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid" unique_id=1478256057]
-custom_minimum_size = Vector2(420, 160)
+[node name="BtnIap50" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/IapGrid" unique_id=1011798357]
+custom_minimum_size = Vector2(280, 140)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 24
-text = "🎁 Recompensa Diaria
-+50 🪙
-[¡RECLAMAR GRATIS!]"
+theme_override_font_sizes/font_size = 22
+text = "💎 50 Diamantes
+$0.99 USD
+[COMPRAR]"
 
-[node name="BtnAd" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid" unique_id=1927632094]
-custom_minimum_size = Vector2(420, 160)
+[node name="BtnIap300" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/IapGrid" unique_id=1523188192]
+custom_minimum_size = Vector2(280, 140)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 24
-text = "🎬 Ver Anuncio Corto
-+100 🪙
-[VER VIDEO]"
+theme_override_font_sizes/font_size = 22
+text = "💎 300 Diamantes
+$2.99 USD
+⭐ POPULAR"
 
-[node name="BtnBag" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid" unique_id=1011798357]
-custom_minimum_size = Vector2(420, 160)
+[node name="BtnIap1000" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/IapGrid" unique_id=1523188193]
+custom_minimum_size = Vector2(280, 140)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 24
-text = "💰 Bolsa de Oro
-+500 🪙
-[OBTENER]"
+theme_override_font_sizes/font_size = 22
+text = "💎 1,000 Diamantes
+$7.99 USD
+🔥 MEJOR VALOR"
 
-[node name="BtnChest" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid" unique_id=1523188192]
-custom_minimum_size = Vector2(420, 160)
+[node name="SecExchangeTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=992513845]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "🪙 CANJEAR DIAMANTES POR MONEDAS"
+horizontal_alignment = 1
+
+[node name="ExchangeGrid" type="GridContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=812976053]
+layout_mode = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 3
+
+[node name="BtnExch250" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/ExchangeGrid" unique_id=1011798358]
+custom_minimum_size = Vector2(280, 130)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 24
-text = "💎 Cofre Gigante
-+2,500 🪙
-[OBTENER]"
+theme_override_font_sizes/font_size = 22
+text = "🪙 +250 Monedas
+Costo: 10 💎
+[CANJEAR]"
+
+[node name="BtnExch1000" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/ExchangeGrid" unique_id=1523188194]
+custom_minimum_size = Vector2(280, 130)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 22
+text = "🪙 +1,000 Monedas
+Costo: 30 💎
+[CANJEAR]"
+
+[node name="BtnExch3500" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/ExchangeGrid" unique_id=1523188195]
+custom_minimum_size = Vector2(280, 130)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 22
+text = "🪙 +3,500 Monedas
+Costo: 80 💎
+[CANJEAR]"
 
 [node name="SecPotionsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=1330702291]
 layout_mode = 2
-theme_override_font_sizes/font_size = 30
-text = "🧪 POCIONES MÁGICAS 🧪"
+theme_override_font_sizes/font_size = 26
+text = "🧪 POCIONES MÁGICAS"
 horizontal_alignment = 1
 
 [node name="PotionsGrid" type="VBoxContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=1456274706]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 14
 
 [node name="BtnPotEnergy" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid" unique_id=2053219383]
-custom_minimum_size = Vector2(0, 120)
+custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "⚡ Poción Energética Flash (Energía al 100%)
-Precio: 25 🪙"
+text = "⚡ Poción Flash (Energía 100%) — 80 🪙 ó 4 💎"
 
 [node name="BtnPotHygiene" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid" unique_id=1318306901]
-custom_minimum_size = Vector2(0, 120)
+custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "🧼 Poción de Burbujas Mágicas (Higiene al 100%)
-Precio: 20 🪙"
+text = "🧼 Poción Burbujas (Higiene 100%) — 60 🪙 ó 3 💎"
 
 [node name="BtnPotMega" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid" unique_id=1583246066]
-custom_minimum_size = Vector2(0, 120)
+custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "🌟 Poción Suprema (¡Restaura TODO al 100%!)
-Precio: 50 🪙"
+text = "🌟 Poción Suprema (¡TODO al 100%!) — 200 🪙 ó 10 💎"
+
+[node name="SecRewardsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=992513846]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "🎁 RECOMPENSAS GRATIS"
+horizontal_alignment = 1
+
+[node name="RewardsGrid" type="GridContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=812976054]
+layout_mode = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 2
+
+[node name="BtnDaily" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/RewardsGrid" unique_id=1478256057]
+custom_minimum_size = Vector2(420, 130)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 22
+text = "🎁 Recompensa Diaria
++20 🪙  +1 💎
+[¡RECLAMAR!]"
+
+[node name="BtnAd" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/RewardsGrid" unique_id=1927632094]
+custom_minimum_size = Vector2(420, 130)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 22
+text = "🎬 Ver Anuncio
++15 🪙
+[VER VIDEO]"
 
 [node name="FoodMarketPopup" type="Control" parent="." unique_id=1988231456]
 visible = false

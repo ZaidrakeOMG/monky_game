@@ -65,6 +65,7 @@ func reset_game() -> void:
 	coins_earned = 0
 	player.position = Vector2(280, 960)
 	player.rotation = 0.0
+	background.position = Vector2(540, 960)
 	tap_hint.visible = true
 	game_over_modal.visible = false
 	spawn_timer.stop()
@@ -225,6 +226,7 @@ func _trigger_game_over() -> void:
 		var extra_coins = int(float(score) / 5.0)
 		gm.add_coins(coins_earned + extra_coins)
 		gm.play_with_monky(100.0)
+		gm.hygiene = maxf(0.0, gm.hygiene - 8.0) # Se ensucia jugando
 		gm.add_xp(minf(score * 0.8, 20.0))
 
 	final_score_label.text = str(score) + " pts"

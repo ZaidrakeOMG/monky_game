@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://bpoop1234567"]
+[ext_resource type="Script" path="res://scripts/monky/poop.gd" id="1_script"]
+[sub_resource type="CircleShape2D" id="CircleShape2D_poop"]
+radius = 65.0
+
+[node name="Poop" type="Node2D"]
+script = ExtResource("1_script")
+[node name="IconLabel" type="Label" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -60.0
+offset_top = -65.0
+offset_right = 60.0
+offset_bottom = 65.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 90
+text = "💩"
+horizontal_alignment = 1
+vertical_alignment = 1
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+shape = SubResource("CircleShape2D_poop")
+
+[node name="SparkleParticles" type="CPUParticles2D" parent="."]
+emitting = false
+amount = 18
+lifetime = 0.6
+one_shot = true
+explosiveness = 0.9
+emission_shape = 1
+emission_sphere_radius = 40.0
+direction = Vector2(0, -1)
+spread = 180.0
+gravity = Vector2(0, 100)
+initial_velocity_min = 100.0
+initial_velocity_max = 200.0
+scale_amount_min = 6.0
+scale_amount_max = 12.0
+color = Color(1, 0.9, 0.3, 1)

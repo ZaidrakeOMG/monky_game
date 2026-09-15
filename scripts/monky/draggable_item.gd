@@ -49,13 +49,15 @@ func _update_visuals() -> void:
 			icon_label.text = "🧼"
 		"shower":
 			icon_label.text = "🚿"
+		"toothbrush":
+			icon_label.text = "🪥"
 
 func _process(delta: float) -> void:
 	if is_dragging:
 		global_position = get_global_mouse_position()
 		
-		# Si es jabón o ducha, frotar periódicamente sobre Monky
-		if item_type == "soap" or item_type == "shower":
+		# Si es jabón, ducha o cepillo de dientes, frotar periódicamente sobre Monky
+		if item_type == "soap" or item_type == "shower" or item_type == "toothbrush":
 			rub_timer += delta
 			if rub_timer >= 0.12:
 				rub_timer = 0.0
@@ -68,10 +70,12 @@ func _check_rubbing() -> void:
 	for ov in overlapping:
 		var parent_node = ov.get_parent()
 		if parent_node:
-			if item_type == "soap" and parent_node.has_method("apply_soap"):
+			if item_type == "soap" and (ov.name == "BodyArea" or ov.name == "TouchArea") and parent_node.has_method("apply_soap"):
 				parent_node.apply_soap(10.0)
-			elif item_type == "shower" and parent_node.has_method("rinse_water"):
+			elif item_type == "shower" and (ov.name == "BodyArea" or ov.name == "TouchArea") and parent_node.has_method("rinse_water"):
 				parent_node.rinse_water()
+			elif item_type == "toothbrush" and ov.name == "MouthArea" and parent_node.has_method("brush_teeth"):
+				parent_node.brush_teeth(12.0)
 
 
 var is_eating_sequence: bool = false
