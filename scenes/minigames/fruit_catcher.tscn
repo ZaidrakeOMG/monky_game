@@ -1,0 +1,287 @@
+﻿[gd_scene load_steps=8 format=3 uid="uid://c7fruitcatcher01"]
+
+[ext_resource type="Script" path="res://scripts/minigames/fruit_catcher.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://bfrh6k32gq58y" path="res://assets/backgrounds/sala_juegos.jpg" id="2_bg"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_basket"]
+size = Vector2(220, 70)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud"]
+bg_color = Color(0.12, 0.1, 0.16, 0.75)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.85, 0.3, 0.8)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal"]
+bg_color = Color(0.15, 0.12, 0.22, 0.96)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 0.8, 0.2, 1)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_restart"]
+bg_color = Color(0.2, 0.7, 0.3, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 1, 1, 0.6)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_home"]
+bg_color = Color(0.3, 0.5, 0.9, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 1, 1, 0.6)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[node name="FruitCatcher" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Background" type="Sprite2D" parent="."]
+position = Vector2(540, 960)
+texture = ExtResource("2_bg")
+
+[node name="DimOverlay" type="ColorRect" parent="."]
+offset_right = 1080.0
+offset_bottom = 1920.0
+mouse_filter = 2
+color = Color(0.08, 0.05, 0.12, 0.4)
+
+[node name="ItemsContainer" type="Node2D" parent="."]
+
+[node name="PlayerBasket" type="Area2D" parent="."]
+position = Vector2(540, 1620)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerBasket"]
+position = Vector2(0, 10)
+shape = SubResource("RectangleShape2D_basket")
+
+[node name="MonkyLabel" type="Label" parent="PlayerBasket"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -70.0
+offset_top = -120.0
+offset_right = 70.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 90
+text = "🐵"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BasketLabel" type="Label" parent="PlayerBasket"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -90.0
+offset_top = -40.0
+offset_right = 90.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 110
+text = "🧺"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SpawnTimer" type="Timer" parent="."]
+wait_time = 0.85
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="TopBar" type="MarginContainer" parent="HUD"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 30.0
+offset_top = 40.0
+offset_right = -30.0
+offset_bottom = 150.0
+grow_horizontal = 2
+
+[node name="HBox" type="HBoxContainer" parent="HUD/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="ScoreBox" type="PanelContainer" parent="HUD/TopBar/HBox"]
+custom_minimum_size = Vector2(220, 80)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud")
+
+[node name="ScoreLabel" type="Label" parent="HUD/TopBar/HBox/ScoreBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "🍎 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CoinsBox" type="PanelContainer" parent="HUD/TopBar/HBox"]
+custom_minimum_size = Vector2(200, 80)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud")
+
+[node name="CoinsLabel" type="Label" parent="HUD/TopBar/HBox/CoinsBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 36
+text = "🪙 +0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LivesBox" type="PanelContainer" parent="HUD/TopBar/HBox"]
+custom_minimum_size = Vector2(240, 80)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud")
+
+[node name="LivesLabel" type="Label" parent="HUD/TopBar/HBox/LivesBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "❤️ ❤️ ❤️"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BtnExit" type="Button" parent="HUD/TopBar/HBox"]
+custom_minimum_size = Vector2(90, 80)
+layout_mode = 2
+theme_override_font_sizes/font_size = 38
+theme_override_styles/normal = SubResource("StyleBoxFlat_hud")
+text = "🏠"
+
+[node name="GameOverModal" type="PanelContainer" parent="HUD"]
+visible = false
+z_index = 50
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -440.0
+offset_top = -360.0
+offset_right = 440.0
+offset_bottom = 360.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
+
+[node name="Margin" type="MarginContainer" parent="HUD/GameOverModal"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="VBox" type="VBoxContainer" parent="HUD/GameOverModal/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 26
+alignment = 1
+
+[node name="Title" type="Label" parent="HUD/GameOverModal/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 46
+text = "🎮 ¡JUEGO TERMINADO!"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="HUD/GameOverModal/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 28
+text = "✨ ¡Monky se divirtió al 100%! ✨"
+horizontal_alignment = 1
+
+[node name="StatsGrid" type="VBoxContainer" parent="HUD/GameOverModal/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="HBoxScore" type="HBoxContainer" parent="HUD/GameOverModal/Margin/VBox/StatsGrid"]
+layout_mode = 2
+
+[node name="ScoreTitle" type="Label" parent="HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxScore"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 32
+text = "Puntuación Final:"
+
+[node name="ScoreValue" type="Label" parent="HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxScore"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 1, 0.5, 1)
+theme_override_font_sizes/font_size = 34
+text = "0 pts"
+
+[node name="HBoxCoins" type="HBoxContainer" parent="HUD/GameOverModal/Margin/VBox/StatsGrid"]
+layout_mode = 2
+
+[node name="CoinsTitle" type="Label" parent="HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxCoins"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 32
+text = "Monedas Ganadas:"
+
+[node name="CoinsValue" type="Label" parent="HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxCoins"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 34
+text = "+0 🪙"
+
+[node name="HBoxHigh" type="HBoxContainer" parent="HUD/GameOverModal/Margin/VBox/StatsGrid"]
+layout_mode = 2
+
+[node name="HighScoreTitle" type="Label" parent="HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxHigh"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 32
+text = "Mejor Récord:"
+
+[node name="HighScoreValue" type="Label" parent="HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxHigh"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.5, 0.9, 1)
+theme_override_font_sizes/font_size = 34
+text = "0 pts"
+
+[node name="Buttons" type="HBoxContainer" parent="HUD/GameOverModal/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="BtnRestart" type="Button" parent="HUD/GameOverModal/Margin/VBox/Buttons"]
+custom_minimum_size = Vector2(360, 90)
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_restart")
+text = "🔄 Jugar Otra Vez"
+
+[node name="BtnHome" type="Button" parent="HUD/GameOverModal/Margin/VBox/Buttons"]
+custom_minimum_size = Vector2(360, 90)
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_home")
+text = "🏠 Volver a la Sala"

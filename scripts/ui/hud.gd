@@ -90,7 +90,7 @@ func _select_room(r_name: String) -> void:
 		gm.change_room(r_name)
 
 func _setup_action_drawers() -> void:
-	# Configurar comidas en la cocina
+	# Configurar comidas en la cocina (Arrastrables con mordiscos físicos)
 	for child in food_items_grid.get_children():
 		child.queue_free()
 
@@ -101,19 +101,19 @@ func _setup_action_drawers() -> void:
 		card.text = food.icon + "\n" + food.name + "\n" + (str(food.price) + " 🪙" if food.price > 0 else "GRATIS")
 		card.add_theme_font_size_override("font_size", 22)
 		card.pressed.connect(func():
-			if gm:
-				gm.feed_item(food)
+			if gm and food.price > 0 and gm.coins < food.price:
+				gm.show_floating_text.emit("¡No tienes suficientes monedas! 🪙", get_viewport().get_mouse_position(), Color(1, 0.4, 0.4))
+			else:
+				_spawn_draggable("food", food)
 		)
 		food_items_grid.add_child(card)
 
-	# Configurar acciones de baño
+	# Configurar acciones de baño (Arrastrables interactivos: Jabón y Ducha)
 	btn_soap.pressed.connect(func():
-		if gm:
-			gm.clean(20.0)
+		_spawn_draggable("soap")
 	)
 	btn_shower.pressed.connect(func():
-		if gm:
-			gm.clean(35.0)
+		_spawn_draggable("shower")
 	)
 
 	# Configurar acciones de dormitorio
@@ -130,15 +130,27 @@ func _setup_action_drawers() -> void:
 			gm.add_coins(3)
 	)
 	btn_game.pressed.connect(func():
-		if gm:
-			gm.play_with_monky(40.0)
-			gm.add_coins(15)
-			gm.show_floating_text.emit("¡Minijuego Ganado! +15 🪙", Vector2(540, 800), Color(1, 0.8, 0.2))
+		# Lanzar minijuego jugable real
+		get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/fruit_catcher.tscn")
 	)
 
 	btn_close_level.pressed.connect(func():
 		level_popup.visible = false
 	)
+
+func _spawn_draggable(type: String, data: Dictionary = {}) -> void:
+	var scene_root = get_tree().current_scene
+	if not scene_root:
+		return
+	for child in scene_root.get_children():
+		if child is DraggableItem:
+			child.queue_free()
+	var draggable_scene = preload("res://scenes/monky/draggable_item.tscn")
+	var item = draggable_scene.instantiate()
+	scene_root.add_child(item)
+	item.global_position = get_viewport().get_mouse_position()
+	item.setup(type, data)
+
 
 func _setup_shop_modal() -> void:
 	btn_coins.pressed.connect(func():
