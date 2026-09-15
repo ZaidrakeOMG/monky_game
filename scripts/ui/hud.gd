@@ -432,7 +432,7 @@ func _setup_food_details_popup() -> void:
 	panel.add_child(margin)
 
 	var vbox = VBoxContainer.new()
-	vbox.theme_override_constants.separation = 20
+	vbox.add_theme_constant_override("separation", 20)
 	margin.add_child(vbox)
 
 	# Header con botón cerrar
@@ -455,7 +455,7 @@ func _setup_food_details_popup() -> void:
 
 	# Icono y Nombre
 	var food_header = HBoxContainer.new()
-	food_header.theme_override_constants.separation = 24
+	food_header.add_theme_constant_override("separation", 24)
 	food_header.alignment = BoxContainer.ALIGNMENT_CENTER
 	vbox.add_child(food_header)
 
