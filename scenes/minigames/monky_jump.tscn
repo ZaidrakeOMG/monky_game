@@ -1,7 +1,8 @@
 [gd_scene load_steps=8 format=3 uid="uid://c4monkyjump01"]
 
 [ext_resource type="Script" path="res://scripts/minigames/monky_jump.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://cts7l3u1cw1s6" path="res://assets/backgrounds/sala_juegos.jpg" id="2_bg"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/jump_bg.jpg" id="2_bg"]
+[ext_resource type="SpriteFrames" uid="uid://df5w3k58m8r2y" path="res://resources/wonky_pensando.tres" id="3_frames"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 45.0
@@ -72,7 +73,7 @@ offset_top = -100000.0
 offset_right = 1400.0
 offset_bottom = 20000.0
 mouse_filter = 2
-color = Color(0.05, 0.1, 0.08, 0.45)
+color = Color(0.05, 0.1, 0.08, 0.1)
 
 [node name="PlatformsContainer" type="Node2D" parent="."]
 
@@ -83,22 +84,12 @@ position = Vector2(540, 1400)
 position = Vector2(0, 15)
 shape = SubResource("CircleShape2D_player")
 
-[node name="MonkyLabel" type="Label" parent="Player"]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -60.0
-offset_top = -60.0
-offset_right = 60.0
-offset_bottom = 60.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_font_sizes/font_size = 90
-text = "🐵"
-horizontal_alignment = 1
-vertical_alignment = 1
+[node name="MonkySprite" type="AnimatedSprite2D" parent="Player"]
+position = Vector2(0, -10)
+scale = Vector2(0.20, 0.20)
+sprite_frames = ExtResource("3_frames")
+animation = &"pensando"
+autoplay = "pensando"
 
 [node name="HUD" type="CanvasLayer" parent="."]
 

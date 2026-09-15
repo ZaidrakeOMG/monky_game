@@ -5,8 +5,9 @@ extends Node2D
 
 @onready var background: Sprite2D = $Background
 @onready var player: Area2D = $Player
-@onready var player_label: Label = $Player/MonkyLabel
+@onready var monky_sprite: AnimatedSprite2D = $Player/MonkySprite
 @onready var platforms_container: Node2D = $PlatformsContainer
+
 @onready var camera: Camera2D = $Camera2D
 
 # UI

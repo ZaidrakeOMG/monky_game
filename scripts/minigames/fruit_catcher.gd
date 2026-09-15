@@ -6,8 +6,9 @@ extends Node2D
 @onready var background: Sprite2D = $Background
 @onready var player_basket: Area2D = $PlayerBasket
 @onready var basket_sprite: Label = $PlayerBasket/BasketLabel
-@onready var monky_icon: Label = $PlayerBasket/MonkyLabel
+@onready var monky_sprite: AnimatedSprite2D = $PlayerBasket/MonkySprite
 @onready var items_container: Node2D = $ItemsContainer
+
 @onready var spawn_timer: Timer = $SpawnTimer
 
 # UI Nodes
@@ -262,4 +263,3 @@ func _trigger_game_over() -> void:
 
 func _on_btn_home_pressed() -> void:
 	get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/minigames_menu.tscn")
-
