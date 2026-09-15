@@ -414,16 +414,36 @@ func _setup_food_details_popup() -> void:
 	vbox.add_theme_constant_override("separation", 20)
 	margin.add_child(vbox)
 
-	# Header con botón cerrar
+	# Header con navegación y botón cerrar
 	var header_row = HBoxContainer.new()
+	header_row.add_theme_constant_override("separation", 12)
 	vbox.add_child(header_row)
 
+	var prev_food_btn = Button.new()
+	prev_food_btn.custom_minimum_size = Vector2(60, 60)
+	prev_food_btn.text = "◀️"
+	prev_food_btn.add_theme_font_size_override("font_size", 24)
+	prev_food_btn.pressed.connect(func():
+		_navigate_food_details(-1)
+	)
+	header_row.add_child(prev_food_btn)
+
 	var title_top = Label.new()
-	title_top.text = "📋 FICHA NUTRICIONAL"
+	title_top.text = "📋 TABLA NUTRICIONAL REAL"
 	title_top.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_top.add_theme_font_size_override("font_size", 32)
+	title_top.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_top.add_theme_font_size_override("font_size", 30)
 	title_top.add_theme_color_override("font_color", Color(1, 0.9, 0.4))
 	header_row.add_child(title_top)
+
+	var next_food_btn = Button.new()
+	next_food_btn.custom_minimum_size = Vector2(60, 60)
+	next_food_btn.text = "▶️"
+	next_food_btn.add_theme_font_size_override("font_size", 24)
+	next_food_btn.pressed.connect(func():
+		_navigate_food_details(1)
+	)
+	header_row.add_child(next_food_btn)
 
 	var close_btn = Button.new()
 	close_btn.custom_minimum_size = Vector2(60, 60)
@@ -439,49 +459,49 @@ func _setup_food_details_popup() -> void:
 	vbox.add_child(food_header)
 
 	details_icon_label = Label.new()
-	details_icon_label.text = "🍎"
-	details_icon_label.add_theme_font_size_override("font_size", 85)
+	details_icon_label.text = "🐟"
+	details_icon_label.add_theme_font_size_override("font_size", 80)
 	food_header.add_child(details_icon_label)
 
 	var name_box = VBoxContainer.new()
 	name_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	details_title_label = Label.new()
-	details_title_label.text = "Manzana"
-	details_title_label.add_theme_font_size_override("font_size", 36)
+	details_title_label.text = "Pescado (Proteínas)"
+	details_title_label.add_theme_font_size_override("font_size", 34)
 	details_title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	name_box.add_child(details_title_label)
 	food_header.add_child(name_box)
 
-	# Valores Nutricionales
+	# Valores Nutricionales Reales
 	var stats_box = PanelContainer.new()
 	stats_box.add_theme_stylebox_override("panel", _create_card_style(Color(0.22, 0.2, 0.3), Color(0.4, 0.4, 0.55)))
 	var stats_margin = MarginContainer.new()
 	stats_margin.add_theme_constant_override("margin_left", 20)
 	stats_margin.add_theme_constant_override("margin_right", 20)
-	stats_margin.add_theme_constant_override("margin_top", 16)
-	stats_margin.add_theme_constant_override("margin_bottom", 16)
+	stats_margin.add_theme_constant_override("margin_top", 14)
+	stats_margin.add_theme_constant_override("margin_bottom", 14)
 	stats_box.add_child(stats_margin)
 
 	details_stats_label = Label.new()
-	details_stats_label.text = "🍖 Hambre: +15%   |   🥩 Proteínas: +10%\n⚡ Energía: +5%   |   ⭐ XP: +4 XP"
-	details_stats_label.add_theme_font_size_override("font_size", 26)
+	details_stats_label.text = "🥩 Proteína Real: 24.0g (+45%)\n🔥 Calorías: 175 kcal (+12%)\n🍖 Saciedad: +35%   |   ⭐ XP: +8 XP"
+	details_stats_label.add_theme_font_size_override("font_size", 24)
 	details_stats_label.add_theme_color_override("font_color", Color(0.9, 0.95, 1.0))
 	details_stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stats_margin.add_child(details_stats_label)
 	vbox.add_child(stats_box)
 
-	# Descripción
+	# Nutrientes Clave y Descripción
 	details_desc_label = Label.new()
-	details_desc_label.text = "Fruta fresca y saludable."
+	details_desc_label.text = "Descripción nutricional..."
 	details_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	details_desc_label.add_theme_font_size_override("font_size", 24)
-	details_desc_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.9))
+	details_desc_label.add_theme_font_size_override("font_size", 22)
+	details_desc_label.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95))
 	vbox.add_child(details_desc_label)
 
 	# Botón comprar / acción rápida
 	details_buy_btn = Button.new()
-	details_buy_btn.custom_minimum_size = Vector2(0, 80)
-	details_buy_btn.text = "🛒 Comprar por 8 🪙"
+	details_buy_btn.custom_minimum_size = Vector2(0, 76)
+	details_buy_btn.text = "🛒 Comprar por 22 🪙"
 	details_buy_btn.add_theme_font_size_override("font_size", 28)
 	details_buy_btn.add_theme_stylebox_override("normal", _create_card_style(Color(0.2, 0.65, 0.35), Color(1, 1, 1, 0.6)))
 	details_buy_btn.pressed.connect(func():
@@ -493,6 +513,21 @@ func _setup_food_details_popup() -> void:
 	
 	# Asegurar que inicie oculto
 	food_details_popup.visible = false
+
+func _navigate_food_details(dir: int) -> void:
+	if not gm or gm.FOOD_CATALOG.is_empty():
+		return
+	var catalog = gm.FOOD_CATALOG
+	var cur_idx = 0
+	for i in range(catalog.size()):
+		if catalog[i].id == current_inspected_food.get("id", ""):
+			cur_idx = i
+			break
+	var next_idx = (cur_idx + dir) % catalog.size()
+	if next_idx < 0:
+		next_idx += catalog.size()
+	current_inspected_food = catalog[next_idx]
+	_update_food_details_view()
 
 func _open_food_details(food_data: Dictionary) -> void:
 	if food_data.is_empty() and gm and not gm.FOOD_CATALOG.is_empty():
@@ -511,16 +546,23 @@ func _update_food_details_view() -> void:
 		return
 	var f = current_inspected_food
 	details_icon_label.text = f.get("icon", "🍎")
-	details_title_label.text = f.get("name", "Comida") + " (" + f.get("category", "General") + ")"
+	details_title_label.text = f.get("name", "Comida") + "  (" + f.get("category", "General") + ")"
 	
+	var prot_g = f.get("protein_g", 0.0)
+	var prot_bar = int(f.get("protein", 0))
+	var cals = int(f.get("calories_kcal", 0))
+	var energy_gain = int(f.get("energy", 0))
 	var h_val = int(f.get("hunger", 15))
-	var p_val = int(f.get("protein", 10))
-	var e_val = int(f.get("energy", 0))
 	var xp_val = int(f.get("xp", 4))
 	var qty = gm.get_food_quantity(f.id) if gm else 0
+	var nutrients = f.get("nutrients", "")
 
-	details_stats_label.text = "🍖 Hambre: +" + str(h_val) + "%   |   🥩 Proteína: +" + str(p_val) + "%\n⚡ Energía: +" + str(e_val) + "%   |   ⭐ XP: +" + str(xp_val) + "   |   En nevera: " + str(qty)
-	details_desc_label.text = f.get("desc", "Alimento delicioso para nutrir a Monky.")
+	details_stats_label.text = "🥩 Proteína Real: " + str(prot_g) + "g (+" + str(prot_bar) + "%)\n🔥 Calorías: " + str(cals) + " kcal (Energía: +" + str(energy_gain) + "%)\n🍖 Saciedad: +" + str(h_val) + "%   |   ⭐ XP: +" + str(xp_val) + "   |   En nevera: " + str(qty)
+	
+	var desc_text = f.get("desc", "")
+	if nutrients != "":
+		desc_text += "\n\n🧪 Nutrientes Clave: " + nutrients
+	details_desc_label.text = desc_text
 	details_buy_btn.text = "🛒 Comprar 1 unidad (" + str(f.get("price", 10)) + " 🪙)"
 
 func _close_food_details() -> void:
