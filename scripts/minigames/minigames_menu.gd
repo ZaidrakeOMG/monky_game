@@ -1,4 +1,4 @@
-﻿extends Control
+extends Control
 
 ## Menú Selector de Minijuegos (Hub Arcade)
 ## Permite al jugador elegir entre los diferentes minijuegos disponibles, ver récords y volver a la sala.

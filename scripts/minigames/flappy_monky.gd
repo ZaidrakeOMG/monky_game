@@ -1,4 +1,4 @@
-﻿extends Node2D
+extends Node2D
 
 ## Controlador del Minijuego "Flappy Monky"
 ## Minijuego estilo Flappy Bird adaptado a Monky con toques táctiles, obstáculos de jungla y recompensas.

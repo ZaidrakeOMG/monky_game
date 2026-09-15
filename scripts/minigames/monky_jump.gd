@@ -1,4 +1,4 @@
-﻿extends Node2D
+extends Node2D
 
 ## Controlador del Minijuego "Monky Jump"
 ## Salto infinito vertical en plataformas con monedas, resortes y generación procedural.

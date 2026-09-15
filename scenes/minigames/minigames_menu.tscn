@@ -1,4 +1,4 @@
-﻿[gd_scene load_steps=8 format=3 uid="uid://c6minigamesmenu01"]
+[gd_scene load_steps=8 format=3 uid="uid://c6minigamesmenu01"]
 
 [ext_resource type="Script" path="res://scripts/minigames/minigames_menu.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://cts7l3u1cw1s6" path="res://assets/backgrounds/sala_juegos.jpg" id="2_bg"]
