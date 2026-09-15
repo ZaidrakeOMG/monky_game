@@ -23,7 +23,20 @@ func _ready() -> void:
 		gm.room_changed.connect(_on_room_changed)
 		gm.monky_state_changed.connect(_on_monky_state_changed)
 		gm.show_floating_text.connect(_spawn_floating_text)
+		gm.poop_spawned.connect(_spawn_poop_node)
 		_on_room_changed(gm.current_room)
+		
+		# Generar popis guardadas pendientes
+		for i in range(gm.poop_count):
+			var spawn_x = 300.0 + (i * 90.0)
+			_spawn_poop_node(Vector2(spawn_x, randf_range(1380.0, 1460.0)))
+
+func _spawn_poop_node(pos: Vector2) -> void:
+	var poop_scene = preload("res://scenes/monky/poop.tscn")
+	if poop_scene:
+		var poop = poop_scene.instantiate()
+		poop.global_position = pos
+		add_child(poop)
 
 func _on_room_changed(room_name: String) -> void:
 	var key = room_name.to_lower()

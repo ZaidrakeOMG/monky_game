@@ -8,18 +8,36 @@ class_name HUD
 @onready var xp_bar: ProgressBar = $TopBar/VBox/HeaderRow/LevelContainer/XPBar
 @onready var btn_coins: Button = $TopBar/VBox/HeaderRow/BtnCoins
 @onready var coins_label: Label = $TopBar/VBox/HeaderRow/BtnCoins/HBox/CoinsLabel
+@onready var btn_diamonds: Button = $TopBar/VBox/HeaderRow/BtnDiamonds
+@onready var diamonds_label: Label = $TopBar/VBox/HeaderRow/BtnDiamonds/HBox/DiamondsLabel
 
-# Modal de Tienda de Monedas / Pociones
+# Modal de Tienda de Diamantes y Monedas
 @onready var shop_popup: Control = $ShopPopup
-@onready var shop_balance_label: Label = $ShopPopup/Panel/Margin/VBox/HeaderRow/BalanceLabel
+@onready var shop_coins_balance: Label = $ShopPopup/Panel/Margin/VBox/HeaderRow/BalanceContainer/CoinsBalanceLabel
+@onready var shop_diamonds_balance: Label = $ShopPopup/Panel/Margin/VBox/HeaderRow/BalanceContainer/DiamondsBalanceLabel
 @onready var btn_close_shop: Button = $ShopPopup/Panel/Margin/VBox/HeaderRow/BtnCloseShop
-@onready var btn_pack_daily: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid/BtnDaily
-@onready var btn_pack_ad: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid/BtnAd
-@onready var btn_pack_bag: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid/BtnBag
-@onready var btn_pack_chest: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/CoinPacksGrid/BtnChest
+
+# IAP Diamantes
+@onready var btn_iap_50: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/IapGrid/BtnIap50
+@onready var btn_iap_300: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/IapGrid/BtnIap300
+@onready var btn_iap_1000: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/IapGrid/BtnIap1000
+
+# Canje Diamantes por Monedas
+@onready var btn_exch_250: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/ExchangeGrid/BtnExch250
+@onready var btn_exch_1000: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/ExchangeGrid/BtnExch1000
+@onready var btn_exch_3500: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/ExchangeGrid/BtnExch3500
+
+# Pociones
 @onready var btn_pot_energy: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid/BtnPotEnergy
 @onready var btn_pot_hygiene: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid/BtnPotHygiene
 @onready var btn_pot_mega: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid/BtnPotMega
+
+# Recompensas
+@onready var btn_pack_daily: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/RewardsGrid/BtnDaily
+@onready var btn_pack_ad: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/RewardsGrid/BtnAd
+
+var iap_confirm_popup: Control = null
+var current_iap_pack: Dictionary = {}
 
 # Modal de Mercado de Comidas
 @onready var food_market_popup: Control = $FoodMarketPopup
@@ -52,6 +70,14 @@ var details_stats_label: Label = null
 var details_buy_btn: Button = null
 var current_inspected_food: Dictionary = {}
 
+# Botón y Modal de Ajustes / Configuración
+@onready var btn_settings: Button = $TopBar/VBox/HeaderRow/BtnSettings
+var settings_popup: Control = null
+var btn_toggle_sfx: Button = null
+var btn_toggle_music: Button = null
+var btn_toggle_vib: Button = null
+var confirm_reset_popup: Control = null
+
 # Dock de navegación
 @onready var btn_bed: Button = $BottomBar/VBox/DockContainer/BtnBed
 @onready var btn_kitchen: Button = $BottomBar/VBox/DockContainer/BtnKitchen
@@ -65,6 +91,7 @@ var current_inspected_food: Dictionary = {}
 @onready var food_scroll: ScrollContainer = $ActionDrawers/KitchenDrawer/Margin/FoodScroll
 @onready var food_items_grid: HBoxContainer = $ActionDrawers/KitchenDrawer/Margin/FoodScroll/FoodGrid
 @onready var bath_drawer: PanelContainer = $ActionDrawers/BathDrawer
+@onready var btn_toothbrush: Button = $ActionDrawers/BathDrawer/Margin/HBox/BtnToothbrush
 @onready var btn_soap: Button = $ActionDrawers/BathDrawer/Margin/HBox/BtnSoap
 @onready var btn_shower: Button = $ActionDrawers/BathDrawer/Margin/HBox/BtnShower
 @onready var bed_drawer: PanelContainer = $ActionDrawers/BedDrawer
@@ -88,6 +115,7 @@ func _ready() -> void:
 	if gm:
 		gm.stat_changed.connect(_on_stat_changed)
 		gm.coins_changed.connect(_on_coins_changed)
+		gm.diamonds_changed.connect(_on_diamonds_changed)
 		gm.xp_changed.connect(_on_xp_changed)
 		gm.level_up.connect(_on_level_up)
 		gm.room_changed.connect(_on_room_changed)
@@ -101,14 +129,19 @@ func _ready() -> void:
 		_update_stat_ui("fun", gm.fun, gm.MAX_STAT)
 		_update_stat_ui("hygiene", gm.hygiene, gm.MAX_STAT)
 		_on_coins_changed(gm.coins)
+		_on_diamonds_changed(gm.diamonds)
 		_on_xp_changed(gm.xp, gm.get_xp_needed(), gm.level)
 
 	_setup_dock_buttons()
 	_setup_action_drawers()
 	_setup_shop_modal()
 	_setup_food_market()
+	_setup_settings_modal()
 	_setup_scroll_support()
 	_update_room_view(gm.current_room if gm else "dormitorio")
+
+	if btn_settings:
+		btn_settings.pressed.connect(_open_settings_modal)
 
 func _process(_delta: float) -> void:
 	# Cuenta regresiva en vivo del tiempo de sueño de 1h
@@ -119,8 +152,14 @@ func _process(_delta: float) -> void:
 			var mins = seconds_remaining / 60
 			var secs = seconds_remaining % 60
 			btn_lamp.text = "☀️\n\nDespertar\n(%02d:%02d)" % [mins, secs]
+		elif gm.energy <= 0.0:
+			btn_lamp.text = "🌙\n\n¡A Dormir!\n(Agotado 🥱)"
 		else:
 			btn_lamp.text = "🌙\n\nDormir\n(1 hora)"
+
+	# Actualizar temporizadores de recompensas de la tienda en vivo si está abierta
+	if shop_popup and shop_popup.visible:
+		_update_shop_timers()
 
 func _setup_protein_ui() -> void:
 	# Las 4 barras clásicas se mantienen limpias y amplias en TopBar
@@ -155,6 +194,7 @@ func _setup_action_drawers() -> void:
 
 	var ball_style = _create_card_style(Color(1.0, 0.92, 0.78), Color(0.88, 0.62, 0.25))
 	var game_style = _create_card_style(Color(0.92, 0.88, 1.0), Color(0.65, 0.5, 0.9))
+	var brush_style = _create_card_style(Color(0.95, 0.9, 1.0), Color(0.6, 0.45, 0.85))
 	var soap_style = _create_card_style(Color(0.85, 0.96, 1.0), Color(0.3, 0.75, 0.9))
 	var shower_style = _create_card_style(Color(0.85, 0.9, 1.0), Color(0.4, 0.6, 0.95))
 	var lamp_style = _create_card_style(Color(0.88, 0.88, 0.98), Color(0.5, 0.5, 0.85))
@@ -162,6 +202,16 @@ func _setup_action_drawers() -> void:
 	_refresh_kitchen_inventory()
 
 	# Configurar acciones de baño
+	if btn_toothbrush:
+		btn_toothbrush.custom_minimum_size = Vector2(250, 180)
+		btn_toothbrush.text = "🪥\n\nCepillar"
+		btn_toothbrush.add_theme_font_size_override("font_size", 26)
+		btn_toothbrush.add_theme_color_override("font_color", Color(0.35, 0.2, 0.5))
+		btn_toothbrush.add_theme_stylebox_override("normal", brush_style)
+		btn_toothbrush.pressed.connect(func():
+			_spawn_draggable("toothbrush")
+		)
+
 	btn_soap.custom_minimum_size = Vector2(250, 180)
 	btn_soap.text = "🧼\n\nEnjabonar"
 	btn_soap.add_theme_font_size_override("font_size", 26)
@@ -198,6 +248,9 @@ func _setup_action_drawers() -> void:
 	btn_ball.add_theme_color_override("font_color", Color(0.4, 0.25, 0.1))
 	btn_ball.add_theme_stylebox_override("normal", ball_style)
 	btn_ball.pressed.connect(func():
+		if gm and gm.energy <= 0.0:
+			gm.show_floating_text.emit("¡Sin energía! 🥱 Lleva a Monky a su cuarto a dormir 🛏️", Vector2(540, 850), Color(1.0, 0.45, 0.35))
+			return
 		_spawn_bouncing_ball()
 	)
 
@@ -207,6 +260,9 @@ func _setup_action_drawers() -> void:
 	btn_game.add_theme_color_override("font_color", Color(0.3, 0.18, 0.5))
 	btn_game.add_theme_stylebox_override("normal", game_style)
 	btn_game.pressed.connect(func():
+		if gm and gm.energy <= 0.0:
+			gm.show_floating_text.emit("¡Monky está agotado! 🥱💤 Debe dormir en su cama 🛏️", Vector2(540, 850), Color(1.0, 0.45, 0.35))
+			return
 		get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/minigames_menu.tscn")
 	)
 
@@ -386,12 +442,10 @@ func _setup_food_details_popup() -> void:
 	food_details_popup.visible = false
 	food_details_popup.z_index = 80
 	food_details_popup.set_anchors_preset(Control.PRESET_FULL_RECT)
-	food_details_popup.size = Vector2(1080, 1920)
 	add_child(food_details_popup)
 
 	var backdrop = ColorRect.new()
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.size = Vector2(1080, 1920)
 	backdrop.color = Color(0, 0, 0, 0.7)
 	food_details_popup.add_child(backdrop)
 
@@ -613,61 +667,126 @@ func _spawn_draggable(type: String, data: Dictionary = {}) -> void:
 	item.setup(type, data)
 
 func _setup_shop_modal() -> void:
-	btn_coins.pressed.connect(func():
-		_open_shop()
-	)
-	btn_close_shop.pressed.connect(func():
-		_close_shop()
-	)
+	# Estilos del Panel y Cabecera de la Tienda
+	var panel = shop_popup.get_node_or_null("Panel")
+	if panel:
+		panel.add_theme_stylebox_override("panel", _create_card_style(Color(0.14, 0.12, 0.22, 0.98), Color(1.0, 0.85, 0.35)))
 
-	# Packs de Monedas
-	btn_pack_daily.pressed.connect(func():
-		if gm:
-			gm.add_coins(25)
-			_update_shop_balance()
-	)
-	btn_pack_ad.pressed.connect(func():
-		if gm:
-			gm.add_coins(50)
-			_update_shop_balance()
-	)
-	btn_pack_bag.pressed.connect(func():
-		if gm:
-			gm.add_coins(500)
-			_update_shop_balance()
-	)
-	btn_pack_chest.pressed.connect(func():
-		if gm:
-			gm.add_coins(2500)
-			_update_shop_balance()
-	)
+	var title_lbl = shop_popup.get_node_or_null("Panel/Margin/VBox/HeaderRow/Title")
+	if title_lbl:
+		title_lbl.add_theme_color_override("font_color", Color(1.0, 0.88, 0.3))
 
-	# Pociones
-	btn_pot_energy.pressed.connect(func():
-		if gm and gm.spend_coins(25):
-			gm.energy = 100.0
-			gm.show_floating_text.emit("⚡ ¡Energía al 100%!", Vector2(540, 900), Color(1, 0.9, 0.2))
-			_update_shop_balance()
-	)
-	btn_pot_hygiene.pressed.connect(func():
-		if gm and gm.spend_coins(20):
-			gm.hygiene = 100.0
-			gm.show_floating_text.emit("🧼 ¡Higiene al 100%!", Vector2(540, 900), Color(0.3, 0.9, 1.0))
-			_update_shop_balance()
-	)
-	btn_pot_mega.pressed.connect(func():
-		if gm and gm.spend_coins(50):
-			gm.hunger = 100.0
-			gm.protein = 100.0
-			gm.energy = 100.0
-			gm.fun = 100.0
-			gm.hygiene = 100.0
-			gm.show_floating_text.emit("🌟 ¡Poción Suprema Usada!", Vector2(540, 900), Color(1, 0.4, 1.0))
-			_update_shop_balance()
-	)
+	if shop_coins_balance:
+		shop_coins_balance.add_theme_color_override("font_color", Color(1.0, 0.9, 0.4))
+	if shop_diamonds_balance:
+		shop_diamonds_balance.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0))
+
+	if btn_close_shop:
+		btn_close_shop.add_theme_stylebox_override("normal", _create_card_style(Color(0.28, 0.22, 0.36), Color(0.6, 0.5, 0.7)))
+
+	var sec_iap = shop_popup.get_node_or_null("Panel/Margin/VBox/Scroll/ContentVBox/SecIapTitle")
+	if sec_iap:
+		sec_iap.add_theme_color_override("font_color", Color(0.45, 0.9, 1.0))
+
+	var sec_exch = shop_popup.get_node_or_null("Panel/Margin/VBox/Scroll/ContentVBox/SecExchangeTitle")
+	if sec_exch:
+		sec_exch.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
+
+	var sec_pots = shop_popup.get_node_or_null("Panel/Margin/VBox/Scroll/ContentVBox/SecPotionsTitle")
+	if sec_pots:
+		sec_pots.add_theme_color_override("font_color", Color(1.0, 0.55, 0.88))
+
+	var sec_rew = shop_popup.get_node_or_null("Panel/Margin/VBox/Scroll/ContentVBox/SecRewardsTitle")
+	if sec_rew:
+		sec_rew.add_theme_color_override("font_color", Color(0.5, 1.0, 0.6))
+
+	# Estilos de Packs IAP (Diamantes)
+	if btn_iap_50:
+		btn_iap_50.add_theme_stylebox_override("normal", _create_card_style(Color(0.22, 0.16, 0.38), Color(0.5, 0.8, 1.0)))
+		btn_iap_50.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	if btn_iap_300:
+		btn_iap_300.add_theme_stylebox_override("normal", _create_card_style(Color(0.28, 0.18, 0.48), Color(0.6, 0.9, 1.0)))
+		btn_iap_300.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	if btn_iap_1000:
+		btn_iap_1000.add_theme_stylebox_override("normal", _create_card_style(Color(0.35, 0.20, 0.58), Color(1.0, 0.7, 0.95)))
+		btn_iap_1000.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+
+	# Estilos de Canje por Monedas
+	if btn_exch_250:
+		btn_exch_250.add_theme_stylebox_override("normal", _create_card_style(Color(0.24, 0.22, 0.12), Color(1.0, 0.8, 0.3)))
+		btn_exch_250.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	if btn_exch_1000:
+		btn_exch_1000.add_theme_stylebox_override("normal", _create_card_style(Color(0.3, 0.26, 0.14), Color(1.0, 0.85, 0.35)))
+		btn_exch_1000.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	if btn_exch_3500:
+		btn_exch_3500.add_theme_stylebox_override("normal", _create_card_style(Color(0.38, 0.3, 0.15), Color(1.0, 0.9, 0.4)))
+		btn_exch_3500.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+
+	# Estilos de Pociones Mágicas
+	if btn_pot_energy:
+		btn_pot_energy.add_theme_stylebox_override("normal", _create_card_style(Color(0.75, 0.55, 0.12), Color(1.0, 0.85, 0.35)))
+		btn_pot_energy.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+
+	if btn_pot_hygiene:
+		btn_pot_hygiene.add_theme_stylebox_override("normal", _create_card_style(Color(0.18, 0.55, 0.72), Color(0.45, 0.85, 1.0)))
+		btn_pot_hygiene.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+
+	if btn_pot_mega:
+		btn_pot_mega.add_theme_stylebox_override("normal", _create_card_style(Color(0.68, 0.22, 0.72), Color(1.0, 0.65, 0.95)))
+		btn_pot_mega.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+
+	# Estilos de Recompensas
+	if btn_pack_daily:
+		btn_pack_daily.add_theme_stylebox_override("normal", _create_card_style(Color(0.85, 0.45, 0.18), Color(1.0, 0.75, 0.35)))
+		btn_pack_daily.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+
+	if btn_pack_ad:
+		btn_pack_ad.add_theme_stylebox_override("normal", _create_card_style(Color(0.45, 0.3, 0.75), Color(0.75, 0.55, 0.98)))
+		btn_pack_ad.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+
+	# Conexiones de apertura y cierre
+	if btn_coins:
+		btn_coins.pressed.connect(_open_shop)
+	if btn_diamonds:
+		btn_diamonds.pressed.connect(_open_shop)
+	if btn_close_shop:
+		btn_close_shop.pressed.connect(_close_shop)
+
+	# Conexiones IAP Diamantes ($ USD)
+	if btn_iap_50:
+		btn_iap_50.pressed.connect(func(): _prompt_iap_purchase(50, 0.99, "Bolsita de Gemas"))
+	if btn_iap_300:
+		btn_iap_300.pressed.connect(func(): _prompt_iap_purchase(300, 2.99, "Cofre de Gemas"))
+	if btn_iap_1000:
+		btn_iap_1000.pressed.connect(func(): _prompt_iap_purchase(1000, 7.99, "Bóveda de Gemas"))
+
+	# Conexiones Canje Diamantes -> Monedas
+	if btn_exch_250:
+		btn_exch_250.pressed.connect(func(): _exchange_diamonds_for_coins(10, 250))
+	if btn_exch_1000:
+		btn_exch_1000.pressed.connect(func(): _exchange_diamonds_for_coins(30, 1000))
+	if btn_exch_3500:
+		btn_exch_3500.pressed.connect(func(): _exchange_diamonds_for_coins(80, 3500))
+
+	# Conexiones Pociones
+	if btn_pot_energy:
+		btn_pot_energy.pressed.connect(func(): _buy_potion("energy", 80, 4))
+	if btn_pot_hygiene:
+		btn_pot_hygiene.pressed.connect(func(): _buy_potion("hygiene", 60, 3))
+	if btn_pot_mega:
+		btn_pot_mega.pressed.connect(func(): _buy_potion("mega", 200, 10))
+
+	# Conexiones Recompensas
+	if btn_pack_daily:
+		btn_pack_daily.pressed.connect(_claim_daily_reward)
+	if btn_pack_ad:
+		btn_pack_ad.pressed.connect(_claim_ad_reward)
+
+	_setup_iap_confirm_popup()
 
 func _open_shop() -> void:
 	_update_shop_balance()
+	_update_shop_timers()
 	shop_popup.visible = true
 	var panel = shop_popup.get_node("Panel")
 	panel.scale = Vector2(0.7, 0.7)
@@ -684,8 +803,234 @@ func _close_shop() -> void:
 	)
 
 func _update_shop_balance() -> void:
-	if gm and shop_balance_label:
-		shop_balance_label.text = "Saldo: " + str(gm.coins) + " 🪙"
+	if not gm:
+		return
+	if shop_coins_balance:
+		shop_coins_balance.text = str(gm.coins) + " 🪙"
+	if shop_diamonds_balance:
+		shop_diamonds_balance.text = str(gm.diamonds) + " 💎"
+
+func _update_shop_timers() -> void:
+	if not gm:
+		return
+	var now: int = int(Time.get_unix_time_from_system())
+
+	# Recompensa Diaria (24 Horas = 86,400 seg)
+	if btn_pack_daily:
+		if gm.last_daily_reward_time == 0 or (now - gm.last_daily_reward_time) >= 86400:
+			btn_pack_daily.text = "🎁 Recompensa Diaria\n+20 🪙  +1 💎\n[¡RECLAMAR!]"
+			btn_pack_daily.modulate = Color(1.0, 1.0, 1.0)
+		else:
+			var wait_sec: int = maxi(0, 86400 - (now - gm.last_daily_reward_time))
+			var h: int = wait_sec / 3600
+			var m: int = (wait_sec % 3600) / 60
+			var s: int = wait_sec % 60
+			btn_pack_daily.text = "🎁 Recompensa Diaria\n⏳ En %02dh %02dm %02ds\n[ESPERA]" % [h, m, s]
+			btn_pack_daily.modulate = Color(0.7, 0.7, 0.7)
+
+	# Anuncio (2 Minutos = 120 seg)
+	if btn_pack_ad:
+		if gm.last_ad_reward_time == 0 or (now - gm.last_ad_reward_time) >= 120:
+			btn_pack_ad.text = "🎬 Ver Anuncio\n+15 🪙\n[VER VIDEO]"
+			btn_pack_ad.modulate = Color(1.0, 1.0, 1.0)
+		else:
+			var wait_sec: int = maxi(0, 120 - (now - gm.last_ad_reward_time))
+			var m: int = wait_sec / 60
+			var s: int = wait_sec % 60
+			btn_pack_ad.text = "🎬 Ver Anuncio\n⏳ Espera %02d:%02d\n[ESPERA]" % [m, s]
+			btn_pack_ad.modulate = Color(0.7, 0.7, 0.7)
+
+func _claim_daily_reward() -> void:
+	if not gm:
+		return
+	var now: int = int(Time.get_unix_time_from_system())
+	if gm.last_daily_reward_time == 0 or (now - gm.last_daily_reward_time) >= 86400:
+		gm.last_daily_reward_time = now
+		gm.add_coins(20)
+		gm.add_diamonds(1)
+		gm.save_game()
+		_update_shop_balance()
+		_update_shop_timers()
+		gm.show_floating_text.emit("🎁 ¡Recompensa Diaria: +20🪙 +1💎!", Vector2(540, 850), Color(1.0, 0.85, 0.2))
+	else:
+		var wait_sec: int = maxi(0, 86400 - (now - gm.last_daily_reward_time))
+		var h: int = wait_sec / 3600
+		var m: int = (wait_sec % 3600) / 60
+		gm.show_floating_text.emit("⏳ Vuelve en %02dh %02dm" % [h, m], Vector2(540, 850), Color(1.0, 0.6, 0.3))
+
+func _claim_ad_reward() -> void:
+	if not gm:
+		return
+	var now: int = int(Time.get_unix_time_from_system())
+	if gm.last_ad_reward_time == 0 or (now - gm.last_ad_reward_time) >= 120:
+		gm.last_ad_reward_time = now
+		gm.add_coins(15)
+		gm.save_game()
+		_update_shop_balance()
+		_update_shop_timers()
+		gm.show_floating_text.emit("🎬 ¡Video completado: +15 🪙!", Vector2(540, 850), Color(0.4, 1.0, 0.6))
+	else:
+		var wait_sec: int = maxi(0, 120 - (now - gm.last_ad_reward_time))
+		var m: int = wait_sec / 60
+		var s: int = wait_sec % 60
+		gm.show_floating_text.emit("⏳ Espera %02d:%02d" % [m, s], Vector2(540, 850), Color(1.0, 0.6, 0.3))
+
+func _exchange_diamonds_for_coins(gem_cost: int, coin_gain: int) -> void:
+	if not gm:
+		return
+	if gm.spend_diamonds(gem_cost):
+		gm.add_coins(coin_gain)
+		gm.save_game()
+		_update_shop_balance()
+		gm.show_floating_text.emit("✨ ¡Canje exitoso! +" + str(coin_gain) + " 🪙", Vector2(540, 850), Color(1.0, 0.85, 0.2))
+	else:
+		gm.show_floating_text.emit("❌ Necesitas " + str(gem_cost) + " 💎", Vector2(540, 850), Color(1.0, 0.4, 0.4))
+
+func _buy_potion(pot_type: String, coin_cost: int, gem_cost: int) -> void:
+	if not gm:
+		return
+	var paid: bool = false
+	var payment_msg: String = ""
+
+	if gm.spend_coins(coin_cost):
+		paid = true
+		payment_msg = " (-" + str(coin_cost) + " 🪙)"
+	elif gm.spend_diamonds(gem_cost):
+		paid = true
+		payment_msg = " (-" + str(gem_cost) + " 💎)"
+
+	if not paid:
+		gm.show_floating_text.emit("❌ Requiere " + str(coin_cost) + " 🪙 ó " + str(gem_cost) + " 💎", Vector2(540, 850), Color(1.0, 0.4, 0.4))
+		return
+
+	match pot_type:
+		"energy":
+			gm.energy = 100.0
+			gm.show_floating_text.emit("⚡ ¡Energía al 100%!" + payment_msg, Vector2(540, 900), Color(1.0, 0.9, 0.2))
+		"hygiene":
+			gm.hygiene = 100.0
+			gm.show_floating_text.emit("🧼 ¡Higiene al 100%!" + payment_msg, Vector2(540, 900), Color(0.3, 0.9, 1.0))
+		"mega":
+			gm.hunger = 100.0
+			gm.protein = 100.0
+			gm.energy = 100.0
+			gm.fun = 100.0
+			gm.hygiene = 100.0
+			gm.show_floating_text.emit("🌟 ¡Poción Suprema Usada!" + payment_msg, Vector2(540, 900), Color(1.0, 0.4, 1.0))
+
+	gm.save_game()
+	_update_shop_balance()
+
+# Modal IAP Simulado para Comprar Diamantes
+func _setup_iap_confirm_popup() -> void:
+	iap_confirm_popup = Control.new()
+	iap_confirm_popup.name = "IapConfirmPopup"
+	iap_confirm_popup.visible = false
+	iap_confirm_popup.z_index = 90
+	iap_confirm_popup.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(iap_confirm_popup)
+
+	var backdrop = ColorRect.new()
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.color = Color(0, 0, 0, 0.8)
+	backdrop.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed:
+			iap_confirm_popup.visible = false
+	)
+	iap_confirm_popup.add_child(backdrop)
+
+	var panel = PanelContainer.new()
+	panel.name = "Panel"
+	panel.custom_minimum_size = Vector2(800, 520)
+	panel.size = Vector2(800, 520)
+	panel.position = Vector2(140, 700)
+	panel.add_theme_stylebox_override("panel", _create_card_style(Color(0.16, 0.12, 0.25, 0.98), Color(0.4, 0.85, 1.0)))
+	iap_confirm_popup.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 36)
+	margin.add_theme_constant_override("margin_right", 36)
+	margin.add_theme_constant_override("margin_top", 32)
+	margin.add_theme_constant_override("margin_bottom", 32)
+	panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.name = "VBox"
+	vbox.add_theme_constant_override("separation", 24)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	margin.add_child(vbox)
+
+	var title = Label.new()
+	title.name = "Title"
+	title.text = "💳 TIENDA OFICIAL (IAP SIMULADO)"
+	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var desc = Label.new()
+	desc.name = "Desc"
+	desc.text = "¿Deseas adquirir este paquete de Diamantes?"
+	desc.add_theme_font_size_override("font_size", 24)
+	desc.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(desc)
+
+	var hbox = HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 20)
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+
+	var btn_cancel = Button.new()
+	btn_cancel.custom_minimum_size = Vector2(280, 80)
+	btn_cancel.text = "❌ Cancelar"
+	btn_cancel.add_theme_font_size_override("font_size", 28)
+	btn_cancel.add_theme_stylebox_override("normal", _create_card_style(Color(0.3, 0.3, 0.4), Color(0.6, 0.6, 0.7)))
+	btn_cancel.pressed.connect(func():
+		iap_confirm_popup.visible = false
+	)
+	hbox.add_child(btn_cancel)
+
+	var btn_confirm = Button.new()
+	btn_confirm.name = "BtnConfirm"
+	btn_confirm.custom_minimum_size = Vector2(280, 80)
+	btn_confirm.text = "💳 Comprar"
+	btn_confirm.add_theme_font_size_override("font_size", 28)
+	btn_confirm.add_theme_stylebox_override("normal", _create_card_style(Color(0.18, 0.6, 0.35), Color(0.4, 0.95, 0.55)))
+	btn_confirm.pressed.connect(func():
+		if gm and not current_iap_pack.is_empty():
+			var gems = current_iap_pack.get("gems", 0)
+			var price = current_iap_pack.get("price", 0.0)
+			gm.add_diamonds(gems)
+			gm.save_game()
+			_update_shop_balance()
+			gm.show_floating_text.emit("💎 ¡+" + str(gems) + " Diamantes Comprados!", Vector2(540, 800), Color(0.4, 0.9, 1.0))
+		iap_confirm_popup.visible = false
+	)
+	hbox.add_child(btn_confirm)
+	vbox.add_child(hbox)
+
+func _prompt_iap_purchase(gems: int, price: float, pack_name: String) -> void:
+	current_iap_pack = {
+		"gems": gems,
+		"price": price,
+		"name": pack_name
+	}
+	if not iap_confirm_popup:
+		return
+	var desc = iap_confirm_popup.get_node_or_null("Panel/Margin/VBox/Desc")
+	if desc:
+		desc.text = "Paquete: " + pack_name + "\nRecibes: 💎 " + str(gems) + " Diamantes\nPrecio: $" + str(price) + " USD\n\n¿Confirmar transacción simulada?"
+	var btn_conf = iap_confirm_popup.get_node_or_null("Panel/Margin/VBox/HBox/BtnConfirm")
+	if btn_conf:
+		btn_conf.text = "💳 Pagar $" + str(price)
+	
+	iap_confirm_popup.visible = true
+	var panel = iap_confirm_popup.get_node("Panel")
+	panel.scale = Vector2(0.6, 0.6)
+	panel.pivot_offset = panel.size / 2.0
+	var tween = create_tween()
+	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _on_stat_changed(stat_name: String, current_value: float, max_value: float) -> void:
 	_update_stat_ui(stat_name, current_value, max_value)
@@ -729,9 +1074,15 @@ func _update_stat_ui(stat_name: String, value: float, max_val: float) -> void:
 					target_label.text = "🧼 " + str(int(value)) + "%"
 
 func _on_coins_changed(new_coins: int) -> void:
-	coins_label.text = str(new_coins)
+	if coins_label:
+		coins_label.text = str(new_coins)
 	_update_shop_balance()
 	_update_market_balance()
+
+func _on_diamonds_changed(new_diamonds: int) -> void:
+	if diamonds_label:
+		diamonds_label.text = str(new_diamonds)
+	_update_shop_balance()
 
 func _on_xp_changed(cur_xp: float, max_xp: float, lvl: int) -> void:
 	level_label.text = "⭐ NIV. " + str(lvl)
@@ -739,7 +1090,7 @@ func _on_xp_changed(cur_xp: float, max_xp: float, lvl: int) -> void:
 	xp_bar.value = cur_xp
 
 func _on_level_up(new_level: int) -> void:
-	level_popup_label.text = "¡Monky ha alcanzado el Nivel " + str(new_level) + "!\nHas ganado " + str(new_level * 5) + " 🪙 de bonificación."
+	level_popup_label.text = "¡Monky ha alcanzado el Nivel " + str(new_level) + "!\nHas ganado " + str(new_level * 5) + " 🪙 y +1 💎 de bonificación."
 	level_popup.visible = true
 	var tween = create_tween()
 	level_popup.scale = Vector2(0.5, 0.5)
@@ -764,3 +1115,292 @@ func _update_room_view(room_name: String) -> void:
 	btn_kitchen.modulate = Color(1.3, 1.3, 1.3) if key == "cocina" else Color(0.7, 0.7, 0.7)
 	btn_bath.modulate = Color(1.3, 1.3, 1.3) if key == "baño" else Color(0.7, 0.7, 0.7)
 	btn_play.modulate = Color(1.3, 1.3, 1.3) if (key == "sala de juegos" or key == "juegos") else Color(0.7, 0.7, 0.7)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		if iap_confirm_popup and iap_confirm_popup.visible:
+			iap_confirm_popup.visible = false
+		elif confirm_reset_popup and confirm_reset_popup.visible:
+			confirm_reset_popup.visible = false
+		elif settings_popup and settings_popup.visible:
+			_close_settings_modal()
+		elif food_details_popup and food_details_popup.visible:
+			food_details_popup.visible = false
+		elif food_market_popup and food_market_popup.visible:
+			_close_food_market()
+		elif shop_popup and shop_popup.visible:
+			_close_shop()
+		else:
+			_open_settings_modal()
+
+# Modal de Ajustes y Configuración del Juego
+func _setup_settings_modal() -> void:
+	settings_popup = Control.new()
+	settings_popup.name = "SettingsPopup"
+	settings_popup.visible = false
+	settings_popup.z_index = 85
+	settings_popup.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(settings_popup)
+
+	var backdrop = ColorRect.new()
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.color = Color(0, 0, 0, 0.75)
+	backdrop.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed:
+			_close_settings_modal()
+	)
+	settings_popup.add_child(backdrop)
+
+	var panel = PanelContainer.new()
+	panel.name = "Panel"
+	panel.custom_minimum_size = Vector2(880, 920)
+	panel.size = Vector2(880, 920)
+	panel.position = Vector2(100, 500)
+	panel.add_theme_stylebox_override("panel", _create_card_style(Color(0.15, 0.12, 0.22, 0.98), Color(1.0, 0.85, 0.35)))
+	settings_popup.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 36)
+	margin.add_theme_constant_override("margin_right", 36)
+	margin.add_theme_constant_override("margin_top", 32)
+	margin.add_theme_constant_override("margin_bottom", 32)
+	panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 18)
+	margin.add_child(vbox)
+
+	# Cabecera
+	var header = HBoxContainer.new()
+	var title = Label.new()
+	title.text = "⚙️ AJUSTES Y OPCIONES"
+	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_color_override("font_color", Color(1.0, 0.88, 0.3))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+
+	var btn_close = Button.new()
+	btn_close.custom_minimum_size = Vector2(70, 70)
+	btn_close.text = "✖️"
+	btn_close.add_theme_font_size_override("font_size", 28)
+	btn_close.add_theme_stylebox_override("normal", _create_card_style(Color(0.28, 0.22, 0.36), Color(0.6, 0.5, 0.7)))
+	btn_close.pressed.connect(_close_settings_modal)
+	header.add_child(btn_close)
+	vbox.add_child(header)
+
+	# Separador visual
+	var sep = HSeparator.new()
+	vbox.add_child(sep)
+
+	# Opción 1: Sonido SFX
+	btn_toggle_sfx = Button.new()
+	btn_toggle_sfx.custom_minimum_size = Vector2(0, 85)
+	btn_toggle_sfx.add_theme_font_size_override("font_size", 28)
+	btn_toggle_sfx.pressed.connect(func():
+		if gm:
+			gm.sfx_enabled = !gm.sfx_enabled
+			gm.save_game()
+			_update_settings_ui()
+	)
+	vbox.add_child(btn_toggle_sfx)
+
+	# Opción 2: Música de Fondo
+	btn_toggle_music = Button.new()
+	btn_toggle_music.custom_minimum_size = Vector2(0, 85)
+	btn_toggle_music.add_theme_font_size_override("font_size", 28)
+	btn_toggle_music.pressed.connect(func():
+		if gm:
+			gm.music_enabled = !gm.music_enabled
+			gm.save_game()
+			_update_settings_ui()
+	)
+	vbox.add_child(btn_toggle_music)
+
+	# Opción 3: Vibración Háptica
+	btn_toggle_vib = Button.new()
+	btn_toggle_vib.custom_minimum_size = Vector2(0, 85)
+	btn_toggle_vib.add_theme_font_size_override("font_size", 28)
+	btn_toggle_vib.pressed.connect(func():
+		if gm:
+			gm.vibration_enabled = !gm.vibration_enabled
+			gm.save_game()
+			_update_settings_ui()
+	)
+	vbox.add_child(btn_toggle_vib)
+
+	# Opción 4: Reiniciar Mascota
+	var btn_reset = Button.new()
+	btn_reset.custom_minimum_size = Vector2(0, 85)
+	btn_reset.text = "🔄 Reiniciar Mascota (Borrar Datos)"
+	btn_reset.add_theme_font_size_override("font_size", 26)
+	btn_reset.add_theme_color_override("font_color", Color(1.0, 0.9, 0.8))
+	btn_reset.add_theme_stylebox_override("normal", _create_card_style(Color(0.65, 0.35, 0.2), Color(0.9, 0.55, 0.3)))
+	btn_reset.pressed.connect(func():
+		_open_confirm_reset()
+	)
+	vbox.add_child(btn_reset)
+
+	# Opción 6: Salir del Juego
+	var btn_quit = Button.new()
+	btn_quit.custom_minimum_size = Vector2(0, 95)
+	btn_quit.text = "🚪 Salir del Juego"
+	btn_quit.add_theme_font_size_override("font_size", 30)
+	btn_quit.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	btn_quit.add_theme_stylebox_override("normal", _create_card_style(Color(0.8, 0.22, 0.22), Color(1.0, 0.5, 0.5)))
+	btn_quit.pressed.connect(func():
+		if gm:
+			gm.save_game()
+		get_tree().quit()
+	)
+	vbox.add_child(btn_quit)
+
+	# Pie de información de versión
+	var version_lbl = Label.new()
+	version_lbl.text = "Wonky / Monky Virtual Pet • v1.2.0\nPair Programming with DeepMind Antigravity"
+	version_lbl.add_theme_font_size_override("font_size", 20)
+	version_lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.75))
+	version_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(version_lbl)
+
+	_setup_confirm_reset_popup()
+	_update_settings_ui()
+
+func _update_settings_ui() -> void:
+	if not gm:
+		return
+	if btn_toggle_sfx:
+		var sfx_on = gm.sfx_enabled
+		btn_toggle_sfx.text = "🔊 Efectos de Sonido: " + ("ACTIVADOS" if sfx_on else "SILENCIADOS")
+		var bg_c = Color(0.2, 0.6, 0.35) if sfx_on else Color(0.35, 0.3, 0.4)
+		var bd_c = Color(0.4, 0.9, 0.55) if sfx_on else Color(0.6, 0.55, 0.65)
+		btn_toggle_sfx.add_theme_stylebox_override("normal", _create_card_style(bg_c, bd_c))
+
+	if btn_toggle_music:
+		var mus_on = gm.music_enabled
+		btn_toggle_music.text = "🎵 Música de Fondo: " + ("ACTIVADA" if mus_on else "SILENCIADA")
+		var bg_c = Color(0.35, 0.3, 0.7) if mus_on else Color(0.35, 0.3, 0.4)
+		var bd_c = Color(0.65, 0.55, 0.95) if mus_on else Color(0.6, 0.55, 0.65)
+		btn_toggle_music.add_theme_stylebox_override("normal", _create_card_style(bg_c, bd_c))
+
+	if btn_toggle_vib:
+		var vib_on = gm.vibration_enabled
+		btn_toggle_vib.text = "📳 Vibración Háptica: " + ("ACTIVADA" if vib_on else "DESACTIVADA")
+		var bg_c = Color(0.7, 0.5, 0.2) if vib_on else Color(0.35, 0.3, 0.4)
+		var bd_c = Color(0.95, 0.75, 0.3) if vib_on else Color(0.6, 0.55, 0.65)
+		btn_toggle_vib.add_theme_stylebox_override("normal", _create_card_style(bg_c, bd_c))
+
+func _open_settings_modal() -> void:
+	if not settings_popup:
+		return
+	_update_settings_ui()
+	settings_popup.visible = true
+	var panel = settings_popup.get_node("Panel")
+	panel.scale = Vector2(0.7, 0.7)
+	panel.pivot_offset = panel.size / 2.0
+	var tween = create_tween()
+	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _close_settings_modal() -> void:
+	if not settings_popup:
+		return
+	var panel = settings_popup.get_node("Panel")
+	var tween = create_tween()
+	tween.tween_property(panel, "scale", Vector2(0.7, 0.7), 0.15).set_ease(Tween.EASE_IN)
+	tween.finished.connect(func():
+		settings_popup.visible = false
+	)
+
+func _setup_confirm_reset_popup() -> void:
+	confirm_reset_popup = Control.new()
+	confirm_reset_popup.name = "ConfirmResetPopup"
+	confirm_reset_popup.visible = false
+	confirm_reset_popup.z_index = 95
+	confirm_reset_popup.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(confirm_reset_popup)
+
+	var backdrop = ColorRect.new()
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.color = Color(0, 0, 0, 0.8)
+	confirm_reset_popup.add_child(backdrop)
+
+	var panel = PanelContainer.new()
+	panel.name = "Panel"
+	panel.custom_minimum_size = Vector2(800, 520)
+	panel.size = Vector2(800, 520)
+	panel.position = Vector2(140, 700)
+	panel.add_theme_stylebox_override("panel", _create_card_style(Color(0.2, 0.1, 0.12, 0.98), Color(0.95, 0.3, 0.3)))
+	confirm_reset_popup.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 36)
+	margin.add_theme_constant_override("margin_right", 36)
+	margin.add_theme_constant_override("margin_top", 32)
+	margin.add_theme_constant_override("margin_bottom", 32)
+	panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 24)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	margin.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "⚠️ ¿REINICIAR MASCOTA?"
+	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var desc = Label.new()
+	desc.text = "Esta acción borrará todas las monedas, comidas, nivel y estadísticas acumuladas para empezar desde el Nivel 1.\n\n¿Estás completamente seguro?"
+	desc.add_theme_font_size_override("font_size", 24)
+	desc.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(desc)
+
+	var hbox = HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 20)
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+
+	var btn_cancel = Button.new()
+	btn_cancel.custom_minimum_size = Vector2(280, 80)
+	btn_cancel.text = "❌ Cancelar"
+	btn_cancel.add_theme_font_size_override("font_size", 28)
+	btn_cancel.add_theme_stylebox_override("normal", _create_card_style(Color(0.3, 0.3, 0.4), Color(0.6, 0.6, 0.7)))
+	btn_cancel.pressed.connect(func():
+		confirm_reset_popup.visible = false
+	)
+	hbox.add_child(btn_cancel)
+
+	var btn_confirm = Button.new()
+	btn_confirm.custom_minimum_size = Vector2(280, 80)
+	btn_confirm.text = "🗑️ Sí, Reiniciar"
+	btn_confirm.add_theme_font_size_override("font_size", 28)
+	btn_confirm.add_theme_stylebox_override("normal", _create_card_style(Color(0.85, 0.25, 0.25), Color(1.0, 0.5, 0.5)))
+	btn_confirm.pressed.connect(func():
+		if gm:
+			gm.reset_game_data()
+			_update_stat_ui("hunger", gm.hunger, gm.MAX_STAT)
+			_update_stat_ui("protein", gm.protein, gm.MAX_STAT)
+			_update_stat_ui("energy", gm.energy, gm.MAX_STAT)
+			_update_stat_ui("fun", gm.fun, gm.MAX_STAT)
+			_update_stat_ui("hygiene", gm.hygiene, gm.MAX_STAT)
+			_on_coins_changed(gm.coins)
+			_on_xp_changed(gm.xp, gm.get_xp_needed(), gm.level)
+			_refresh_kitchen_inventory()
+			gm.show_floating_text.emit("¡Mascota reiniciada desde cero! 🐣", Vector2(540, 850), Color(0.4, 1.0, 0.5))
+		confirm_reset_popup.visible = false
+		_close_settings_modal()
+	)
+	hbox.add_child(btn_confirm)
+	vbox.add_child(hbox)
+
+func _open_confirm_reset() -> void:
+	if not confirm_reset_popup:
+		return
+	confirm_reset_popup.visible = true
+	var panel = confirm_reset_popup.get_node("Panel")
+	panel.scale = Vector2(0.6, 0.6)
+	panel.pivot_offset = panel.size / 2.0
+	var tween = create_tween()
+	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)

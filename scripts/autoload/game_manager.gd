@@ -5,16 +5,27 @@ extends Node
 
 signal stat_changed(stat_name: String, current_value: float, max_value: float)
 signal coins_changed(current_coins: int)
+signal diamonds_changed(current_diamonds: int)
 signal xp_changed(current_xp: float, max_xp: float, level: int)
 signal level_up(new_level: int)
 signal room_changed(room_name: String)
 signal monky_state_changed(new_state: String)
 signal show_floating_text(text: String, global_pos: Vector2, color: Color)
 signal food_inventory_changed()
+signal poop_spawned(pos: Vector2)
+signal poop_removed()
+signal settings_changed()
 
 const SAVE_PATH := "user://monky_save.cfg"
 const MAX_STAT := 100.0
 const SLEEP_DURATION_SEC := 3600.0 # 1 hora exacta de sueño en tiempo real para 100% de energía
+
+var poop_count: int = 0
+var sfx_enabled: bool = true
+var music_enabled: bool = true
+var vibration_enabled: bool = true
+var last_daily_reward_time: int = 0
+var last_ad_reward_time: int = 0
 
 # Nivel y Experiencia (Curva móvil balanceada)
 var level: int = 1:
@@ -30,6 +41,7 @@ var xp: float = 0.0:
 			level += 1
 			level_up.emit(level)
 			add_coins(level * 5)
+			add_diamonds(1)
 		xp_changed.emit(xp, get_xp_needed(), level)
 
 func get_xp_needed() -> float:
@@ -50,6 +62,10 @@ var energy: float = 100.0:
 	set(val):
 		energy = clampf(val, 0.0, MAX_STAT)
 		stat_changed.emit("energy", energy, MAX_STAT)
+		if energy <= 0.0 and not is_sleeping:
+			monky_state_changed.emit("tired")
+		elif energy > 15.0 and not is_sleeping and current_room != "dormitorio":
+			monky_state_changed.emit("idle")
 
 var fun: float = 100.0:
 	set(val):
@@ -65,6 +81,11 @@ var coins: int = 50:
 	set(val):
 		coins = maxi(0, val)
 		coins_changed.emit(coins)
+
+var diamonds: int = 5:
+	set(val):
+		diamonds = maxi(0, val)
+		diamonds_changed.emit(diamonds)
 
 # Catálogo oficial de comidas con propiedades nutricionales reales (gramos, calorías y nutrientes clave)
 const FOOD_CATALOG := [
@@ -367,10 +388,26 @@ func clean(amount: float = 25.0) -> void:
 	add_xp(4.0)
 	monky_state_changed.emit("happy")
 	show_floating_text.emit("+" + str(int(amount)) + " 🧼", Vector2(540, 950), Color(0.3, 0.8, 1.0))
+	save_game()
+
+func brush_teeth_action(amount: float = 15.0) -> void:
+	# El cepillado da frescura bucal y XP pero no limpia las manchas de barro del cuerpo
+	hygiene = minf(MAX_STAT, hygiene + amount * 0.3)
+	add_xp(2.0)
+	monky_state_changed.emit("happy")
+	save_game()
+
+func wash_body(amount: float = 50.0) -> void:
+	# El baño completo con jabón y agua deja a Monky 100% limpio
+	hygiene = minf(MAX_STAT, hygiene + amount)
+	add_xp(4.0)
+	monky_state_changed.emit("happy")
+	save_game()
 
 func play_with_monky(amount: float = 20.0) -> void:
 	fun += amount
 	energy -= 3.0 # Cansancio progresivo por interacción activa
+	hygiene -= 2.5 # Se ensucia jugando
 	hunger -= 1.0
 	protein -= 0.8
 	add_xp(3.0)
@@ -383,6 +420,23 @@ func toggle_sleep() -> void:
 		show_floating_text.emit("💤 Durmiendo (1h recuperación)", Vector2(540, 850), Color(0.6, 0.8, 1.0))
 	else:
 		monky_state_changed.emit("idle")
+		# Al despertar, Monky hace popis y se despierta necesitando baño
+		hygiene = maxf(0.0, hygiene - 15.0)
+		spawn_poop()
+		show_floating_text.emit("💩 ¡Monky hizo popis al despertar!", Vector2(540, 850), Color(0.8, 0.55, 0.2))
+	save_game()
+
+func spawn_poop(custom_pos = null) -> void:
+	poop_count = mini(poop_count + 1, 6)
+	var spawn_x = randf_range(260.0, 420.0) if randf() < 0.5 else randf_range(660.0, 820.0)
+	var spawn_y = randf_range(1360.0, 1480.0)
+	var pos = custom_pos if custom_pos != null else Vector2(spawn_x, spawn_y)
+	poop_spawned.emit(pos)
+	save_game()
+
+func remove_poop() -> void:
+	poop_count = maxi(0, poop_count - 1)
+	poop_removed.emit()
 	save_game()
 
 func add_coins(amount: int) -> void:
@@ -392,6 +446,16 @@ func add_coins(amount: int) -> void:
 func spend_coins(amount: int) -> bool:
 	if coins >= amount:
 		coins -= amount
+		return true
+	return false
+
+func add_diamonds(amount: int) -> void:
+	diamonds += amount
+	show_floating_text.emit("+" + str(amount) + " 💎", Vector2(540, 850), Color(0.3, 0.8, 1.0))
+
+func spend_diamonds(amount: int) -> bool:
+	if diamonds >= amount:
+		diamonds -= amount
 		return true
 	return false
 
@@ -408,12 +472,19 @@ func save_game() -> void:
 	config.set_value("stats", "fun", fun)
 	config.set_value("stats", "hygiene", hygiene)
 	config.set_value("game", "coins", coins)
+	config.set_value("game", "diamonds", diamonds)
 	config.set_value("game", "level", level)
 	config.set_value("game", "xp", xp)
 	config.set_value("game", "current_room", current_room)
 	config.set_value("game", "is_sleeping", is_sleeping)
+	config.set_value("game", "poop_count", poop_count)
 	config.set_value("game", "last_timestamp", Time.get_unix_time_from_system())
+	config.set_value("game", "last_daily_reward_time", last_daily_reward_time)
+	config.set_value("game", "last_ad_reward_time", last_ad_reward_time)
 	config.set_value("inventory", "foods", food_inventory)
+	config.set_value("settings", "sfx", sfx_enabled)
+	config.set_value("settings", "music", music_enabled)
+	config.set_value("settings", "vibration", vibration_enabled)
 	config.save(SAVE_PATH)
 
 func load_game() -> void:
@@ -422,16 +493,24 @@ func load_game() -> void:
 	if err != OK:
 		return
 
+	sfx_enabled = config.get_value("settings", "sfx", true)
+	music_enabled = config.get_value("settings", "music", true)
+	vibration_enabled = config.get_value("settings", "vibration", true)
+
 	hunger = config.get_value("stats", "hunger", 100.0)
 	protein = config.get_value("stats", "protein", 100.0)
 	energy = config.get_value("stats", "energy", 100.0)
 	fun = config.get_value("stats", "fun", 100.0)
 	hygiene = config.get_value("stats", "hygiene", 100.0)
 	coins = config.get_value("game", "coins", 50)
+	diamonds = config.get_value("game", "diamonds", 5)
 	level = config.get_value("game", "level", 1)
 	xp = config.get_value("game", "xp", 0.0)
 	current_room = config.get_value("game", "current_room", "dormitorio")
 	is_sleeping = config.get_value("game", "is_sleeping", false)
+	poop_count = config.get_value("game", "poop_count", 0)
+	last_daily_reward_time = config.get_value("game", "last_daily_reward_time", 0)
+	last_ad_reward_time = config.get_value("game", "last_ad_reward_time", 0)
 	food_inventory = config.get_value("inventory", "foods", {
 		"apple": 3,
 		"egg": 2,
@@ -456,6 +535,9 @@ func load_game() -> void:
 				var passed_ticks: float = minf(float(elapsed_seconds) / 10.0, 2880.0)
 				hunger -= passed_ticks * 0.08
 				protein -= passed_ticks * 0.06
+				hygiene = maxf(0.0, hygiene - 15.0)
+				if poop_count == 0:
+					poop_count = 1
 			else:
 				var passed_ticks: float = minf(float(elapsed_seconds) / 10.0, 2880.0)
 				hunger -= passed_ticks * 0.20
@@ -463,6 +545,32 @@ func load_game() -> void:
 				energy -= passed_ticks * 0.15
 				fun -= passed_ticks * 0.20
 				hygiene -= passed_ticks * 0.10
+
+func reset_game_data() -> void:
+	hunger = 100.0
+	protein = 100.0
+	energy = 100.0
+	fun = 100.0
+	hygiene = 100.0
+	coins = 50
+	diamonds = 5
+	level = 1
+	xp = 0.0
+	current_room = "dormitorio"
+	is_sleeping = false
+	poop_count = 0
+	last_daily_reward_time = 0
+	last_ad_reward_time = 0
+	food_inventory = {
+		"apple": 3,
+		"egg": 2,
+		"milk": 2,
+		"banana": 1,
+		"fish": 1
+	}
+	save_game()
+	food_inventory_changed.emit()
+	room_changed.emit(current_room)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:

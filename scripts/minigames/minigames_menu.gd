@@ -39,22 +39,13 @@ func _setup_buttons() -> void:
 	)
 
 	btn_play_fruit.pressed.connect(func():
-		if _can_play_minigame():
-			get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/fruit_catcher.tscn")
+		get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/fruit_catcher.tscn")
 	)
 
 	btn_play_flappy.pressed.connect(func():
-		if _can_play_minigame():
-			get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/flappy_monky.tscn")
+		get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/flappy_monky.tscn")
 	)
 
 	btn_play_jump.pressed.connect(func():
-		if _can_play_minigame():
-			get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/monky_jump.tscn")
+		get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/monky_jump.tscn")
 	)
-
-func _can_play_minigame() -> bool:
-	if gm and gm.energy <= 5.0:
-		gm.show_floating_text.emit("😴 ¡Monky no tiene energía! Ve a dormir", Vector2(540, 960), Color(1, 0.4, 0.4))
-		return false
-	return true
