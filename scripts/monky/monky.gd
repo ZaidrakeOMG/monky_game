@@ -38,16 +38,18 @@ func _ready() -> void:
 
 func _on_mouth_area_entered(other_area: Area2D) -> void:
 	var item = other_area.get_parent()
-	if item is DraggableItem and item.item_type == "food":
+	if item and item.has_method("take_bite") and item.get("item_type") == "food":
 		item.take_bite(self)
 
 func _on_body_area_entered(other_area: Area2D) -> void:
 	var item = other_area.get_parent()
-	if item is DraggableItem:
-		if item.item_type == "soap":
+	if item and item.has_method("finish_and_destroy"):
+		var type = item.get("item_type")
+		if type == "soap":
 			apply_soap(15.0)
-		elif item.item_type == "shower":
+		elif type == "shower":
 			rinse_water()
+
 
 ## Reacción física a cada mordisco de comida
 func on_bite_received(_food_name: String) -> void:

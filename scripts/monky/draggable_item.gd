@@ -67,11 +67,12 @@ func _check_rubbing() -> void:
 	var overlapping = area.get_overlapping_areas()
 	for ov in overlapping:
 		var parent_node = ov.get_parent()
-		if parent_node and parent_node is Monky:
-			if item_type == "soap":
+		if parent_node:
+			if item_type == "soap" and parent_node.has_method("apply_soap"):
 				parent_node.apply_soap(10.0)
-			elif item_type == "shower":
+			elif item_type == "shower" and parent_node.has_method("rinse_water"):
 				parent_node.rinse_water()
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:

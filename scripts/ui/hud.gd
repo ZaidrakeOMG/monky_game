@@ -186,10 +186,11 @@ func _spawn_bouncing_ball() -> void:
 	var scene_root = get_tree().current_scene
 	if not scene_root:
 		return
-	for child in scene_root.get_children():
-		if child is BouncingBall:
-			child.queue_free()
 	var ball_scene = preload("res://scenes/monky/bouncing_ball.tscn")
+	var ball_script = preload("res://scripts/monky/bouncing_ball.gd")
+	for child in scene_root.get_children():
+		if child is ball_script or child.name.begins_with("BouncingBall"):
+			child.queue_free()
 	var ball = ball_scene.instantiate()
 	scene_root.add_child(ball)
 	ball.global_position = Vector2(540, 850)
@@ -201,14 +202,16 @@ func _spawn_draggable(type: String, data: Dictionary = {}) -> void:
 	var scene_root = get_tree().current_scene
 	if not scene_root:
 		return
-	for child in scene_root.get_children():
-		if child is DraggableItem:
-			child.queue_free()
 	var draggable_scene = preload("res://scenes/monky/draggable_item.tscn")
+	var draggable_script = preload("res://scripts/monky/draggable_item.gd")
+	for child in scene_root.get_children():
+		if child is draggable_script or child.name.begins_with("DraggableItem"):
+			child.queue_free()
 	var item = draggable_scene.instantiate()
 	scene_root.add_child(item)
 	item.global_position = get_viewport().get_mouse_position()
 	item.setup(type, data)
+
 
 
 func _setup_shop_modal() -> void:

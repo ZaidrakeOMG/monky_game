@@ -76,14 +76,14 @@ func _check_monky_collision() -> void:
 	var overlapping = area.get_overlapping_areas()
 	for ov in overlapping:
 		var parent_node = ov.get_parent()
-		if parent_node is Monky:
+		if parent_node and parent_node.has_method("on_ball_hit"):
 			# Monky cabecea o patea la pelota hacia arriba
 			velocity.y = -randf_range(850.0, 1150.0)
 			velocity.x = randf_range(-450.0, 450.0)
 			_play_squash()
-			if parent_node.has_method("on_ball_hit"):
-				parent_node.on_ball_hit(velocity)
+			parent_node.on_ball_hit(velocity)
 			break
+
 
 func _play_squash() -> void:
 	if abs(velocity.y) > 150.0:
