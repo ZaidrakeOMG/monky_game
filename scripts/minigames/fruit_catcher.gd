@@ -261,6 +261,5 @@ func _trigger_game_over() -> void:
 	tween.tween_property(game_over_modal, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _on_btn_home_pressed() -> void:
-	if gm:
-		gm.change_room("sala de juegos")
-	get_tree().change_scene_to_file.call_deferred("res://scenes/main.tscn")
+	get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/minigames_menu.tscn")
+

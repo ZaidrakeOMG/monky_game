@@ -130,9 +130,10 @@ func _setup_action_drawers() -> void:
 			gm.add_coins(3)
 	)
 	btn_game.pressed.connect(func():
-		# Lanzar minijuego jugable real
-		get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/fruit_catcher.tscn")
+		# Abrir Selector / Hub de Minijuegos
+		get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/minigames_menu.tscn")
 	)
+
 
 	btn_close_level.pressed.connect(func():
 		level_popup.visible = false
