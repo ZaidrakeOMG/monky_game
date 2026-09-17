@@ -402,18 +402,27 @@ func feed_item(food: Dictionary) -> bool:
 	save_game()
 	return true
 
+
 func clean(amount: float = 25.0) -> void:
+	if str(current_room).to_lower() != "baño":
+		return
 	hygiene += amount
 	add_xp(1.0)
 	monky_state_changed.emit("happy")
 
+
 func brush_teeth_action(amount: float = 15.0) -> void:
+	if str(current_room).to_lower() != "baño":
+		return
 	# El cepillado da frescura bucal. El guardado se hace al soltar la herramienta.
 	hygiene = minf(MAX_STAT, hygiene + amount * 0.3)
 	add_xp(0.5)
 	monky_state_changed.emit("happy")
 
+
 func wash_body(amount: float = 50.0) -> void:
+	if str(current_room).to_lower() != "baño":
+		return
 	# El baño completo con jabón y agua deja a Monky 100% limpio
 	hygiene = minf(MAX_STAT, hygiene + amount)
 	add_xp(4.0)
@@ -454,6 +463,20 @@ func remove_poop() -> void:
 	poop_count = maxi(0, poop_count - 1)
 	poop_removed.emit()
 	save_game()
+
+func clear_all_poop_after_bath() -> int:
+	# La popó ya no se limpia tocándola. Sólo desaparece cuando Wonky recibe
+	# un baño/enjuague completo dentro del baño.
+	if str(current_room).to_lower() != "baño":
+		return 0
+	var removed := poop_count
+	if removed <= 0:
+		return 0
+	poop_count = 0
+	poop_removed.emit()
+	save_game()
+	return removed
+
 
 func add_coins(amount: int) -> void:
 	coins += amount

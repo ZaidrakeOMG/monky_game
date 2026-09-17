@@ -131,8 +131,26 @@ func _play_bath_animation(duration: float = 0.65) -> void:
 			animated_sprite.play("bano_jabon")
 
 
+func _is_in_bathroom() -> bool:
+	return gm != null and str(gm.current_room).to_lower() == "baño"
+
+
+func _bathroom_only_hint() -> void:
+	if gm:
+		gm.show_floating_text.emit(
+			"Usa esto dentro del baño",
+			global_position + Vector2(0, -170),
+			Color(0.55, 0.85, 1.0)
+		)
+
+
 ## Cepillado de dientes.
+
 func brush_teeth(amount: float = 15.0) -> void:
+	if not _is_in_bathroom():
+		_bathroom_only_hint()
+		return
+
 	_play_bath_animation(0.65)
 
 	if sparkle_particles:
@@ -143,8 +161,6 @@ func brush_teeth(amount: float = 15.0) -> void:
 
 	play_reaction_bounce(Vector2(1.08, 0.94))
 
-
-## Reacción física y animación a cada mordisco de comida.
 func on_bite_received(_food_name: String) -> void:
 	if animated_sprite and animated_sprite.sprite_frames:
 		if animated_sprite.sprite_frames.has_animation("comer"):
@@ -159,7 +175,12 @@ func on_bite_received(_food_name: String) -> void:
 
 
 ## Aplicar jabón. No se dibujan manchas sobre el personaje.
+
 func apply_soap(amount: float = 15.0) -> void:
+	if not _is_in_bathroom():
+		_bathroom_only_hint()
+		return
+
 	soap_level = minf(soap_level + amount, 100.0)
 	_play_bath_animation(0.70)
 
@@ -172,8 +193,10 @@ func apply_soap(amount: float = 15.0) -> void:
 	play_reaction_bounce(Vector2(1.04, 1.04))
 
 
-## Enjuagar con agua. Se evita lanzar varios enjuagues simultáneos.
 func rinse_water() -> void:
+	if not _is_in_bathroom():
+		_bathroom_only_hint()
+		return
 	if is_rinsing:
 		return
 
@@ -196,16 +219,28 @@ func rinse_water() -> void:
 		var was_dirty: bool = soap_level > 20.0 or gm.hygiene < 85.0
 		gm.wash_body(50.0)
 
-		if was_dirty:
+		# V8: la popó sólo desaparece al bañar/enjuagar a Wonky dentro del baño.
+		var removed_poop: int = 0
+		if gm.has_method("clear_all_poop_after_bath"):
+			removed_poop = gm.clear_all_poop_after_bath()
+		if removed_poop > 0:
+			for poop_node in get_tree().get_nodes_in_group("wonky_poop"):
+				if is_instance_valid(poop_node):
+					poop_node.queue_free()
+
+		if was_dirty or removed_poop > 0:
 			gm.add_coins(3)
+			var clean_text := "¡Wonky está limpio! +3"
+			if removed_poop > 0:
+				clean_text = "¡Baño completo! Popó limpia +3"
 			gm.show_floating_text.emit(
-				"¡Monky está limpio! +3",
+				clean_text,
 				global_position + Vector2(0, -180),
 				Color(0.4, 0.9, 1.0)
 			)
 		else:
 			gm.show_floating_text.emit(
-				"¡Monky está reluciente!",
+				"¡Wonky está reluciente!",
 				global_position + Vector2(0, -180),
 				Color(0.4, 0.9, 1.0)
 			)
@@ -218,7 +253,6 @@ func rinse_water() -> void:
 		_play_sleep_animation()
 	else:
 		_play_idle_animation()
-
 
 func _on_touch_area_input_event(
 	_viewport: Node,

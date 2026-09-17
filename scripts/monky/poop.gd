@@ -15,33 +15,33 @@ func _ready() -> void:
 	var tween = create_tween()
 	tween.tween_property(self, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 
+	add_to_group("wonky_poop")
 	if touch_area:
 		touch_area.input_event.connect(_on_touch_event)
 
+
 func _on_touch_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
+	var pressed := false
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		clean_up()
+		pressed = true
 	elif event is InputEventScreenTouch and event.pressed:
-		clean_up()
+		pressed = true
+
+	if pressed and gm:
+		gm.show_floating_text.emit(
+			"Baña a Wonky para limpiar la popó",
+			global_position + Vector2(-120, -70),
+			Color(0.55, 0.85, 1.0)
+		)
+
 
 func clean_up() -> void:
-	if is_cleaning:
-		return
-	is_cleaning = true
-
+	# Se conserva el método por compatibilidad, pero ya no elimina la popó.
+	# La limpieza real ocurre en Monky.rinse_water() dentro del baño.
 	if gm:
-		gm.add_coins(5)
-		gm.add_xp(3.0)
-		gm.clean(8.0)
-		if gm.has_method("remove_poop"):
-			gm.remove_poop()
-		gm.show_floating_text.emit("¡Limpio! +5 monedas", global_position + Vector2(0, -60), Color(1, 0.9, 0.2))
+		gm.show_floating_text.emit(
+			"Baña a Wonky para limpiar la popó",
+			global_position + Vector2(-120, -70),
+			Color(0.55, 0.85, 1.0)
+		)
 
-	if sparkle_particles:
-		sparkle_particles.emitting = true
-
-	var tween = create_tween()
-	tween.tween_property(self, "scale", Vector2(1.3, 0.7), 0.08)
-	tween.tween_property(self, "scale", Vector2.ZERO, 0.15).set_ease(Tween.EASE_IN)
-	await tween.finished
-	queue_free()

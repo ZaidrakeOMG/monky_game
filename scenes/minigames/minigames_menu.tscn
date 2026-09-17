@@ -85,7 +85,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.06, 0.04, 0.1, 0.6)
+color = Color(0.06, 0.04, 0.1, 0.42)
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
@@ -106,6 +106,7 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 38
 theme_override_styles/normal = SubResource("StyleBoxFlat_hud")
 text = ""
+flat = true
 
 [node name="TitleBox" type="PanelContainer" parent="HUD/TopBar"]
 layout_mode = 2
@@ -206,6 +207,7 @@ size_flags_vertical = 4
 theme_override_font_sizes/font_size = 28
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_play_fruit")
 text = ""
+flat = true
 
 [node name="CardFlappy" type="PanelContainer" parent="HUD/Scroll/VBox"]
 custom_minimum_size = Vector2(0, 340)
@@ -263,6 +265,7 @@ size_flags_vertical = 4
 theme_override_font_sizes/font_size = 28
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_play_flappy")
 text = ""
+flat = true
 
 [node name="CardJump" type="PanelContainer" parent="HUD/Scroll/VBox"]
 custom_minimum_size = Vector2(0, 340)
@@ -320,3 +323,4 @@ size_flags_vertical = 4
 theme_override_font_sizes/font_size = 28
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_play_jump")
 text = ""
+flat = true

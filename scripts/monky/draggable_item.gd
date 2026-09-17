@@ -61,21 +61,28 @@ func _update_visuals() -> void:
 	else:
 		icon_sprite.texture = null
 
+
 func _process(delta: float) -> void:
 	if not is_dragging:
 		return
 
+	# Las herramientas del baño no pueden viajar a otros cuartos.
+	if item_type in ["soap", "shower", "toothbrush"]:
+		if not gm or str(gm.current_room).to_lower() != "baño":
+			finish_and_destroy()
+			return
+
 	global_position = get_global_mouse_position()
 
-	# En Android no comprobamos colisiones cada frame. 5 veces/seg es suficiente.
 	if item_type == "soap" or item_type == "shower" or item_type == "toothbrush":
 		rub_timer += delta
 		if rub_timer >= 0.20:
 			rub_timer = 0.0
 			_check_rubbing()
 
+
 func _check_rubbing() -> void:
-	if not area:
+	if not area or not gm or str(gm.current_room).to_lower() != "baño":
 		return
 
 	for ov in area.get_overlapping_areas():

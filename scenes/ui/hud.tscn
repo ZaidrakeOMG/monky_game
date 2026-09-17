@@ -211,7 +211,7 @@ anchor_right = 1.0
 offset_left = 30.0
 offset_top = 40.0
 offset_right = -30.0
-offset_bottom = 300.0
+offset_bottom = 285.0
 grow_horizontal = 2
 
 [node name="VBox" type="VBoxContainer" parent="TopBar" unique_id=481232040]
@@ -232,7 +232,7 @@ theme_override_font_sizes/font_size = 28
 text = "NIV. 1"
 
 [node name="XPBar" type="ProgressBar" parent="TopBar/VBox/HeaderRow/LevelContainer" unique_id=434084309]
-custom_minimum_size = Vector2(180, 32)
+custom_minimum_size = Vector2(180, 18)
 layout_mode = 2
 size_flags_horizontal = 0
 show_percentage = false
@@ -305,8 +305,8 @@ text = ""
 custom_minimum_size = Vector2(72, 68)
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
+flat = true
 text = ""
-
 [node name="StatsGrid" type="HBoxContainer" parent="TopBar/VBox" unique_id=2126513594]
 layout_mode = 2
 theme_override_constants/separation = 14
@@ -318,12 +318,12 @@ size_flags_horizontal = 3
 
 [node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/HungerContainer" unique_id=310855642]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "HAMBRE 100%"
 horizontal_alignment = 1
 
 [node name="HungerBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/HungerContainer" unique_id=1660913576]
-custom_minimum_size = Vector2(0, 52)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 value = 100.0
 show_percentage = false
@@ -334,12 +334,12 @@ size_flags_horizontal = 3
 
 [node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/ProteinContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "PROTEÍNA 100%"
 horizontal_alignment = 1
 
 [node name="ProteinBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/ProteinContainer"]
-custom_minimum_size = Vector2(0, 52)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 value = 100.0
 show_percentage = false
@@ -350,12 +350,12 @@ size_flags_horizontal = 3
 
 [node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/EnergyContainer" unique_id=1988759332]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "SUEÑO 100%"
 horizontal_alignment = 1
 
 [node name="EnergyBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/EnergyContainer" unique_id=1405971321]
-custom_minimum_size = Vector2(0, 52)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 value = 100.0
 show_percentage = false
@@ -366,12 +366,12 @@ size_flags_horizontal = 3
 
 [node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/FunContainer" unique_id=338426872]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "DIVERSIÓN 100%"
 horizontal_alignment = 1
 
 [node name="FunBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/FunContainer" unique_id=1218702684]
-custom_minimum_size = Vector2(0, 52)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 value = 100.0
 show_percentage = false
@@ -382,12 +382,12 @@ size_flags_horizontal = 3
 
 [node name="Label" type="Label" parent="TopBar/VBox/StatsGrid/HygieneContainer" unique_id=321727504]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "HIGIENE 100%"
 horizontal_alignment = 1
 
 [node name="HygieneBar" type="ProgressBar" parent="TopBar/VBox/StatsGrid/HygieneContainer" unique_id=1960785982]
-custom_minimum_size = Vector2(0, 52)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 value = 100.0
 show_percentage = false
@@ -398,8 +398,8 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -460.0
-offset_bottom = -220.0
+offset_top = -520.0
+offset_bottom = -300.0
 grow_horizontal = 2
 grow_vertical = 0
 
@@ -455,23 +455,20 @@ alignment = 1
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "
-Cepillar"
-
+flat = true
+text = ""
 [node name="BtnSoap" type="Button" parent="ActionDrawers/BathDrawer/Margin/HBox" unique_id=1859711105]
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "
-Enjabonar"
-
+flat = true
+text = ""
 [node name="BtnShower" type="Button" parent="ActionDrawers/BathDrawer/Margin/HBox" unique_id=1753131413]
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "
-Enjuagar"
-
+flat = true
+text = ""
 [node name="BedDrawer" type="PanelContainer" parent="ActionDrawers" unique_id=1188537546]
 visible = false
 layout_mode = 1
@@ -498,8 +495,8 @@ alignment = 1
 custom_minimum_size = Vector2(300, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
-text = "Dormir"
-
+flat = true
+text = ""
 [node name="PlayDrawer" type="PanelContainer" parent="ActionDrawers" unique_id=1442392542]
 visible = false
 layout_mode = 1
@@ -524,34 +521,33 @@ theme_override_constants/separation = 30
 alignment = 1
 
 [node name="BtnBall" type="Button" parent="ActionDrawers/PlayDrawer/Margin/HBox" unique_id=1851390457]
-custom_minimum_size = Vector2(240, 160)
+visible = false
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "
-Pelota (+3)"
-
+flat = true
+text = ""
 [node name="BtnGame" type="Button" parent="ActionDrawers/PlayDrawer/Margin/HBox" unique_id=224597947]
 custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "
-Minijuego (+15)"
-
+flat = true
+text = ""
 [node name="BottomBar" type="MarginContainer" parent="." unique_id=761474792]
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 30.0
-offset_top = -200.0
+offset_top = -280.0
 offset_right = -30.0
-offset_bottom = -30.0
+offset_bottom = -24.0
 grow_horizontal = 2
 grow_vertical = 0
 
 [node name="VBox" type="VBoxContainer" parent="BottomBar" unique_id=1886615342]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 6
 alignment = 2
 
 [node name="RoomTitle" type="Label" parent="BottomBar/VBox" unique_id=1565913802]
@@ -562,7 +558,7 @@ horizontal_alignment = 1
 
 [node name="DockContainer" type="HBoxContainer" parent="BottomBar/VBox" unique_id=98208272]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 6
 alignment = 1
 
 [node name="BtnBed" type="Button" parent="BottomBar/VBox/DockContainer" unique_id=2029609434]
@@ -577,9 +573,8 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_h0628")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_8qguk")
 theme_override_styles/hover = SubResource("StyleBoxFlat_bo48s")
 theme_override_styles/focus = SubResource("StyleBoxFlat_hqnrr")
-text = "
-Cuarto"
-
+flat = true
+text = ""
 [node name="BtnKitchen" type="Button" parent="BottomBar/VBox/DockContainer" unique_id=897079605]
 custom_minimum_size = Vector2(180, 110)
 layout_mode = 2
@@ -592,8 +587,8 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_136eg")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_gss2c")
 theme_override_styles/hover = SubResource("StyleBoxFlat_oj5la")
 theme_override_styles/focus = SubResource("StyleBoxFlat_0mwgc")
-text = "Cocina"
-
+flat = true
+text = ""
 [node name="BtnBath" type="Button" parent="BottomBar/VBox/DockContainer" unique_id=2027461436]
 custom_minimum_size = Vector2(180, 110)
 layout_mode = 2
@@ -606,8 +601,8 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_h022r")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_kicr4")
 theme_override_styles/hover = SubResource("StyleBoxFlat_4jqwt")
 theme_override_styles/focus = SubResource("StyleBoxFlat_mj13f")
-text = "Baño"
-
+flat = true
+text = ""
 [node name="BtnPlay" type="Button" parent="BottomBar/VBox/DockContainer" unique_id=695840091]
 custom_minimum_size = Vector2(180, 110)
 layout_mode = 2
@@ -620,8 +615,8 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_0h1do")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_erw67")
 theme_override_styles/hover = SubResource("StyleBoxFlat_4d46k")
 theme_override_styles/focus = SubResource("StyleBoxFlat_gonto")
-text = "Juegos"
-
+flat = true
+text = ""
 [node name="LevelUpPopup" type="PanelContainer" parent="." unique_id=1839315011]
 visible = false
 z_index = 50
@@ -837,26 +832,31 @@ theme_override_font_sizes/font_size = 26
 text = " POCIONES MÁGICAS"
 horizontal_alignment = 1
 
-[node name="PotionsGrid" type="VBoxContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=1456274706]
+[node name="PotionsGrid" type="GridContainer" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=1456274706]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 3
 
 [node name="BtnPotEnergy" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid" unique_id=2053219383]
-custom_minimum_size = Vector2(0, 100)
+custom_minimum_size = Vector2(280, 170)
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 22
 text = " Poción Flash (Energía 100%) — 80  ó 4 "
 
 [node name="BtnPotHygiene" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid" unique_id=1318306901]
-custom_minimum_size = Vector2(0, 100)
+custom_minimum_size = Vector2(280, 170)
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 22
 text = " Poción Burbujas (Higiene 100%) — 60  ó 3 "
 
 [node name="BtnPotMega" type="Button" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid" unique_id=1583246066]
-custom_minimum_size = Vector2(0, 100)
+custom_minimum_size = Vector2(280, 170)
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 22
 text = " Poción Suprema (¡TODO al 100%!) — 200  ó 10 "
 
 [node name="SecRewardsTitle" type="Label" parent="ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox" unique_id=992513846]
@@ -959,7 +959,9 @@ layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="MarketGrid" type="VBoxContainer" parent="FoodMarketPopup/Panel/Margin/VBox/Scroll" unique_id=1988231466]
+[node name="MarketGrid" type="GridContainer" parent="FoodMarketPopup/Panel/Margin/VBox/Scroll" unique_id=1988231466]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 16
+theme_override_constants/h_separation = 18
+theme_override_constants/v_separation = 18
+columns = 2
