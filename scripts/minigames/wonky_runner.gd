@@ -1,6 +1,6 @@
 extends Node2D
 
-## WONKY RUN V13 - ESCENARIO ESTABLE
+## WONKY RUN V14 - PSEUDO 3D SUAVE / ANTI-MAREO
 ## Runner 2D de 3 carriles con camino infinito, parallax y perspectiva compartida.
 ## Cambios clave:
 ## - La moneda gigante queda eliminada: HUD y pista usan texturas runtime pequeñas.
@@ -8,6 +8,7 @@ extends Node2D
 ## - Camino, laterales, objetos y carriles comparten la misma proyección de perspectiva.
 ## - Fondo lejano casi fijo + camino rápido + laterales lentos + partículas de primer plano.
 ## - El enemigo se retira fuera de pantalla y solo se acerca al cometer errores.
+## - V14 sincroniza suelo/objetos, reduce movimiento periférico y suaviza acciones.
 
 const VIEW_W: float = 1080.0
 const VIEW_H: float = 1920.0
@@ -25,10 +26,10 @@ const ROAD_TILES: float = 2.20
 const SIDE_TILES: float = 1.15
 
 const SPAWN_Y: float = ROAD_HORIZON_Y + 6.0
-const DESPAWN_Y: float = 2050.0
+const DESPAWN_Y: float = VIEW_H
 const PLAYER_Y: float = 1590.0
-const PLAYER_SCALE: float = 0.72
-const ENEMY_SCALE: float = 0.52
+const PLAYER_SCALE: float = 0.64
+const ENEMY_SCALE: float = 0.48
 const PLAYER_FRAME_FOOT_OFFSET: float = -244.0
 const ENEMY_FRAME_FOOT_OFFSET: float = -244.0
 
@@ -197,8 +198,8 @@ func _build_world() -> void:
 	dust = Sprite2D.new()
 	dust.texture = TEX_DUST
 	dust.position = Vector2(center_x, PLAYER_Y + 12.0)
-	dust.scale = Vector2.ONE * 0.46
-	dust.modulate = Color(1.0, 1.0, 1.0, 0.30)
+	dust.scale = Vector2.ONE * 0.38
+	dust.modulate = Color(1.0, 1.0, 1.0, 0.20)
 	dust.z_index = 9
 	world.add_child(dust)
 
@@ -302,7 +303,7 @@ func _build_player_frames() -> SpriteFrames:
 	frames.remove_animation("default")
 
 	frames.add_animation("run")
-	frames.set_animation_speed("run", 10.5)
+	frames.set_animation_speed("run", 9.0)
 	frames.set_animation_loop("run", true)
 	for tex in WONKY_RUN:
 		frames.add_frame("run", tex)
@@ -334,7 +335,7 @@ func _build_enemy_frames() -> SpriteFrames:
 	var frames: SpriteFrames = SpriteFrames.new()
 	frames.remove_animation("default")
 	frames.add_animation("run")
-	frames.set_animation_speed("run", 8.5)
+	frames.set_animation_speed("run", 8.0)
 	frames.set_animation_loop("run", true)
 	for tex in ENEMY_RUN:
 		frames.add_frame("run", tex)
@@ -561,7 +562,7 @@ func _start_game() -> void:
 	start_grace = 0.85
 	road_scroll = 0.0
 	side_scroll = 0.0
-	particle_clock = 0.06
+	particle_clock = 0.45
 	_clear_speed_particles()
 	queue_redraw()
 
@@ -639,10 +640,9 @@ func _process(delta: float) -> void:
 	_update_hud()
 
 func _update_parallax(delta: float) -> void:
-	var speed_factor: float = clampf((scroll_speed - 0.205) / 0.150, 0.0, 1.0)
-	# V13: el paisaje y los laterales quedan anclados. Solo avanza el suelo.
-	# Esto evita el efecto de "mareo" que producía mover capas con perspectivas distintas.
-	var road_rate: float = lerpf(0.34, 0.62, speed_factor)
+	# V14: el fondo y los laterales permanecen quietos. El suelo usa la MISMA
+	# velocidad base que los objetos para que no parezca una caminadora separada.
+	var road_rate: float = scroll_speed * ROAD_TILES * 0.94
 	road_scroll = fmod(road_scroll + delta * road_rate, 1.0)
 	side_scroll = 0.0
 	background.position = Vector2(VIEW_W * 0.5, VIEW_H * 0.5)
@@ -661,18 +661,19 @@ func _spawn_speed_particle() -> void:
 	var tex_index: int = randi_range(0, SPEED_PARTICLES.size() - 1)
 	fx.texture = SPEED_PARTICLES[tex_index]
 	var left_side: bool = randf() < 0.5
-	var x: float = randf_range(35.0, 245.0) if left_side else randf_range(835.0, 1045.0)
-	var y: float = randf_range(720.0, 1420.0)
+	# Mantener el movimiento periférico lejos del jugador y con baja opacidad.
+	var x: float = randf_range(45.0, 205.0) if left_side else randf_range(875.0, 1035.0)
+	var y: float = randf_range(820.0, 1320.0)
 	fx.position = Vector2(x, y)
-	var base_scale: float = randf_range(0.16, 0.34)
+	var base_scale: float = randf_range(0.13, 0.25)
 	fx.scale = Vector2.ONE * base_scale
-	fx.rotation = randf_range(-0.35, 0.35)
-	fx.modulate = Color(1.0, 1.0, 1.0, randf_range(0.34, 0.68))
-	fx.z_index = 6 if randf() < 0.7 else 14
+	fx.rotation = randf_range(-0.16, 0.16)
+	fx.modulate = Color(1.0, 1.0, 1.0, randf_range(0.18, 0.36))
+	fx.z_index = 6
 	var speed_factor: float = clampf((scroll_speed - 0.205) / 0.150, 0.0, 1.0)
-	fx.set_meta("vy", randf_range(300.0, 520.0) * lerpf(0.85, 1.25, speed_factor))
-	fx.set_meta("vx", randf_range(-55.0, 55.0))
-	fx.set_meta("growth", randf_range(0.10, 0.28))
+	fx.set_meta("vy", randf_range(180.0, 300.0) * lerpf(0.90, 1.10, speed_factor))
+	fx.set_meta("vx", randf_range(-22.0, 22.0))
+	fx.set_meta("growth", randf_range(0.025, 0.070))
 	world.add_child(fx)
 	speed_particles.append(fx)
 
@@ -681,21 +682,22 @@ func _update_speed_particles(delta: float) -> void:
 	var speed_factor: float = clampf((scroll_speed - 0.205) / 0.150, 0.0, 1.0)
 	if particle_clock <= 0.0:
 		_spawn_speed_particle()
-		particle_clock = lerpf(0.34, 0.16, speed_factor)
+		# Mucho menos tráfico visual que V13: ayuda a que no maree.
+		particle_clock = lerpf(0.70, 0.43, speed_factor)
 
 	for fx in speed_particles.duplicate():
 		if not is_instance_valid(fx):
 			speed_particles.erase(fx)
 			continue
-		var vy: float = float(fx.get_meta("vy", 420.0))
+		var vy: float = float(fx.get_meta("vy", 240.0))
 		var vx: float = float(fx.get_meta("vx", 0.0))
-		var growth: float = float(fx.get_meta("growth", 0.15))
+		var growth: float = float(fx.get_meta("growth", 0.045))
 		fx.position += Vector2(vx, vy) * delta
 		fx.scale += Vector2.ONE * growth * delta
-		fx.rotation += delta * 0.35 * signf(vx if absf(vx) > 0.1 else 1.0)
-		if fx.position.y > 1580.0:
-			fx.modulate.a = maxf(0.0, fx.modulate.a - delta * 0.85)
-		if fx.position.y > 2050.0 or fx.modulate.a <= 0.01:
+		fx.rotation += delta * 0.10 * signf(vx if absf(vx) > 0.1 else 1.0)
+		if fx.position.y > 1460.0:
+			fx.modulate.a = maxf(0.0, fx.modulate.a - delta * 0.55)
+		if fx.position.y > 1880.0 or fx.modulate.a <= 0.01:
 			speed_particles.erase(fx)
 			fx.queue_free()
 
@@ -709,7 +711,7 @@ func _update_dust(delta: float) -> void:
 	dust.position.x = lerpf(dust.position.x, player.position.x, minf(1.0, delta * 13.0))
 	dust.position.y = PLAYER_Y + 18.0
 	dust.rotation = sin(elapsed * 6.0) * 0.02
-	dust.modulate.a = 0.22 + 0.10 * (0.5 + 0.5 * sin(elapsed * 11.0))
+	dust.modulate.a = 0.14 + 0.06 * (0.5 + 0.5 * sin(elapsed * 8.0))
 	dust.visible = not is_jumping and not is_sliding and hit_lock <= 0.0
 
 func _spawn_pattern() -> void:
@@ -1156,16 +1158,16 @@ func _change_lane(direction: int) -> void:
 		return
 	lane_index = new_lane
 	var target_x: float = _lane_x_at_y(lane_index, PLAYER_Y)
-	var tilt: float = -0.09 if direction < 0 else 0.09
+	var tilt: float = -0.025 if direction < 0 else 0.025
 	var tw: Tween = create_tween()
 	tw.set_parallel(true)
-	tw.tween_property(player, "position:x", target_x, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(player, "rotation", tilt, 0.08)
+	tw.tween_property(player, "position:x", target_x, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(player, "rotation", tilt, 0.09)
 	var dust_tw: Tween = create_tween()
-	dust_tw.tween_property(dust, "position:x", target_x, 0.17).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	dust_tw.tween_property(dust, "position:x", target_x, 0.19).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	var reset: Tween = create_tween()
-	reset.tween_interval(0.09)
-	reset.tween_property(player, "rotation", 0.0, 0.10)
+	reset.tween_interval(0.10)
+	reset.tween_property(player, "rotation", 0.0, 0.11)
 
 func _jump() -> void:
 	if is_jumping or is_sliding or hit_lock > 0.0 or is_game_over:
@@ -1173,8 +1175,8 @@ func _jump() -> void:
 	is_jumping = true
 	player.play("jump")
 	var tw: Tween = create_tween()
-	tw.tween_property(player, "position:y", PLAYER_Y - 285.0, 0.29).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(player, "position:y", PLAYER_Y, 0.34).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(player, "position:y", PLAYER_Y - 230.0, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(player, "position:y", PLAYER_Y, 0.36).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.finished.connect(_finish_jump)
 
 func _finish_jump() -> void:
@@ -1188,7 +1190,7 @@ func _slide() -> void:
 		return
 	is_sliding = true
 	slide_time = 0.70
-	player.position.y = PLAYER_Y + 18.0
+	player.position.y = PLAYER_Y + 8.0
 	player.play("slide")
 
 func _finish_slide() -> void:

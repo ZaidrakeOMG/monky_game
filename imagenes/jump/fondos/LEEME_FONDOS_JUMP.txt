@@ -1,0 +1,25 @@
+FONDOS PARA MONKY JUMP
+
+Coloca en esta carpeta tus 22 fondos verticales 9:16 con estos nombres exactos:
+
+fondo_01.png
+fondo_02.png
+fondo_03.png
+...
+fondo_21.png
+fondo_22.png
+
+El juego los mostrará en orden conforme Wonky sube.
+Después de fondo_22.png el modo continúa de forma infinita repitiendo el último escenario.
+
+OPCIONAL: para que la zona infinita tenga variaciones, también puedes agregar:
+
+fondo_infinito_01.png
+fondo_infinito_02.png
+fondo_infinito_03.png
+...
+
+Si existen, se alternarán para siempre después de fondo_22.png.
+
+Resolución recomendada: 1440 x 2560 px (9:16).
+IMPORTANTE: no agregues un archivo .gdignore dentro de imagenes/jump/fondos.
