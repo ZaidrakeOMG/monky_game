@@ -1,7 +1,7 @@
-[gd_scene load_steps=15 format=3 uid="uid://c4monkyjump01"]
+[gd_scene load_steps=16 format=3 uid="uid://c4monkyjump01"]
 
 [ext_resource type="Script" path="res://scripts/minigames/monky_jump.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/jump_bg.jpg" id="2_bg"]
+[ext_resource type="Script" path="res://scripts/minigames/jump_backgrounds.gd" id="2_bg_script"]
 [ext_resource type="SpriteFrames" uid="uid://df5w3k58m8r2y" path="res://resources/wonky_pensando.tres" id="3_frames"]
 [ext_resource type="Texture2D" path="res://assets/ui/jump/home.png" id="4_home"]
 [ext_resource type="Texture2D" path="res://assets/ui/jump/rocket.png" id="5_rocket"]
@@ -90,8 +90,13 @@ script = ExtResource("1_script")
 position = Vector2(540, 960)
 
 [node name="Background" type="Sprite2D" parent="."]
+visible = false
 position = Vector2(540, 960)
-texture = ExtResource("2_bg")
+
+[node name="BackgroundStrip" type="Node2D" parent="."]
+script = ExtResource("2_bg_script")
+velocidad_fondo = 0.24
+empalme_px = 4.0
 
 [node name="DimOverlay" type="ColorRect" parent="."]
 offset_left = -300.0
