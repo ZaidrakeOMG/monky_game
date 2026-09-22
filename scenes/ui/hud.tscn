@@ -497,6 +497,14 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 30
 flat = true
 text = ""
+
+[node name="BtnWardrobe" type="Button" parent="ActionDrawers/BedDrawer/Margin/HBox" unique_id=2100125839]
+custom_minimum_size = Vector2(300, 160)
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+flat = true
+text = ""
+
 [node name="PlayDrawer" type="PanelContainer" parent="ActionDrawers" unique_id=1442392542]
 visible = false
 layout_mode = 1

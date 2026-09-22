@@ -213,12 +213,16 @@ func _on_basket_area_entered(area: Area2D) -> void:
 		_on_fruit_caught(hit_pos, int(data.points))
 
 func _on_fruit_caught(pos: Vector2, pts: int) -> void:
+	if AudioManager:
+		AudioManager.play_fruit_catch()
 	score += pts
 	_spawn_floating_popup("+" + str(pts), pos, Color(0.3, 1.0, 0.4))
 	_bounce_basket(Vector2(1.15, 0.85))
 	_update_hud()
 
 func _on_coin_caught(pos: Vector2, pts: int) -> void:
+	if AudioManager:
+		AudioManager.play_coins()
 	score += pts
 	coins_earned += 1
 	_spawn_floating_popup("+1 moneda", pos, Color(1.0, 0.85, 0.1))
@@ -271,6 +275,8 @@ func _update_hud() -> void:
 func _trigger_game_over() -> void:
 	is_game_over = true
 	spawn_timer.stop()
+	if AudioManager:
+		AudioManager.play_game_over()
 
 	# Aplicar recompensas reales al GameManager
 	if gm:

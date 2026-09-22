@@ -12,6 +12,18 @@ class_name Monky
 @onready var water_particles: CPUParticles2D = $WaterParticles
 @onready var sparkle_particles: CPUParticles2D = $SparkleParticles
 
+@onready var accessory_container: Node2D = get_node_or_null("AccessoryContainer")
+@onready var clothes_slot: Sprite2D = get_node_or_null("AccessoryContainer/ClothesSlot")
+@onready var face_slot: Sprite2D = get_node_or_null("AccessoryContainer/FaceSlot")
+@onready var hat_slot: Sprite2D = get_node_or_null("AccessoryContainer/HatSlot")
+
+const ANIM_TRACKING_OFFSETS: Dictionary = {
+	"pensando": [0, 0, 0, 0, 6, 16, 22, 21, 9, -3, -3, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 11, 15, 15, 12, 3, 0, -1, -1, -1, -1, 0, -1, -1, -3, -4, -1, 0, 0, 3, 3, 3, 3, 6, 12, 19, 21, 15, 3, -4, -4, -1, -3, -3, -3],
+	"comer": [0, -1, -1, -10, 0, -2, -1, -1],
+	"rechazar_comida": [0, 4, 0, -13, -12, -12],
+	"durmiendo": [0, 0, 0, 2, 5, 5, 5, 7, 0, -1, -2, -4, -4, -1, 0, 2, 5, 5, 5, 5, 5, 5, 5, 8, 14, 15, 16, 16, 19, 20, 20, 20, 20, 19, 19, 18, 16, 15, 14, 13, 13, 12, 13, 13, 14, 14, 15, 15, 18, 19, 19, 19, 19, 20, 19, 19, 16, 15, 14, 13]
+}
+
 var is_interacting: bool = false
 var original_scale: Vector2
 var gm: Node = null
@@ -27,6 +39,8 @@ func _ready() -> void:
 	if animated_sprite:
 		if not animated_sprite.animation_finished.is_connected(_on_animation_finished):
 			animated_sprite.animation_finished.connect(_on_animation_finished)
+		if not animated_sprite.frame_changed.is_connected(_on_animation_frame_changed):
+			animated_sprite.frame_changed.connect(_on_animation_frame_changed)
 
 		if gm and gm.is_sleeping:
 			_play_sleep_animation()
@@ -36,6 +50,10 @@ func _ready() -> void:
 	if gm:
 		if not gm.monky_state_changed.is_connected(_on_monky_state_changed):
 			gm.monky_state_changed.connect(_on_monky_state_changed)
+		if not gm.accessory_equipped.is_connected(_on_accessory_equipped):
+			gm.accessory_equipped.connect(_on_accessory_equipped)
+
+	update_accessories()
 
 	if touch_area:
 		if not touch_area.input_event.is_connected(_on_touch_area_input_event):
@@ -59,6 +77,8 @@ func _process(delta: float) -> void:
 			if animated_sprite and animated_sprite.animation == &"bano_jabon":
 				_play_idle_animation()
 
+	_update_contextual_accessory_visibility()
+
 
 func can_eat() -> bool:
 	if gm:
@@ -69,6 +89,9 @@ func can_eat() -> bool:
 func reject_food() -> void:
 	if is_interacting:
 		return
+
+	if AudioManager:
+		AudioManager.play_reject()
 
 	is_interacting = true
 
@@ -161,7 +184,22 @@ func brush_teeth(amount: float = 15.0) -> void:
 
 	play_reaction_bounce(Vector2(1.08, 0.94))
 
-func on_bite_received(_food_name: String) -> void:
+func on_bite_received(food_info = null) -> void:
+	var is_drink: bool = false
+	if food_info is Dictionary:
+		var cat: String = str(food_info.get("category", "")).to_lower()
+		var fid: String = str(food_info.get("id", "")).to_lower()
+		if "bebida" in cat or fid == "milk" or "jugo" in fid or "agua" in fid or "drink" in fid:
+			is_drink = true
+	elif food_info is String:
+		if "leche" in food_info.to_lower() or "jugo" in food_info.to_lower() or "bebida" in food_info.to_lower():
+			is_drink = true
+
+	if AudioManager:
+		if is_drink:
+			AudioManager.play_drink()
+		else:
+			AudioManager.play_eat()
 	if animated_sprite and animated_sprite.sprite_frames:
 		if animated_sprite.sprite_frames.has_animation("comer"):
 			animated_sprite.modulate = Color.WHITE
@@ -212,11 +250,9 @@ func rinse_water() -> void:
 		soap_particles.emitting = false
 	if water_particles:
 		water_particles.emitting = false
-	if sparkle_particles:
-		sparkle_particles.emitting = true
 
 	if gm:
-		var was_dirty: bool = soap_level > 20.0 or gm.hygiene < 85.0
+		var was_dirty: bool = soap_level > 20.0 or gm.hygiene < 90.0
 		gm.wash_body(50.0)
 
 		# V8: la popó sólo desaparece al bañar/enjuagar a Wonky dentro del baño.
@@ -224,23 +260,23 @@ func rinse_water() -> void:
 		if gm.has_method("clear_all_poop_after_bath"):
 			removed_poop = gm.clear_all_poop_after_bath()
 		if removed_poop > 0:
+			if AudioManager:
+				AudioManager.play_poop_clean()
 			for poop_node in get_tree().get_nodes_in_group("wonky_poop"):
 				if is_instance_valid(poop_node):
 					poop_node.queue_free()
 
 		if was_dirty or removed_poop > 0:
+			if AudioManager:
+				AudioManager.play_sparkle()
+			if sparkle_particles:
+				sparkle_particles.emitting = true
 			gm.add_coins(3)
 			var clean_text := "¡Wonky está limpio! +3"
 			if removed_poop > 0:
 				clean_text = "¡Baño completo! Popó limpia +3"
 			gm.show_floating_text.emit(
 				clean_text,
-				global_position + Vector2(0, -180),
-				Color(0.4, 0.9, 1.0)
-			)
-		else:
-			gm.show_floating_text.emit(
-				"¡Wonky está reluciente!",
 				global_position + Vector2(0, -180),
 				Color(0.4, 0.9, 1.0)
 			)
@@ -269,6 +305,9 @@ func _on_touch_area_input_event(
 func on_tapped() -> void:
 	if is_interacting:
 		return
+
+	if AudioManager:
+		AudioManager.play_pet()
 
 	is_interacting = true
 	var tween = create_tween()
@@ -325,6 +364,8 @@ func _on_animation_finished() -> void:
 		return
 
 	if animated_sprite.animation == &"comer" or animated_sprite.animation == &"rechazar_comida":
+		if AudioManager:
+			AudioManager.stop_eat()
 		if gm and gm.is_sleeping:
 			_play_sleep_animation()
 		else:
@@ -371,3 +412,99 @@ func on_ball_hit(_ball_vel: Vector2) -> void:
 				global_position + Vector2(0, -180),
 				Color(0.3, 0.9, 1.0)
 			)
+
+
+## Actualiza todos los accesorios equipados desde GameManager
+func update_accessories() -> void:
+	if not gm:
+		return
+	for cat in ["clothes", "glasses", "hat"]:
+		var equipped_id: String = gm.get_equipped_accessory(cat)
+		_apply_accessory(cat, equipped_id)
+	_update_contextual_accessory_visibility()
+
+
+func _on_accessory_equipped(category: String, item_id: String) -> void:
+	_apply_accessory(category, item_id)
+	_update_contextual_accessory_visibility()
+
+
+func _apply_accessory(category: String, item_id: String) -> void:
+	var slot: Sprite2D = null
+	match category:
+		"clothes":
+			slot = clothes_slot
+		"glasses":
+			slot = face_slot
+		"hat":
+			slot = hat_slot
+
+	if not slot:
+		return
+
+	var item: Dictionary = AccessoryCatalog.get_item(item_id)
+	var slot_tex_path: String = str(item.get("slot_texture", ""))
+	if slot_tex_path == "" or item_id.begins_with("none"):
+		slot.texture = null
+		slot.visible = false
+	else:
+		if ResourceLoader.exists(slot_tex_path):
+			slot.texture = load(slot_tex_path)
+			slot.position = item.get("offset", Vector2.ZERO)
+			slot.scale = item.get("scale", Vector2.ONE)
+			slot.visible = true
+		else:
+			slot.texture = null
+			slot.visible = false
+
+
+func _on_animation_frame_changed() -> void:
+	if not animated_sprite or not accessory_container:
+		return
+	var anim_name: String = str(animated_sprite.animation)
+	var current_frame: int = animated_sprite.frame
+
+	var offsets: Array = ANIM_TRACKING_OFFSETS.get(anim_name, [])
+	if current_frame >= 0 and current_frame < offsets.size():
+		var dy: float = float(offsets[current_frame])
+		accessory_container.position.y = dy
+	else:
+		accessory_container.position.y = 0.0
+
+
+func _update_contextual_accessory_visibility() -> void:
+	if not gm or not accessory_container:
+		return
+
+	var anim_name: String = str(animated_sprite.animation) if animated_sprite else ""
+	var is_in_bath: bool = (anim_name == "bano_jabon") or (bath_animation_time > 0.0) or is_rinsing
+	var is_asleep: bool = (anim_name == "durmiendo") or (anim_name == "dormir_entrada") or gm.is_sleeping
+
+	# 1. En el baño se desviste para lavarse con jabón y agua
+	if is_in_bath:
+		accessory_container.visible = false
+		return
+
+	accessory_container.visible = true
+
+	# 2. Al dormir se quita lentes y sombreros no dormilones
+	var equipped_hat: String = gm.get_equipped_accessory("hat")
+	var equipped_glasses: String = gm.get_equipped_accessory("glasses")
+	var equipped_clothes: String = gm.get_equipped_accessory("clothes")
+
+	if hat_slot:
+		if is_asleep:
+			hat_slot.visible = (equipped_hat == "hat_nightcap")
+		else:
+			hat_slot.visible = (equipped_hat != "" and not equipped_hat.begins_with("none"))
+
+	if face_slot:
+		if is_asleep:
+			face_slot.visible = false
+		else:
+			face_slot.visible = (equipped_glasses != "" and not equipped_glasses.begins_with("none"))
+
+	if clothes_slot:
+		clothes_slot.visible = (equipped_clothes != "" and not equipped_clothes.begins_with("none"))
+
+
