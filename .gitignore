@@ -34,4 +34,5 @@ $RECYCLE.BIN/
 *.tmp
 *.log
 *.bak
+scratch/
 

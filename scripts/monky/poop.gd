@@ -44,4 +44,3 @@ func clean_up() -> void:
 			global_position + Vector2(-120, -70),
 			Color(0.55, 0.85, 1.0)
 		)
-

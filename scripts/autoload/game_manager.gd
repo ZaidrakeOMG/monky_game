@@ -14,17 +14,38 @@ signal show_floating_text(text: String, global_pos: Vector2, color: Color)
 signal food_inventory_changed()
 signal poop_spawned(pos: Vector2)
 signal poop_removed()
+signal accessory_equipped(category: String, item_id: String)
+signal accessory_unlocked(item_id: String)
 
 const SAVE_PATH := "user://monky_save.cfg"
 const MAX_STAT := 100.0
 const SLEEP_DURATION_SEC := 3600.0 # 1 hora exacta de sueño en tiempo real para 100% de energía
 
 var poop_count: int = 0
-var sfx_enabled: bool = true
-var music_enabled: bool = true
+var sfx_enabled: bool = true:
+	set(val):
+		sfx_enabled = val
+		var am = get_tree().root.get_node_or_null("AudioManager") if is_inside_tree() else null
+		if am and am.has_method("set_sfx_enabled"):
+			am.set_sfx_enabled(val)
+
+var music_enabled: bool = true:
+	set(val):
+		music_enabled = val
+		var am = get_tree().root.get_node_or_null("AudioManager") if is_inside_tree() else null
+		if am and am.has_method("set_music_enabled"):
+			am.set_music_enabled(val)
+
 var vibration_enabled: bool = true
 var last_daily_reward_time: int = 0
 var last_ad_reward_time: int = 0
+
+var unlocked_accessories: Array = []
+var equipped_accessories: Dictionary = {
+	"hat": "none_hat",
+	"glasses": "none_glasses",
+	"clothes": "none_clothes"
+}
 
 # Nivel y Experiencia (Curva móvil balanceada)
 var level: int = 1:
@@ -365,6 +386,8 @@ func buy_food(food_id: String, amount: int = 1) -> bool:
 		food_inventory[food_id] = food_inventory.get(food_id, 0) + amount
 		food_inventory_changed.emit()
 		save_game()
+		if AudioManager:
+			AudioManager.play_buy()
 		show_floating_text.emit("¡Compraste " + item_data.name + "!", Vector2(540, 850), Color(0.3, 1.0, 0.4))
 		return true
 	else:
@@ -439,6 +462,8 @@ func play_with_monky(amount: float = 20.0) -> void:
 	monky_state_changed.emit("happy")
 
 func toggle_sleep() -> void:
+	if AudioManager:
+		AudioManager.play_light_switch()
 	is_sleeping = !is_sleeping
 	if is_sleeping:
 		monky_state_changed.emit("sleeping")
@@ -521,6 +546,8 @@ func save_game() -> void:
 	config.set_value("game", "last_daily_reward_time", last_daily_reward_time)
 	config.set_value("game", "last_ad_reward_time", last_ad_reward_time)
 	config.set_value("inventory", "foods", food_inventory)
+	config.set_value("customization", "unlocked_accessories", unlocked_accessories)
+	config.set_value("customization", "equipped_accessories", equipped_accessories)
 	config.set_value("settings", "sfx", sfx_enabled)
 	config.set_value("settings", "music", music_enabled)
 	config.set_value("settings", "vibration", vibration_enabled)
@@ -530,6 +557,7 @@ func load_game() -> void:
 	var config := ConfigFile.new()
 	var err := config.load(SAVE_PATH)
 	if err != OK:
+		unlocked_accessories = AccessoryCatalog.get_default_unlocked_ids()
 		return
 
 	sfx_enabled = config.get_value("settings", "sfx", true)
@@ -556,6 +584,18 @@ func load_game() -> void:
 		"milk": 2,
 		"banana": 1,
 		"fish": 1
+	})
+	
+	var default_unlocked: Array = AccessoryCatalog.get_default_unlocked_ids()
+	unlocked_accessories = config.get_value("customization", "unlocked_accessories", default_unlocked)
+	for def_id in default_unlocked:
+		if not def_id in unlocked_accessories:
+			unlocked_accessories.append(def_id)
+			
+	equipped_accessories = config.get_value("customization", "equipped_accessories", {
+		"hat": "none_hat",
+		"glasses": "none_glasses",
+		"clothes": "none_clothes"
 	})
 
 	var last_time: int = config.get_value("game", "last_timestamp", 0)
@@ -585,6 +625,46 @@ func load_game() -> void:
 				fun -= passed_ticks * 0.20
 				hygiene -= passed_ticks * 0.10
 
+# Métodos de Accesorios / Ropas
+func is_accessory_unlocked(item_id: String) -> bool:
+	return item_id in unlocked_accessories
+
+func unlock_accessory(item_id: String) -> bool:
+	var item: Dictionary = AccessoryCatalog.get_item(item_id)
+	if item.is_empty():
+		return false
+	if is_accessory_unlocked(item_id):
+		return true
+	
+	var p_coins: int = int(item.get("price_coins", 0))
+	var p_diamonds: int = int(item.get("price_diamonds", 0))
+	
+	if p_coins > 0:
+		if coins < p_coins:
+			return false
+		coins -= p_coins
+		coins_changed.emit(coins)
+	if p_diamonds > 0:
+		if diamonds < p_diamonds:
+			return false
+		diamonds -= p_diamonds
+		diamonds_changed.emit(diamonds)
+	
+	unlocked_accessories.append(item_id)
+	accessory_unlocked.emit(item_id)
+	save_game()
+	return true
+
+func equip_accessory(category: String, item_id: String) -> void:
+	if not is_accessory_unlocked(item_id):
+		return
+	equipped_accessories[category] = item_id
+	accessory_equipped.emit(category, item_id)
+	save_game()
+
+func get_equipped_accessory(category: String) -> String:
+	return str(equipped_accessories.get(category, "none_" + category))
+
 func reset_game_data() -> void:
 	hunger = 100.0
 	protein = 100.0
@@ -607,9 +687,17 @@ func reset_game_data() -> void:
 		"banana": 1,
 		"fish": 1
 	}
+	unlocked_accessories = AccessoryCatalog.get_default_unlocked_ids()
+	equipped_accessories = {
+		"hat": "none_hat",
+		"glasses": "none_glasses",
+		"clothes": "none_clothes"
+	}
 	save_game()
 	food_inventory_changed.emit()
 	room_changed.emit(current_room)
+	for cat in ["hat", "glasses", "clothes"]:
+		accessory_equipped.emit(cat, equipped_accessories[cat])
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:

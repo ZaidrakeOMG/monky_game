@@ -62,6 +62,8 @@ func _update_visuals() -> void:
 		icon_sprite.texture = null
 
 
+var is_shower_playing: bool = false
+
 func _process(delta: float) -> void:
 	if not is_dragging:
 		return
@@ -73,6 +75,23 @@ func _process(delta: float) -> void:
 			return
 
 	global_position = get_global_mouse_position()
+
+	# Manejo continuo y fluido del sonido de la regadera
+	if item_type == "shower":
+		var touching_monky: bool = false
+		if area and is_dragging:
+			for ov in area.get_overlapping_areas():
+				if ov.name == "BodyArea" or ov.name == "TouchArea":
+					touching_monky = true
+					break
+		if touching_monky:
+			if not is_shower_playing and AudioManager:
+				is_shower_playing = true
+				AudioManager.start_shower()
+		else:
+			if is_shower_playing and AudioManager:
+				is_shower_playing = false
+				AudioManager.stop_shower()
 
 	if item_type == "soap" or item_type == "shower" or item_type == "toothbrush":
 		rub_timer += delta
@@ -92,10 +111,14 @@ func _check_rubbing() -> void:
 
 		if item_type == "soap" and (ov.name == "BodyArea" or ov.name == "TouchArea") and parent_node.has_method("apply_soap"):
 			parent_node.apply_soap(8.0)
+			if AudioManager:
+				AudioManager.play_soap()
 		elif item_type == "shower" and (ov.name == "BodyArea" or ov.name == "TouchArea") and parent_node.has_method("rinse_water"):
 			parent_node.rinse_water()
 		elif item_type == "toothbrush" and ov.name == "MouthArea" and parent_node.has_method("brush_teeth"):
 			parent_node.brush_teeth(8.0)
+			if AudioManager:
+				AudioManager.play_toothbrush()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -104,6 +127,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_release()
 
 func _on_release() -> void:
+	if is_shower_playing and AudioManager:
+		is_shower_playing = false
+		AudioManager.stop_shower()
+
 	if item_type != "food":
 		if gm:
 			gm.save_game()
@@ -128,7 +155,7 @@ func take_bite(monky_ref: Node2D) -> void:
 	tween.tween_property(self, "scale", target_scale, 0.08)
 
 	if is_instance_valid(monky_ref) and monky_ref.has_method("on_bite_received"):
-		monky_ref.on_bite_received(item_data.get("name", "Comida"))
+		monky_ref.on_bite_received(item_data)
 
 	if bites_left <= 0:
 		if gm:
@@ -144,6 +171,8 @@ func take_bite(monky_ref: Node2D) -> void:
 func finish_and_destroy() -> void:
 	if not is_inside_tree():
 		return
+	if item_type == "shower" and AudioManager:
+		AudioManager.stop_shower()
 	is_dragging = false
 	var tween = create_tween()
 	tween.tween_property(self, "scale", Vector2.ZERO, 0.12).set_ease(Tween.EASE_IN)

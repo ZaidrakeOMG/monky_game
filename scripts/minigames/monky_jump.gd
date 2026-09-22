@@ -471,6 +471,8 @@ func _on_player_area_entered(area: Area2D) -> void:
 			return
 
 		var p_type: String = str(area.get_meta("type", "normal"))
+		if AudioManager:
+			AudioManager.play_jump()
 		match p_type:
 			"spring":
 				velocity.y = SUPER_JUMP_POWER
@@ -478,6 +480,8 @@ func _on_player_area_entered(area: Area2D) -> void:
 			"coin":
 				velocity.y = JUMP_POWER
 				coins_earned += 1
+				if AudioManager:
+					AudioManager.play_coins()
 				_spawn_floating_icon(TEX_COIN, player.position + Vector2(0.0, -82.0), 72.0)
 				area.set_meta("type", "normal")
 				# Quitar el distintivo de moneda para dejar la plataforma normal.
@@ -515,6 +519,8 @@ func _trigger_game_over() -> void:
 	if is_game_over:
 		return
 	is_game_over = true
+	if AudioManager:
+		AudioManager.play_game_over()
 
 	var total_coins: int = coins_earned + int(float(score) / 30.0)
 

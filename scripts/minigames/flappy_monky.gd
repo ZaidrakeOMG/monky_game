@@ -114,6 +114,8 @@ func _on_jump() -> void:
 		tap_hint.visible = false
 		spawn_timer.start()
 
+	if AudioManager:
+		AudioManager.play_jump()
 	velocity_y = JUMP_VELOCITY
 	var tween = create_tween()
 	tween.tween_property(player, "rotation", deg_to_rad(-22.0), 0.1)
@@ -227,6 +229,8 @@ func _on_player_area_entered(area: Area2D) -> void:
 
 	if area.has_meta("coin"):
 		coins_earned += 1
+		if AudioManager:
+			AudioManager.play_coins()
 		_spawn_floating_text("+1 moneda", area.global_position, Color(1, 0.85, 0.2))
 		area.queue_free()
 		_update_hud()
@@ -238,6 +242,8 @@ func _trigger_game_over() -> void:
 		return
 	is_game_over = true
 	spawn_timer.stop()
+	if AudioManager:
+		AudioManager.play_game_over()
 
 	# Recompensas al GameManager
 	if gm:

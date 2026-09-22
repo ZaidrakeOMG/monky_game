@@ -95,6 +95,13 @@ var confirm_reset_popup: Control = null
 @onready var btn_shower: Button = $ActionDrawers/BathDrawer/Margin/HBox/BtnShower
 @onready var bed_drawer: PanelContainer = $ActionDrawers/BedDrawer
 @onready var btn_lamp: Button = $ActionDrawers/BedDrawer/Margin/HBox/BtnLamp
+@onready var btn_wardrobe: Button = $ActionDrawers/BedDrawer/Margin/HBox/BtnWardrobe
+var wardrobe_popup: Control = null
+var wardrobe_selected_tab: String = "hat"
+var wardrobe_grid: GridContainer = null
+var wardrobe_tab_buttons: Dictionary = {}
+var wardrobe_coins_balance: Label = null
+var wardrobe_diamonds_balance: Label = null
 @onready var play_drawer: PanelContainer = $ActionDrawers/PlayDrawer
 @onready var btn_ball: Button = $ActionDrawers/PlayDrawer/Margin/HBox/BtnBall
 @onready var btn_game: Button = $ActionDrawers/PlayDrawer/Margin/HBox/BtnGame
@@ -130,6 +137,7 @@ const UI_ICON := {
 	"play": "res://imagenes/ui_polished/navegacion/juegos.png",
 	"sleep": "res://imagenes/ui_polished/dormitorio/dormir.png",
 	"wake": "res://imagenes/ui_polished/dormitorio/despertar.png",
+	"wardrobe": "res://imagenes/accesorios/wardrobe_icon.png",
 	"toothbrush": "res://imagenes/ui_polished/bano/cepillo_dientes.png",
 	"soap": "res://imagenes/ui_polished/bano/jabon.png",
 	"shower": "res://imagenes/ui_polished/bano/ducha.png",
@@ -607,6 +615,9 @@ func _setup_dock_buttons() -> void:
 
 func _select_room(r_name: String) -> void:
 	if gm:
+		if gm.current_room != r_name:
+			if AudioManager:
+				AudioManager.play_pop()
 		gm.change_room(r_name)
 
 
@@ -636,13 +647,18 @@ func _setup_action_drawers() -> void:
 		btn_shower.pressed.connect(func(): _spawn_draggable("shower"))
 
 	if btn_lamp:
-		_set_image_button(btn_lamp, str(UI_ICON["sleep"]), 124, Vector2(320, 205), "Dormir", 25)
+		_set_image_button(btn_lamp, str(UI_ICON["sleep"]), 124, Vector2(280, 205), "Dormir", 25)
 		_update_sleep_button()
 		btn_lamp.pressed.connect(func():
 			if gm:
 				gm.toggle_sleep()
 				_update_sleep_button()
 		)
+
+	if btn_wardrobe:
+		_set_image_button(btn_wardrobe, str(UI_ICON["wardrobe"]), 124, Vector2(280, 205), "Armario", 25)
+		btn_wardrobe.tooltip_text = "Armario de Ropa"
+		btn_wardrobe.pressed.connect(_open_wardrobe_modal)
 
 	# Sala de juegos: se elimina la pelota por completo. Minijuegos queda como acción principal.
 	if btn_ball:
@@ -917,6 +933,8 @@ func _setup_food_market() -> void:
 func _open_food_market() -> void:
 	if not food_market_popup:
 		return
+	if AudioManager:
+		AudioManager.play_pop()
 	_populate_market_grid()
 	_update_market_balance()
 	food_market_popup.visible = true
@@ -929,6 +947,8 @@ func _open_food_market() -> void:
 func _close_food_market() -> void:
 	if not food_market_popup:
 		return
+	if AudioManager:
+		AudioManager.play_pop()
 	var panel = food_market_popup.get_node("Panel")
 	var tween = create_tween()
 	tween.tween_property(panel, "scale", Vector2(0.84, 0.84), 0.14).set_ease(Tween.EASE_IN)
@@ -1509,6 +1529,8 @@ func _setup_shop_modal() -> void:
 	_setup_iap_confirm_popup()
 
 func _open_shop() -> void:
+	if AudioManager:
+		AudioManager.play_pop()
 	_update_shop_balance()
 	_update_shop_timers()
 	shop_popup.visible = true
@@ -1519,6 +1541,8 @@ func _open_shop() -> void:
 	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _close_shop() -> void:
+	if AudioManager:
+		AudioManager.play_pop()
 	var panel = shop_popup.get_node("Panel")
 	var tween = create_tween()
 	tween.tween_property(panel, "scale", Vector2(0.7, 0.7), 0.15).set_ease(Tween.EASE_IN)
@@ -1640,6 +1664,9 @@ func _buy_potion(pot_type: String, coin_cost: int, gem_cost: int) -> void:
 	if not paid:
 		gm.show_floating_text.emit("Requiere " + str(coin_cost) + " monedas o " + str(gem_cost) + " diamantes", Vector2(540, 850), Color(1.0, 0.4, 0.4))
 		return
+
+	if AudioManager:
+		AudioManager.play_potion()
 
 	match pot_type:
 		"energy":
@@ -2011,6 +2038,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			food_details_popup.visible = false
 		elif food_market_popup and food_market_popup.visible:
 			_close_food_market()
+		elif wardrobe_popup and wardrobe_popup.visible:
+			_close_wardrobe_modal()
 		elif shop_popup and shop_popup.visible:
 			_close_shop()
 		else:
@@ -2155,14 +2184,13 @@ func _setup_settings_modal() -> void:
 	)
 	settings_popup.add_child(backdrop)
 
-	# Marco ilustrado centrado. Evitamos el letrero colgante grande que en V7
-	# terminaba atravesando el contenido.
-	var panel := PanelContainer.new()
+	# Marco ilustrado centrado. Usamos Control para posicionado libre y confiable.
+	var panel := Control.new()
 	panel.name = "Panel"
 	panel.custom_minimum_size = Vector2(860, 1040)
 	panel.size = Vector2(860, 1040)
 	panel.position = Vector2(110, 440)
-	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	settings_popup.add_child(panel)
 
 	var frame := TextureRect.new()
@@ -2184,20 +2212,10 @@ func _setup_settings_modal() -> void:
 	title.text = "AJUSTES"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_style_caption(title, 35, Color("#FFF4D5"))
 	title.add_theme_color_override("font_outline_color", Color("#4A2417"))
 	panel.add_child(title)
-
-	var btn_close := Button.new()
-	btn_close.anchor_left = 1.0
-	btn_close.anchor_right = 1.0
-	btn_close.offset_left = -102.0
-	btn_close.offset_right = -36.0
-	btn_close.offset_top = 42.0
-	btn_close.offset_bottom = 108.0
-	_set_image_button(btn_close, str(UI_ICON["close"]), 52, Vector2(66, 66))
-	btn_close.pressed.connect(_close_settings_modal)
-	panel.add_child(btn_close)
 
 	var content := VBoxContainer.new()
 	content.position = Vector2(82, 178)
@@ -2281,6 +2299,18 @@ func _setup_settings_modal() -> void:
 	hint.add_theme_color_override("font_color", Color("#8B6956"))
 	content.add_child(hint)
 
+	# Botón Cerrar (X) colocado al final para quedar siempre arriba en el orden visual y de input
+	var btn_close := Button.new()
+	btn_close.name = "BtnCloseSettings"
+	btn_close.position = Vector2(748, 38)
+	btn_close.size = Vector2(76, 76)
+	btn_close.custom_minimum_size = Vector2(76, 76)
+	btn_close.mouse_filter = Control.MOUSE_FILTER_STOP
+	btn_close.z_index = 10
+	_set_image_button(btn_close, str(UI_ICON["close"]), 54, Vector2(76, 76))
+	btn_close.pressed.connect(_close_settings_modal)
+	panel.add_child(btn_close)
+
 	_update_settings_ui()
 
 func _update_settings_ui() -> void:
@@ -2293,23 +2323,32 @@ func _update_settings_ui() -> void:
 func _open_settings_modal() -> void:
 	if not settings_popup:
 		return
+	if AudioManager:
+		AudioManager.play_pop()
 	_update_settings_ui()
 	settings_popup.visible = true
-	var panel = settings_popup.get_node("Panel")
-	panel.scale = Vector2(0.7, 0.7)
-	panel.pivot_offset = panel.size / 2.0
-	var tween = create_tween()
-	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	var panel = settings_popup.get_node_or_null("Panel")
+	if panel:
+		panel.scale = Vector2(0.7, 0.7)
+		panel.pivot_offset = panel.size / 2.0
+		var tween = create_tween()
+		tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _close_settings_modal() -> void:
-	if not settings_popup:
+	if not settings_popup or not settings_popup.visible:
 		return
-	var panel = settings_popup.get_node("Panel")
-	var tween = create_tween()
-	tween.tween_property(panel, "scale", Vector2(0.7, 0.7), 0.15).set_ease(Tween.EASE_IN)
-	tween.finished.connect(func():
+	if AudioManager:
+		AudioManager.play_pop()
+	var panel = settings_popup.get_node_or_null("Panel")
+	if panel:
+		var tween = create_tween()
+		tween.tween_property(panel, "scale", Vector2(0.7, 0.7), 0.15).set_ease(Tween.EASE_IN)
+		tween.finished.connect(func():
+			if settings_popup:
+				settings_popup.visible = false
+		)
+	else:
 		settings_popup.visible = false
-	)
 
 
 func _setup_confirm_reset_popup() -> void:
@@ -2424,3 +2463,373 @@ func _open_confirm_reset() -> void:
 	panel.pivot_offset = panel.size / 2.0
 	var tween = create_tween()
 	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+# ==============================================================================
+# SISTEMA DE ARMARIO Y ACCESORIOS DE WONKY (VISTA EN VIVO)
+# ==============================================================================
+
+func _get_monky_node() -> Monky:
+	var m = get_node_or_null("../Monky")
+	if not m:
+		m = get_tree().root.get_node_or_null("Main/Monky")
+	return m as Monky
+
+func _setup_wardrobe_modal() -> void:
+	wardrobe_popup = Control.new()
+	wardrobe_popup.name = "WardrobeModal"
+	wardrobe_popup.visible = false
+	wardrobe_popup.z_index = 85
+	wardrobe_popup.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(wardrobe_popup)
+
+	# Fondo transparente en la parte superior para ver a Wonky,
+	# pero permite cerrar tocando fuera del panel inferior.
+	var backdrop_button := Button.new()
+	backdrop_button.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop_button.flat = true
+	for s in ["normal", "hover", "pressed", "focus", "disabled"]:
+		backdrop_button.add_theme_stylebox_override(s, StyleBoxEmpty.new())
+	backdrop_button.pressed.connect(_close_wardrobe_modal)
+	wardrobe_popup.add_child(backdrop_button)
+
+	# Panel inferior (Bottom Sheet) que deja la mitad superior libre para ver a Wonky
+	var panel := PanelContainer.new()
+	panel.name = "Panel"
+	panel.custom_minimum_size = Vector2(980, 820)
+	panel.size = Vector2(980, 820)
+	panel.position = Vector2(50, 850)
+
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color("#FFFDF7")
+	panel_style.border_color = Color("#E4C28D")
+	panel_style.set_border_width_all(7)
+	panel_style.set_corner_radius_all(36)
+	panel_style.shadow_color = Color(0.12, 0.08, 0.05, 0.30)
+	panel_style.shadow_size = 18
+	panel.add_theme_stylebox_override("panel", panel_style)
+	wardrobe_popup.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 28)
+	margin.add_theme_constant_override("margin_right", 28)
+	margin.add_theme_constant_override("margin_top", 24)
+	margin.add_theme_constant_override("margin_bottom", 24)
+	panel.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 14)
+	margin.add_child(vbox)
+
+	# 1. Header (Título, balances de Monedas y Diamantes, Botón Cerrar)
+	var header := HBoxContainer.new()
+	header.custom_minimum_size.y = 70
+	header.add_theme_constant_override("separation", 12)
+	vbox.add_child(header)
+
+	var title := Label.new()
+	title.text = "ARMARIO DE WONKY"
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 30)
+	title.add_theme_color_override("font_color", Color("#4A2E18"))
+	title.add_theme_color_override("font_outline_color", Color.WHITE)
+	title.add_theme_constant_override("outline_size", 6)
+	header.add_child(title)
+
+	# Balance Monedas
+	var coin_box := HBoxContainer.new()
+	coin_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	coin_box.add_theme_constant_override("separation", 6)
+	header.add_child(coin_box)
+
+	var coin_icon := TextureRect.new()
+	coin_icon.texture = _load_ui_texture(str(UI_ICON["coin"]))
+	coin_icon.custom_minimum_size = Vector2(34, 34)
+	coin_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	coin_box.add_child(coin_icon)
+
+	wardrobe_coins_balance = Label.new()
+	wardrobe_coins_balance.text = str(gm.coins if gm else 0)
+	wardrobe_coins_balance.add_theme_font_size_override("font_size", 22)
+	wardrobe_coins_balance.add_theme_color_override("font_color", Color("#6B391F"))
+	coin_box.add_child(wardrobe_coins_balance)
+
+	# Balance Diamantes
+	var gem_box := HBoxContainer.new()
+	gem_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	gem_box.add_theme_constant_override("separation", 6)
+	header.add_child(gem_box)
+
+	var gem_icon := TextureRect.new()
+	gem_icon.texture = _load_ui_texture(str(UI_ICON["diamond"]))
+	gem_icon.custom_minimum_size = Vector2(34, 34)
+	gem_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	gem_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	gem_box.add_child(gem_icon)
+
+	wardrobe_diamonds_balance = Label.new()
+	wardrobe_diamonds_balance.text = str(gm.diamonds if gm else 0)
+	wardrobe_diamonds_balance.add_theme_font_size_override("font_size", 22)
+	wardrobe_diamonds_balance.add_theme_color_override("font_color", Color("#2471A3"))
+	gem_box.add_child(wardrobe_diamonds_balance)
+
+	# Botón Cerrar
+	var btn_close := Button.new()
+	btn_close.custom_minimum_size = Vector2(58, 58)
+	_set_image_button(btn_close, str(UI_ICON["close"]), 40, Vector2(58, 58))
+	btn_close.tooltip_text = "Cerrar"
+	btn_close.pressed.connect(_close_wardrobe_modal)
+	header.add_child(btn_close)
+
+	# 2. Selector de Pestañas (Sombreros, Lentes, Ropa)
+	var tabs_row := HBoxContainer.new()
+	tabs_row.custom_minimum_size.y = 66
+	tabs_row.add_theme_constant_override("separation", 12)
+	vbox.add_child(tabs_row)
+
+	wardrobe_tab_buttons.clear()
+	for cat in AccessoryCatalog.CATEGORIES:
+		var tab_btn := Button.new()
+		tab_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tab_btn.custom_minimum_size.y = 62
+		tab_btn.text = AccessoryCatalog.CATEGORY_NAMES.get(cat, cat.capitalize())
+		tab_btn.add_theme_font_size_override("font_size", 23)
+		tab_btn.focus_mode = Control.FOCUS_NONE
+		tab_btn.pressed.connect(func(c=cat): _select_wardrobe_tab(c))
+		tabs_row.add_child(tab_btn)
+		wardrobe_tab_buttons[cat] = tab_btn
+
+	# 3. Scroll Container con Grid de Items
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vbox.add_child(scroll)
+
+	wardrobe_grid = GridContainer.new()
+	wardrobe_grid.columns = 3
+	wardrobe_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wardrobe_grid.add_theme_constant_override("h_separation", 14)
+	wardrobe_grid.add_theme_constant_override("v_separation", 14)
+	scroll.add_child(wardrobe_grid)
+
+func _open_wardrobe_modal() -> void:
+	if not wardrobe_popup:
+		_setup_wardrobe_modal()
+
+	if AudioManager:
+		AudioManager.play_pop()
+
+	_update_wardrobe_balance()
+	_select_wardrobe_tab(wardrobe_selected_tab)
+
+	wardrobe_popup.visible = true
+
+	# Subir suavemente a Wonky para que quede centrado en la mitad superior visible
+	var monky := _get_monky_node()
+	if monky:
+		var tween_m = create_tween()
+		tween_m.tween_property(monky, "position:y", 560.0, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+	var panel = wardrobe_popup.get_node_or_null("Panel")
+	if panel:
+		panel.position.y = 1920.0
+		var tween = create_tween()
+		tween.tween_property(panel, "position:y", 850.0, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _close_wardrobe_modal() -> void:
+	if not wardrobe_popup or not wardrobe_popup.visible:
+		return
+
+	if AudioManager:
+		AudioManager.play_pop()
+
+	# Devolver a Wonky a su posición original
+	var monky := _get_monky_node()
+	if monky:
+		var tween_m = create_tween()
+		tween_m.tween_property(monky, "position:y", 1100.0, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+	var panel = wardrobe_popup.get_node_or_null("Panel")
+	if panel:
+		var tween = create_tween()
+		tween.tween_property(panel, "position:y", 1920.0, 0.2).set_ease(Tween.EASE_IN)
+		await tween.finished
+	wardrobe_popup.visible = false
+
+func _update_wardrobe_balance() -> void:
+	if wardrobe_coins_balance and gm:
+		wardrobe_coins_balance.text = str(gm.coins)
+	if wardrobe_diamonds_balance and gm:
+		wardrobe_diamonds_balance.text = str(gm.diamonds)
+
+func _select_wardrobe_tab(category: String) -> void:
+	if wardrobe_selected_tab != category:
+		if AudioManager:
+			AudioManager.play_pop()
+	wardrobe_selected_tab = category
+	for cat in wardrobe_tab_buttons:
+		var btn: Button = wardrobe_tab_buttons[cat]
+		var is_active: bool = (str(cat) == category)
+		btn.add_theme_stylebox_override("normal", _wardrobe_tab_style(is_active))
+		btn.add_theme_stylebox_override("hover", _wardrobe_tab_style(is_active))
+		btn.add_theme_stylebox_override("pressed", _wardrobe_tab_style(is_active))
+		btn.add_theme_color_override("font_color", Color("#FFFFFF" if is_active else "#684833"))
+		btn.add_theme_color_override("font_outline_color", Color("#331E12" if is_active else "#FFF8F0"))
+		btn.add_theme_constant_override("outline_size", 4 if is_active else 2)
+
+	_refresh_wardrobe_tab(category)
+
+func _wardrobe_tab_style(active: bool) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	if active:
+		style.bg_color = Color("#FF9F38")
+		style.border_color = Color("#C66D14")
+	else:
+		style.bg_color = Color("#F0E5D8")
+		style.border_color = Color("#D5C1AE")
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(20)
+	style.shadow_color = Color(0.15, 0.1, 0.08, 0.16 if active else 0.06)
+	style.shadow_size = 4
+	return style
+
+func _wardrobe_card_style(is_equipped: bool, is_unlocked: bool) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	if is_equipped:
+		style.bg_color = Color("#E6F9EA")
+		style.border_color = Color("#38B865")
+		style.set_border_width_all(4)
+	elif is_unlocked:
+		style.bg_color = Color("#F7F9FF")
+		style.border_color = Color("#ADC2EB")
+		style.set_border_width_all(3)
+	else:
+		style.bg_color = Color("#FFFDF5")
+		style.border_color = Color("#E0D6C3")
+		style.set_border_width_all(3)
+	style.set_corner_radius_all(22)
+	style.shadow_color = Color(0.15, 0.1, 0.08, 0.10)
+	style.shadow_size = 3
+	return style
+
+func _refresh_wardrobe_tab(category: String) -> void:
+	if not wardrobe_grid or not gm:
+		return
+
+	for child in wardrobe_grid.get_children():
+		child.queue_free()
+
+	var items: Array[Dictionary] = AccessoryCatalog.get_items_by_category(category)
+	var currently_equipped: String = gm.get_equipped_accessory(category)
+
+	for item in items:
+		var item_id: String = str(item.get("id", ""))
+		var item_name: String = str(item.get("name", "Accesorio"))
+		var tex_path: String = str(item.get("texture_path", ""))
+		var is_unlocked: bool = gm.is_accessory_unlocked(item_id)
+		var is_equipped: bool = (currently_equipped == item_id)
+		var p_coins: int = int(item.get("price_coins", 0))
+		var p_diamonds: int = int(item.get("price_diamonds", 0))
+
+		var card := PanelContainer.new()
+		card.custom_minimum_size = Vector2(290, 215)
+		card.add_theme_stylebox_override("panel", _wardrobe_card_style(is_equipped, is_unlocked))
+
+		var card_margin := MarginContainer.new()
+		card_margin.add_theme_constant_override("margin_left", 12)
+		card_margin.add_theme_constant_override("margin_right", 12)
+		card_margin.add_theme_constant_override("margin_top", 10)
+		card_margin.add_theme_constant_override("margin_bottom", 10)
+		card.add_child(card_margin)
+
+		var card_vbox := VBoxContainer.new()
+		card_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		card_vbox.add_theme_constant_override("separation", 6)
+		card_margin.add_child(card_vbox)
+
+		# Icono
+		var icon := TextureRect.new()
+		icon.texture = _load_ui_texture(tex_path)
+		icon.custom_minimum_size = Vector2(80, 75)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card_vbox.add_child(icon)
+
+		# Nombre
+		var name_lbl := Label.new()
+		name_lbl.text = item_name
+		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_lbl.add_theme_font_size_override("font_size", 18)
+		name_lbl.add_theme_color_override("font_color", Color("#4A2E18"))
+		name_lbl.add_theme_color_override("font_outline_color", Color.WHITE)
+		name_lbl.add_theme_constant_override("outline_size", 3)
+		card_vbox.add_child(name_lbl)
+
+		# Botón de Acción
+		var action_btn := Button.new()
+		action_btn.custom_minimum_size = Vector2(0, 48)
+		action_btn.focus_mode = Control.FOCUS_NONE
+		action_btn.add_theme_font_size_override("font_size", 18)
+
+		var btn_style := StyleBoxFlat.new()
+		btn_style.set_corner_radius_all(15)
+
+		if is_equipped:
+			action_btn.text = "✓ Equipado"
+			action_btn.disabled = true
+			btn_style.bg_color = Color("#38B865")
+			action_btn.add_theme_color_override("font_color", Color.WHITE)
+			action_btn.add_theme_stylebox_override("disabled", btn_style)
+		elif is_unlocked:
+			action_btn.text = "Quitar" if item_id.begins_with("none") else "Ponerse"
+			btn_style.bg_color = Color("#4EA1FF")
+			btn_style.border_color = Color("#2274D4")
+			btn_style.set_border_width_all(2)
+			action_btn.add_theme_color_override("font_color", Color.WHITE)
+			action_btn.add_theme_stylebox_override("normal", btn_style)
+			action_btn.add_theme_stylebox_override("hover", btn_style)
+			action_btn.add_theme_stylebox_override("pressed", btn_style)
+			action_btn.pressed.connect(func(c=category, id=item_id):
+				gm.equip_accessory(c, id)
+				_refresh_wardrobe_tab(c)
+				var m := _get_monky_node()
+				if m:
+					m.play_reaction_bounce(Vector2(1.15, 0.88))
+			)
+		else:
+			# Requiere compra
+			if p_coins > 0:
+				action_btn.text = "%d 🪙" % p_coins
+				btn_style.bg_color = Color("#FFB72B")
+				btn_style.border_color = Color("#C67F00")
+			elif p_diamonds > 0:
+				action_btn.text = "%d 💎" % p_diamonds
+				btn_style.bg_color = Color("#3AB4F2")
+				btn_style.border_color = Color("#1074A8")
+			btn_style.set_border_width_all(2)
+			action_btn.add_theme_color_override("font_color", Color.WHITE)
+			action_btn.add_theme_stylebox_override("normal", btn_style)
+			action_btn.add_theme_stylebox_override("hover", btn_style)
+			action_btn.add_theme_stylebox_override("pressed", btn_style)
+			action_btn.pressed.connect(func(c=category, id=item_id, pc=p_coins, pd=p_diamonds):
+				if pc > 0 and gm.coins < pc:
+					gm.show_floating_text.emit("¡Te faltan Monedas!", Vector2(540, 500), Color(1.0, 0.4, 0.4))
+					return
+				if pd > 0 and gm.diamonds < pd:
+					gm.show_floating_text.emit("¡Te faltan Diamantes!", Vector2(540, 500), Color(1.0, 0.4, 0.4))
+					return
+				if gm.unlock_accessory(id):
+					gm.equip_accessory(c, id)
+					_update_wardrobe_balance()
+					_refresh_wardrobe_tab(c)
+					gm.show_floating_text.emit("¡Nuevo Atuendo!", Vector2(540, 500), Color(0.3, 1.0, 0.5))
+					var m := _get_monky_node()
+					if m:
+						m.play_reaction_bounce(Vector2(1.2, 0.85))
+			)
+
+		card_vbox.add_child(action_btn)
+		wardrobe_grid.add_child(card)
