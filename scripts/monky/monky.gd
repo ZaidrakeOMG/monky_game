@@ -464,8 +464,8 @@ func _apply_accessory(category: String, item_id: String) -> void:
 				if slot.texture:
 					var source_size: Vector2 = slot.texture.get_size()
 					if source_size.x > 700.0 or source_size.y > 700.0:
-						var hard_scale: float = minf(235.0 / source_size.x, 285.0 / source_size.y)
-						hard_scale = clampf(hard_scale, 0.10, 0.40)
+						var hard_scale: float = minf(335.0 / source_size.x, 390.0 / source_size.y)
+						hard_scale = clampf(hard_scale, 0.12, 0.65)
 						if slot.get_node_or_null("AutoMask") == null and slot.get_node_or_null("AutoBody") == null:
 							slot.scale = Vector2.ONE * hard_scale
 							slot.position = Vector2(0, 70)
@@ -520,8 +520,8 @@ func _autofit_suit(slot: Sprite2D) -> void:
 
 		if top_used.size.x > 8 and top_used.size.y > 8 and bottom_used.size.x > 8 and bottom_used.size.y > 8:
 			slot.visible = false
-			_create_suit_part(slot, source_texture, "AutoMask", top_used, Vector2(0, -60), Vector2(145, 62), 2)
-			_create_suit_part(slot, source_texture, "AutoBody", bottom_used, Vector2(0, 105), Vector2(205, 165), 1)
+			_create_suit_part(slot, source_texture, "AutoMask", top_used, Vector2(0, -55), Vector2(235, 100), 2)
+			_create_suit_part(slot, source_texture, "AutoBody", bottom_used, Vector2(0, 115), Vector2(335, 265), 1)
 			slot.texture = null
 			slot.region_enabled = false
 			slot.scale = Vector2.ONE
@@ -532,7 +532,7 @@ func _autofit_suit(slot: Sprite2D) -> void:
 	# Fallback: si no hay separación clara, normaliza el traje completo.
 	slot.region_enabled = true
 	slot.region_rect = Rect2(used.position, used.size)
-	var fit_scale := minf(210.0 / float(used.size.x), 245.0 / float(used.size.y))
+	var fit_scale := minf(335.0 / float(used.size.x), 390.0 / float(used.size.y))
 	fit_scale = clampf(fit_scale, 0.08, 4.0)
 	slot.scale = Vector2.ONE * fit_scale
 	slot.position = Vector2(0, 70)
