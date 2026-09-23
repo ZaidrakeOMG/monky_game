@@ -230,9 +230,62 @@ const ITEMS: Dictionary = {
 	}
 }
 
+const AUTO_SUIT_DIR: String = "res://imagenes/ropa/trajes"
+const AUTO_SUIT_PREFIX: String = "clothes_auto__"
+
+static func _auto_suit_id_from_filename(filename: String) -> String:
+	var base := filename.get_basename().to_lower()
+	var safe := ""
+	for ch in base:
+		if (ch >= "a" and ch <= "z") or (ch >= "0" and ch <= "9") or ch == "_":
+			safe += ch
+		elif ch == " " or ch == "-":
+			safe += "_"
+	return AUTO_SUIT_PREFIX + safe
+
+static func _auto_suit_name(filename: String) -> String:
+	var base := filename.get_basename().replace("_", " ").replace("-", " ").strip_edges()
+	if base.is_empty():
+		return "Traje"
+	return base.capitalize()
+
+static func _get_auto_suits() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var dir := DirAccess.open(AUTO_SUIT_DIR)
+	if dir == null:
+		return result
+	dir.list_dir_begin()
+	var filename := dir.get_next()
+	while filename != "":
+		if not dir.current_is_dir():
+			var lower := filename.to_lower()
+			if lower.ends_with(".png"):
+				var path := AUTO_SUIT_DIR.path_join(filename)
+				result.append({
+					"id": _auto_suit_id_from_filename(filename),
+					"name": _auto_suit_name(filename),
+					"category": "clothes",
+					"price_coins": 0,
+					"price_diamonds": 0,
+					"texture_path": path,
+					"slot_texture": path,
+					"offset": Vector2.ZERO,
+					"scale": Vector2.ONE,
+					"unlocked_default": true,
+					"auto_suit": true
+				})
+		filename = dir.get_next()
+	dir.list_dir_end()
+	result.sort_custom(func(a: Dictionary, b: Dictionary): return str(a.get("name", "")) < str(b.get("name", "")))
+	return result
+
 static func get_item(item_id: String) -> Dictionary:
 	if ITEMS.has(item_id):
 		return ITEMS[item_id]
+	if item_id.begins_with(AUTO_SUIT_PREFIX):
+		for item in _get_auto_suits():
+			if str(item.get("id", "")) == item_id:
+				return item
 	return {}
 
 static func get_items_by_category(category: String) -> Array[Dictionary]:
@@ -241,6 +294,8 @@ static func get_items_by_category(category: String) -> Array[Dictionary]:
 		var item: Dictionary = ITEMS[item_id]
 		if item.get("category", "") == category:
 			result.append(item)
+	if category == "clothes":
+		result.append_array(_get_auto_suits())
 	return result
 
 static func get_default_unlocked_ids() -> Array[String]:
@@ -249,4 +304,7 @@ static func get_default_unlocked_ids() -> Array[String]:
 		var item: Dictionary = ITEMS[item_id]
 		if item.get("unlocked_default", false):
 			result.append(item_id)
+	for item in _get_auto_suits():
+		if item.get("unlocked_default", false):
+			result.append(str(item.get("id", "")))
 	return result
