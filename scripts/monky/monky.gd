@@ -450,12 +450,55 @@ func _apply_accessory(category: String, item_id: String) -> void:
 	else:
 		if ResourceLoader.exists(slot_tex_path):
 			slot.texture = load(slot_tex_path)
-			slot.position = item.get("offset", Vector2.ZERO)
-			slot.scale = item.get("scale", Vector2.ONE)
+			if category == "clothes" and bool(item.get("auto_suit", false)):
+				_autofit_suit(slot)
+			else:
+				slot.region_enabled = false
+				slot.position = item.get("offset", Vector2.ZERO)
+				slot.scale = item.get("scale", Vector2.ONE)
 			slot.visible = true
 		else:
 			slot.texture = null
 			slot.visible = false
+
+
+
+
+## AutoFit para trajes PNG externos.
+## Detecta el rectángulo real de píxeles visibles, elimina márgenes transparentes
+## y normaliza el traje a la caja visual de Wonky. Así un PNG grande (1200x1200,
+## 2048x2048, etc.) no aparece gigante sólo por el tamaño de su lienzo.
+func _autofit_suit(slot: Sprite2D) -> void:
+	if not slot or not slot.texture:
+		return
+
+	var image: Image = slot.texture.get_image()
+	if image == null or image.is_empty():
+		return
+
+	var used: Rect2i = image.get_used_rect()
+	if used.size.x <= 1 or used.size.y <= 1:
+		return
+
+	# Sprite2D puede mostrar sólo la región ocupada sin crear una textura nueva.
+	# Esto descarta automáticamente todo el margen transparente del archivo.
+	slot.region_enabled = true
+	slot.region_rect = Rect2(used.position, used.size)
+
+	# Caja objetivo calibrada para el Wonky frontal del proyecto.
+	# Se mantiene un poco de margen para capas, máscaras y botas.
+	const TARGET_WIDTH: float = 520.0
+	const TARGET_HEIGHT: float = 610.0
+	const TARGET_CENTER_Y: float = 25.0
+
+	var sx: float = TARGET_WIDTH / float(used.size.x)
+	var sy: float = TARGET_HEIGHT / float(used.size.y)
+	var fit_scale: float = minf(sx, sy)
+
+	# Evita valores absurdos por assets dañados o con un solo punto visible.
+	fit_scale = clampf(fit_scale, 0.08, 4.0)
+	slot.scale = Vector2(fit_scale, fit_scale)
+	slot.position = Vector2(0.0, TARGET_CENTER_Y)
 
 
 func _on_animation_frame_changed() -> void:
