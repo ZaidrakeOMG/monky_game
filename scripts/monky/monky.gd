@@ -34,6 +34,8 @@ var gm: Node = null
 var soap_level: float = 0.0
 var bath_animation_time: float = 0.0
 var is_rinsing: bool = false
+var last_suit_tracking_dy: float = 0.0
+var last_suit_tracking_anim: String = ""
 
 
 func _ready() -> void:
@@ -543,6 +545,9 @@ func _apply_piece_suit(item: Dictionary) -> void:
 		spr.scale = Vector2.ONE * scale_value
 		spr.position = target["center"]
 		spr.z_index = int(target["z"])
+		spr.set_meta("suit_base_position", spr.position)
+		spr.set_meta("suit_base_scale", spr.scale)
+		spr.set_meta("suit_base_rotation", spr.rotation)
 		root.add_child(spr)
 
 
@@ -677,15 +682,104 @@ func _try_enqueue_checker_pixel(
 func _on_animation_frame_changed() -> void:
 	if not animated_sprite or not accessory_container:
 		return
+
 	var anim_name: String = str(animated_sprite.animation)
 	var current_frame: int = animated_sprite.frame
+	var dy: float = 0.0
 
 	var offsets: Array = ANIM_TRACKING_OFFSETS.get(anim_name, [])
 	if current_frame >= 0 and current_frame < offsets.size():
-		var dy: float = float(offsets[current_frame])
-		accessory_container.position.y = dy
-	else:
-		accessory_container.position.y = 0.0
+		dy = float(offsets[current_frame])
+
+	# Seguimiento general: sombreros, lentes y todo el traje acompañan
+	# el desplazamiento vertical real medido en cada frame de Wonky.
+	accessory_container.position.y = dy
+
+	# Seguimiento V2: cada pieza del traje recibe microajustes propios
+	# para que el torso respire/rebote y los pies se mantengan más anclados.
+	_update_suit_frame_tracking(anim_name, current_frame, dy)
+
+
+func _update_suit_frame_tracking(anim_name: String, _frame: int, dy: float) -> void:
+	var root := _ensure_suit_parts_root()
+	if not root or root.get_child_count() == 0:
+		last_suit_tracking_dy = dy
+		last_suit_tracking_anim = anim_name
+		return
+
+	if anim_name != last_suit_tracking_anim:
+		last_suit_tracking_dy = dy
+		last_suit_tracking_anim = anim_name
+		_reset_suit_part_tracking()
+
+	var frame_motion: float = dy - last_suit_tracking_dy
+	last_suit_tracking_dy = dy
+
+	var intensity: float = 1.0
+	match anim_name:
+		"pensando":
+			intensity = 1.0
+		"comer":
+			intensity = 1.20
+		"rechazar_comida":
+			intensity = 1.35
+		"durmiendo":
+			intensity = 0.45
+		_:
+			intensity = 0.70
+
+	for child_node in root.get_children():
+		if not (child_node is Sprite2D):
+			continue
+
+		var part := child_node as Sprite2D
+		var base_position: Vector2 = part.get_meta("suit_base_position", part.position)
+		var base_scale: Vector2 = part.get_meta("suit_base_scale", part.scale)
+		var base_rotation: float = float(part.get_meta("suit_base_rotation", 0.0))
+
+		part.position = base_position
+		part.scale = base_scale
+		part.rotation = base_rotation
+
+		var part_name := part.name.to_lower()
+
+		if part_name == "body":
+			# Cuando Wonky sube/baja, el torso se estira/suaviza ligeramente.
+			var squash: float = clampf(frame_motion * 0.0045 * intensity, -0.045, 0.045)
+			part.scale = base_scale * Vector2(1.0 + squash, 1.0 - squash)
+			part.position.y += clampf(dy * 0.035, -2.0, 3.0)
+
+		elif part_name == "arms":
+			# Los brazos responden un poco más al cambio entre frames.
+			var arm_squash: float = clampf(frame_motion * 0.0035 * intensity, -0.035, 0.035)
+			part.scale = base_scale * Vector2(1.0 + arm_squash, 1.0 - arm_squash)
+			part.position.y += clampf(frame_motion * 0.22 * intensity, -4.0, 4.0)
+
+		elif part_name == "feet":
+			# Compensa parte del rebote global para que los zapatos no floten.
+			part.position.y -= dy * 0.68
+
+		elif part_name == "cape":
+			# La capa tiene un pequeño retraso visual respecto al cuerpo.
+			part.position.y -= clampf(frame_motion * 0.20 * intensity, -3.0, 3.0)
+
+		elif part_name == "mask" or part_name == "hat":
+			# Accesorios de cabeza siguen el rebote, con menos deformación.
+			part.position.y += clampf(frame_motion * 0.10 * intensity, -2.0, 2.0)
+
+
+func _reset_suit_part_tracking() -> void:
+	var root := _ensure_suit_parts_root()
+	if not root:
+		return
+
+	for child_node in root.get_children():
+		if not (child_node is Sprite2D):
+			continue
+		var part := child_node as Sprite2D
+		part.position = part.get_meta("suit_base_position", part.position)
+		part.scale = part.get_meta("suit_base_scale", part.scale)
+		part.rotation = float(part.get_meta("suit_base_rotation", 0.0))
 
 
 func _update_contextual_accessory_visibility() -> void:
@@ -722,5 +816,8 @@ func _update_contextual_accessory_visibility() -> void:
 
 	if clothes_slot:
 		clothes_slot.visible = (equipped_clothes != "" and not equipped_clothes.begins_with("none"))
+
+	if suit_parts_root:
+		suit_parts_root.visible = (equipped_clothes != "" and not equipped_clothes.begins_with("none"))
 
 
