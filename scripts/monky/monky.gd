@@ -17,6 +17,8 @@ class_name Monky
 @onready var face_slot: Sprite2D = get_node_or_null("AccessoryContainer/FaceSlot")
 @onready var hat_slot: Sprite2D = get_node_or_null("AccessoryContainer/HatSlot")
 
+@onready var suit_parts_root: Node2D = get_node_or_null("AccessoryContainer/SuitParts")
+
 const ANIM_TRACKING_OFFSETS: Dictionary = {
 	"pensando": [0, 0, 0, 0, 6, 16, 22, 21, 9, -3, -3, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 11, 15, 15, 12, 3, 0, -1, -1, -1, -1, 0, -1, -1, -3, -4, -1, 0, 0, 3, 3, 3, 3, 6, 12, 19, 21, 15, 3, -4, -4, -1, -3, -3, -3],
 	"comer": [0, -1, -1, -10, 0, -2, -1, -1],
@@ -442,192 +444,88 @@ func _apply_accessory(category: String, item_id: String) -> void:
 	if not slot:
 		return
 
+	if category == "clothes":
+		_clear_piece_suit()
+
 	var item: Dictionary = AccessoryCatalog.get_item(item_id)
+
+	if category == "clothes" and bool(item.get("piece_suit", false)):
+		slot.texture = null
+		slot.visible = false
+		_apply_piece_suit(item)
+		return
+
 	var slot_tex_path: String = str(item.get("slot_texture", ""))
 	if slot_tex_path == "" or item_id.begins_with("none"):
 		slot.texture = null
 		slot.visible = false
+		return
+
+	if ResourceLoader.exists(slot_tex_path):
+		slot.texture = load(slot_tex_path)
+		slot.region_enabled = false
+		slot.position = item.get("offset", Vector2.ZERO)
+		slot.scale = item.get("scale", Vector2.ONE)
+		slot.visible = true
 	else:
-		if ResourceLoader.exists(slot_tex_path):
-			slot.texture = load(slot_tex_path)
-			var force_auto_fit: bool = false
-			if category == "clothes" and slot.texture:
-				var tex_size: Vector2 = slot.texture.get_size()
-				force_auto_fit = bool(item.get("auto_suit", false)) \
-					or slot_tex_path.begins_with("res://imagenes/ropa/trajes/") \
-					or tex_size.x > 700.0 \
-					or tex_size.y > 700.0
-			if force_auto_fit:
-				_autofit_suit(slot)
-				# Seguridad adicional: cualquier traje grande queda limitado
-				# a una escala visual mucho menor que Wonky.
-				if slot.texture:
-					var source_size: Vector2 = slot.texture.get_size()
-					if source_size.x > 700.0 or source_size.y > 700.0:
-						var hard_scale: float = minf(375.0 / source_size.x, 435.0 / source_size.y)
-						hard_scale = clampf(hard_scale, 0.12, 0.65)
-						if slot.get_node_or_null("AutoMask") == null and slot.get_node_or_null("AutoBody") == null:
-							slot.scale = Vector2.ONE * hard_scale
-							slot.position = Vector2(0, 70)
-			else:
-				slot.region_enabled = false
-				slot.position = item.get("offset", Vector2.ZERO)
-				slot.scale = item.get("scale", Vector2.ONE)
-			slot.visible = true
-		else:
-			slot.texture = null
-			slot.visible = false
+		slot.texture = null
+		slot.visible = false
 
 
+func _ensure_suit_parts_root() -> Node2D:
+	if suit_parts_root and is_instance_valid(suit_parts_root):
+		return suit_parts_root
+	if not accessory_container:
+		return null
+	var root := Node2D.new()
+	root.name = "SuitParts"
+	accessory_container.add_child(root)
+	suit_parts_root = root
+	return root
 
 
-## AutoFit V2 para trajes PNG externos.
-## Separa automáticamente la pieza superior (máscara/casco) del cuerpo del traje
-## cuando existe un hueco transparente horizontal entre ambas piezas.
-func _autofit_suit(slot: Sprite2D) -> void:
-	if not slot or not slot.texture:
+func _clear_piece_suit() -> void:
+	var root := _ensure_suit_parts_root()
+	if not root:
 		return
+	for child in root.get_children():
+		child.queue_free()
 
-	var source_texture: Texture2D = slot.texture
-	var image: Image = source_texture.get_image()
-	if image == null or image.is_empty():
+
+func _apply_piece_suit(item: Dictionary) -> void:
+	var root := _ensure_suit_parts_root()
+	if not root:
 		return
+	_clear_piece_suit()
 
-	var used: Rect2i = image.get_used_rect()
-	if used.size.x <= 1 or used.size.y <= 1:
-		return
+	var parts: Dictionary = item.get("parts", {})
+	var layout := {
+		"cape": {"pos": Vector2(0, 15), "z": -1},
+		"body": {"pos": Vector2(0, 85), "z": 1},
+		"arms": {"pos": Vector2(0, 70), "z": 2},
+		"feet": {"pos": Vector2(0, 190), "z": 2},
+		"mask": {"pos": Vector2(0, -80), "z": 3},
+		"hat": {"pos": Vector2(0, -205), "z": 4}
+	}
 
-	_clear_auto_suit_parts(slot)
+	for part_name in ["cape", "body", "arms", "feet", "mask", "hat"]:
+		if not parts.has(part_name):
+			continue
+		var path: String = str(parts[part_name])
+		if not ResourceLoader.exists(path):
+			continue
 
-	var split_y: int = _find_suit_horizontal_gap(image, used)
-	if split_y > used.position.y:
-		var top_rect := Rect2i(
-			used.position.x,
-			used.position.y,
-			used.size.x,
-			split_y - used.position.y
-		)
-		var bottom_y := split_y + 1
-		var bottom_rect := Rect2i(
-			used.position.x,
-			bottom_y,
-			used.size.x,
-			used.end.y - bottom_y
-		)
+		var spr := Sprite2D.new()
+		spr.name = String(part_name).capitalize()
+		spr.texture = load(path)
+		spr.centered = true
+		spr.position = layout[part_name]["pos"]
+		spr.z_index = int(layout[part_name]["z"])
 
-		var top_used := _used_rect_inside(image, top_rect)
-		var bottom_used := _used_rect_inside(image, bottom_rect)
-
-		if top_used.size.x > 8 and top_used.size.y > 8 and bottom_used.size.x > 8 and bottom_used.size.y > 8:
-			slot.visible = false
-			_create_suit_part(slot, source_texture, "AutoMask", top_used, Vector2(0, -62), Vector2(248, 106), 2)
-			_create_suit_part(slot, source_texture, "AutoBody", bottom_used, Vector2(0, 118), Vector2(375, 296), 1)
-			slot.texture = null
-			slot.region_enabled = false
-			slot.scale = Vector2.ONE
-			slot.position = Vector2.ZERO
-			slot.visible = true
-			return
-
-	# Fallback: si no hay separación clara, normaliza el traje completo.
-	slot.region_enabled = true
-	slot.region_rect = Rect2(used.position, used.size)
-	var fit_scale := minf(375.0 / float(used.size.x), 435.0 / float(used.size.y))
-	fit_scale = clampf(fit_scale, 0.08, 4.0)
-	slot.scale = Vector2.ONE * fit_scale
-	slot.position = Vector2(0, 70)
-	slot.visible = true
-
-
-func _clear_auto_suit_parts(slot: Sprite2D) -> void:
-	for child in slot.get_children():
-		if child.name == "AutoMask" or child.name == "AutoBody":
-			child.queue_free()
-	slot.region_enabled = false
-	slot.scale = Vector2.ONE
-	slot.position = Vector2.ZERO
-
-
-func _alpha_count_on_row(image: Image, rect: Rect2i, y: int) -> int:
-	var count := 0
-	for x in range(rect.position.x, rect.end.x):
-		if image.get_pixel(x, y).a > 0.08:
-			count += 1
-	return count
-
-
-func _find_suit_horizontal_gap(image: Image, used: Rect2i) -> int:
-	# Buscamos un valle transparente sólo en la zona media: evita confundir
-	# huecos de ojos o espacios entre botas con la separación máscara/cuerpo.
-	var from_y := used.position.y + int(float(used.size.y) * 0.18)
-	var to_y := used.position.y + int(float(used.size.y) * 0.55)
-	var threshold := maxi(2, int(float(used.size.x) * 0.025))
-	var best_start := -1
-	var best_end := -1
-	var run_start := -1
-
-	for y in range(from_y, to_y):
-		var occupied := _alpha_count_on_row(image, used, y)
-		if occupied <= threshold:
-			if run_start < 0:
-				run_start = y
-		else:
-			if run_start >= 0:
-				if best_start < 0 or (y - run_start) > (best_end - best_start):
-					best_start = run_start
-					best_end = y
-				run_start = -1
-
-	if run_start >= 0:
-		if best_start < 0 or (to_y - run_start) > (best_end - best_start):
-			best_start = run_start
-			best_end = to_y
-
-	if best_start >= 0 and best_end - best_start >= 4:
-		return int((best_start + best_end) / 2)
-	return -1
-
-
-func _used_rect_inside(image: Image, search: Rect2i) -> Rect2i:
-	var min_x := search.end.x
-	var min_y := search.end.y
-	var max_x := -1
-	var max_y := -1
-	for y in range(search.position.y, search.end.y):
-		for x in range(search.position.x, search.end.x):
-			if image.get_pixel(x, y).a > 0.08:
-				min_x = mini(min_x, x)
-				min_y = mini(min_y, y)
-				max_x = maxi(max_x, x)
-				max_y = maxi(max_y, y)
-	if max_x < min_x or max_y < min_y:
-		return Rect2i()
-	return Rect2i(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
-
-
-func _create_suit_part(
-	parent_slot: Sprite2D,
-	source_texture: Texture2D,
-	part_name: String,
-	source_rect: Rect2i,
-	target_center: Vector2,
-	target_size: Vector2,
-	part_z: int
-) -> void:
-	var part := Sprite2D.new()
-	part.name = part_name
-	part.texture = source_texture
-	part.region_enabled = true
-	part.region_rect = Rect2(source_rect.position, source_rect.size)
-	var scale_value := minf(
-		target_size.x / float(source_rect.size.x),
-		target_size.y / float(source_rect.size.y)
-	)
-	scale_value = clampf(scale_value, 0.08, 4.0)
-	part.scale = Vector2.ONE * scale_value
-	part.position = target_center
-	part.z_index = part_z
-	parent_slot.add_child(part)
+		# Cada pieza usa el mismo lienzo/base de Wonky, así que no se reescala
+		# automáticamente. Debe venir preparada para este personaje.
+		spr.scale = Vector2.ONE
+		root.add_child(spr)
 
 
 func _on_animation_frame_changed() -> void:
