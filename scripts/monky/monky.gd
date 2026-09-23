@@ -502,17 +502,17 @@ func _autofit_suit(slot: Sprite2D) -> void:
 
 		if top_used.size.x > 8 and top_used.size.y > 8 and bottom_used.size.x > 8 and bottom_used.size.y > 8:
 			slot.visible = false
-			_create_suit_part(slot, "AutoMask", top_used, Vector2(0, -115), Vector2(360, 190), 2)
-			_create_suit_part(slot, "AutoBody", bottom_used, Vector2(0, 105), Vector2(500, 430), 1)
+			_create_suit_part(slot, "AutoMask", top_used, Vector2(0, -20), Vector2(300, 140), 2)
+			_create_suit_part(slot, "AutoBody", bottom_used, Vector2(0, 150), Vector2(420, 320), 1)
 			return
 
 	# Fallback: si no hay separación clara, normaliza el traje completo.
 	slot.region_enabled = true
 	slot.region_rect = Rect2(used.position, used.size)
-	var fit_scale := minf(500.0 / float(used.size.x), 570.0 / float(used.size.y))
+	var fit_scale := minf(410.0 / float(used.size.x), 460.0 / float(used.size.y))
 	fit_scale = clampf(fit_scale, 0.08, 4.0)
 	slot.scale = Vector2.ONE * fit_scale
-	slot.position = Vector2(0, 20)
+	slot.position = Vector2(0, 85)
 	slot.visible = true
 
 
