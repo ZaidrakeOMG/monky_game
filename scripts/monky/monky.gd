@@ -741,7 +741,7 @@ func _update_suit_frame_tracking(anim_name: String, _frame: int, dy: float) -> v
 		part.scale = base_scale
 		part.rotation = base_rotation
 
-		var part_name := part.name.to_lower()
+		var part_name: String = str(part.name).to_lower()
 
 		if part_name == "body":
 			# Cuando Wonky sube/baja, el torso se estira/suaviza ligeramente.
