@@ -1,17 +1,64 @@
-# Trajes automáticos de Wonky
+# Trajes de Wonky por piezas
 
-Coloca aquí los trajes en formato PNG con transparencia real.
+El sistema ya NO usa AutoFit sobre un traje completo. Cada traje debe ir en su propia carpeta y puede tener varias piezas PNG.
 
-## Reglas
-- Usa la misma plantilla y alineación de Wonky.
-- Recomendado: 512x512 px.
-- No dibujes fondo ni patrón de cuadros.
-- El nombre del archivo se convierte automáticamente en el nombre mostrado en la tienda.
-- Usa nombres simples, por ejemplo: `heroe_nocturno.png`, `ninja_naranja.png`, `astronauta.png`.
-- Los PNG de esta carpeta aparecen automáticamente en la categoría **Ropa**.
-- Para esta fase de pruebas, los trajes automáticos quedan desbloqueados y cuestan 0.
-- El juego aplica AutoFit a los trajes de esta carpeta: detecta el área visible, elimina márgenes transparentes y escala/centra el traje automáticamente sobre Wonky.
-- Puedes usar PNG de distintos tamaños (512, 1200, 2048, etc.); el tamaño del lienzo ya no hará que el traje aparezca gigante.
-- Para el mejor resultado, mantén máscara, cuerpo, mangas y botas en una composición vertical coherente. AutoFit corrige tamaño y centrado, pero no puede reconstruir piezas dibujadas en lugares anatómicamente incorrectos.
+## Estructura
 
-No es necesario editar `accessory_catalog.gd` cada vez que agregues un traje.
+Ejemplo:
+
+imagenes/ropa/trajes/heroe_nocturno/
+- cuerpo.png
+- mascara.png
+- capa.png
+- brazos.png
+- pies.png
+- sombrero.png
+- preview.png
+- traje.json
+
+No todas las piezas son obligatorias. Puedes usar solo las que necesite el traje.
+
+## Nombres aceptados
+
+- cuerpo.png o body.png
+- mascara.png o mask.png
+- capa.png o cape.png
+- brazos.png o arms.png
+- pies.png, botas.png, feet.png o boots.png
+- sombrero.png, casco.png, hat.png o helmet.png
+- preview.png, vista_previa.png, icon.png o icono.png
+
+## Regla más importante
+
+Cada PNG debe crearse usando como plantilla el Wonky frontal del proyecto. La pieza debe conservar el mismo lienzo y coordenadas de Wonky. No dibujes un cuerpo nuevo.
+
+La ropa debe verse como una capa parcial encima del personaje:
+- cuerpo.png: solo tela que cubre el torso
+- mascara.png: solo la máscara, alineada con los ojos
+- brazos.png: solo mangas/guantes
+- pies.png: solo calzado
+- capa.png: solo la capa
+- sombrero.png: solo sombrero/casco
+
+Fondo con transparencia alfa real.
+
+## Tienda automática
+
+Cada carpeta válida aparece automáticamente en Armario > Ropa.
+
+Para pruebas, si no existe traje.json:
+- precio = 0
+- desbloqueado = true
+- el nombre sale del nombre de la carpeta
+
+## traje.json opcional
+
+Ejemplo:
+
+{
+  "nombre": "Héroe Nocturno",
+  "monedas": 0,
+  "diamantes": 0,
+  "desbloqueado": true
+}
+
