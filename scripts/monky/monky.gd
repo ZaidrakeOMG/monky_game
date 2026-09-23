@@ -464,10 +464,9 @@ func _apply_accessory(category: String, item_id: String) -> void:
 
 
 
-## AutoFit para trajes PNG externos.
-## Detecta el rectángulo real de píxeles visibles, elimina márgenes transparentes
-## y normaliza el traje a la caja visual de Wonky. Así un PNG grande (1200x1200,
-## 2048x2048, etc.) no aparece gigante sólo por el tamaño de su lienzo.
+## AutoFit V2 para trajes PNG externos.
+## Separa automáticamente la pieza superior (máscara/casco) del cuerpo del traje
+## cuando existe un hueco transparente horizontal entre ambas piezas.
 func _autofit_suit(slot: Sprite2D) -> void:
 	if not slot or not slot.texture:
 		return
@@ -480,25 +479,131 @@ func _autofit_suit(slot: Sprite2D) -> void:
 	if used.size.x <= 1 or used.size.y <= 1:
 		return
 
-	# Sprite2D puede mostrar sólo la región ocupada sin crear una textura nueva.
-	# Esto descarta automáticamente todo el margen transparente del archivo.
+	_clear_auto_suit_parts(slot)
+
+	var split_y: int = _find_suit_horizontal_gap(image, used)
+	if split_y > used.position.y:
+		var top_rect := Rect2i(
+			used.position.x,
+			used.position.y,
+			used.size.x,
+			split_y - used.position.y
+		)
+		var bottom_y := split_y + 1
+		var bottom_rect := Rect2i(
+			used.position.x,
+			bottom_y,
+			used.size.x,
+			used.end.y - bottom_y
+		)
+
+		var top_used := _used_rect_inside(image, top_rect)
+		var bottom_used := _used_rect_inside(image, bottom_rect)
+
+		if top_used.size.x > 8 and top_used.size.y > 8 and bottom_used.size.x > 8 and bottom_used.size.y > 8:
+			slot.visible = false
+			_create_suit_part(slot, "AutoMask", top_used, Vector2(0, -115), Vector2(360, 190), 2)
+			_create_suit_part(slot, "AutoBody", bottom_used, Vector2(0, 105), Vector2(500, 430), 1)
+			return
+
+	# Fallback: si no hay separación clara, normaliza el traje completo.
 	slot.region_enabled = true
 	slot.region_rect = Rect2(used.position, used.size)
-
-	# Caja objetivo calibrada para el Wonky frontal del proyecto.
-	# Se mantiene un poco de margen para capas, máscaras y botas.
-	const TARGET_WIDTH: float = 520.0
-	const TARGET_HEIGHT: float = 610.0
-	const TARGET_CENTER_Y: float = 25.0
-
-	var sx: float = TARGET_WIDTH / float(used.size.x)
-	var sy: float = TARGET_HEIGHT / float(used.size.y)
-	var fit_scale: float = minf(sx, sy)
-
-	# Evita valores absurdos por assets dañados o con un solo punto visible.
+	var fit_scale := minf(500.0 / float(used.size.x), 570.0 / float(used.size.y))
 	fit_scale = clampf(fit_scale, 0.08, 4.0)
-	slot.scale = Vector2(fit_scale, fit_scale)
-	slot.position = Vector2(0.0, TARGET_CENTER_Y)
+	slot.scale = Vector2.ONE * fit_scale
+	slot.position = Vector2(0, 20)
+	slot.visible = true
+
+
+func _clear_auto_suit_parts(slot: Sprite2D) -> void:
+	for child in slot.get_children():
+		if child.name == "AutoMask" or child.name == "AutoBody":
+			child.queue_free()
+	slot.region_enabled = false
+	slot.scale = Vector2.ONE
+	slot.position = Vector2.ZERO
+
+
+func _alpha_count_on_row(image: Image, rect: Rect2i, y: int) -> int:
+	var count := 0
+	for x in range(rect.position.x, rect.end.x):
+		if image.get_pixel(x, y).a > 0.08:
+			count += 1
+	return count
+
+
+func _find_suit_horizontal_gap(image: Image, used: Rect2i) -> int:
+	# Buscamos un valle transparente sólo en la zona media: evita confundir
+	# huecos de ojos o espacios entre botas con la separación máscara/cuerpo.
+	var from_y := used.position.y + int(float(used.size.y) * 0.18)
+	var to_y := used.position.y + int(float(used.size.y) * 0.55)
+	var threshold := maxi(2, int(float(used.size.x) * 0.025))
+	var best_start := -1
+	var best_end := -1
+	var run_start := -1
+
+	for y in range(from_y, to_y):
+		var occupied := _alpha_count_on_row(image, used, y)
+		if occupied <= threshold:
+			if run_start < 0:
+				run_start = y
+		else:
+			if run_start >= 0:
+				if best_start < 0 or (y - run_start) > (best_end - best_start):
+					best_start = run_start
+					best_end = y
+				run_start = -1
+
+	if run_start >= 0:
+		if best_start < 0 or (to_y - run_start) > (best_end - best_start):
+			best_start = run_start
+			best_end = to_y
+
+	if best_start >= 0 and best_end - best_start >= 4:
+		return int((best_start + best_end) / 2)
+	return -1
+
+
+func _used_rect_inside(image: Image, search: Rect2i) -> Rect2i:
+	var min_x := search.end.x
+	var min_y := search.end.y
+	var max_x := -1
+	var max_y := -1
+	for y in range(search.position.y, search.end.y):
+		for x in range(search.position.x, search.end.x):
+			if image.get_pixel(x, y).a > 0.08:
+				min_x = mini(min_x, x)
+				min_y = mini(min_y, y)
+				max_x = maxi(max_x, x)
+				max_y = maxi(max_y, y)
+	if max_x < min_x or max_y < min_y:
+		return Rect2i()
+	return Rect2i(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
+
+
+func _create_suit_part(
+	parent_slot: Sprite2D,
+	part_name: String,
+	source_rect: Rect2i,
+	target_center: Vector2,
+	target_size: Vector2,
+	part_z: int
+) -> void:
+	var part := Sprite2D.new()
+	part.name = part_name
+	part.texture = parent_slot.texture
+	part.region_enabled = true
+	part.region_rect = Rect2(source_rect.position, source_rect.size)
+	var scale_value := minf(
+		target_size.x / float(source_rect.size.x),
+		target_size.y / float(source_rect.size.y)
+	)
+	scale_value = clampf(scale_value, 0.08, 4.0)
+	part.scale = Vector2.ONE * scale_value
+	part.position = target_center
+	part.z_index = part_z
+	parent_slot.add_child(part)
 
 
 func _on_animation_frame_changed() -> void:
