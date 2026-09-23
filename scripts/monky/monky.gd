@@ -506,12 +506,12 @@ func _apply_piece_suit(item: Dictionary) -> void:
 
 	# Cada tipo de pieza tiene una zona anatómica propia de Wonky.
 	var layout := {
-		"cape": {"center": Vector2(0, 65), "size": Vector2(390, 300), "z": -1},
-		"body": {"center": Vector2(0, 82), "size": Vector2(300, 235), "z": 1},
-		"arms": {"center": Vector2(0, 82), "size": Vector2(385, 170), "z": 2},
-		"feet": {"center": Vector2(0, 205), "size": Vector2(245, 105), "z": 2},
-		"mask": {"center": Vector2(0, -78), "size": Vector2(250, 105), "z": 3},
-		"hat": {"center": Vector2(0, -210), "size": Vector2(250, 120), "z": 4}
+		"cape": {"center": Vector2(0, 68), "size": Vector2(360, 270), "z": -1},
+		"body": {"center": Vector2(0, 92), "size": Vector2(278, 208), "z": 1},
+		"arms": {"center": Vector2(0, 88), "size": Vector2(342, 142), "z": 2},
+		"feet": {"center": Vector2(0, 205), "size": Vector2(202, 82), "z": 2},
+		"mask": {"center": Vector2(0, -78), "size": Vector2(240, 100), "z": 3},
+		"hat": {"center": Vector2(0, -210), "size": Vector2(240, 112), "z": 4}
 	}
 
 	for part_name in ["cape", "body", "arms", "feet", "mask", "hat"]:
@@ -537,12 +537,11 @@ func _apply_piece_suit(item: Dictionary) -> void:
 		if tex_size.x <= 0.0 or tex_size.y <= 0.0:
 			continue
 
-		var scale_value: float = minf(
-			target_size.x / tex_size.x,
-			target_size.y / tex_size.y
-		)
-
-		spr.scale = Vector2.ONE * scale_value
+		# Ajuste anatómico: cada pieza llena exactamente su zona objetivo.
+		# Esto evita que un PNG con proporciones raras quede como "sticker".
+		var scale_x: float = target_size.x / tex_size.x
+		var scale_y: float = target_size.y / tex_size.y
+		spr.scale = Vector2(scale_x, scale_y)
 		spr.position = target["center"]
 		spr.z_index = int(target["z"])
 		spr.set_meta("suit_base_position", spr.position)
@@ -745,23 +744,23 @@ func _update_suit_frame_tracking(anim_name: String, _frame: int, dy: float) -> v
 
 		if part_name == "body":
 			# Cuando Wonky sube/baja, el torso se estira/suaviza ligeramente.
-			var squash: float = clampf(frame_motion * 0.0045 * intensity, -0.045, 0.045)
+			var squash: float = clampf(frame_motion * 0.0015 * intensity, -0.015, 0.015)
 			part.scale = base_scale * Vector2(1.0 + squash, 1.0 - squash)
-			part.position.y += clampf(dy * 0.035, -2.0, 3.0)
+			part.position.y += clampf(dy * 0.02, -1.0, 2.0)
 
 		elif part_name == "arms":
 			# Los brazos responden un poco más al cambio entre frames.
-			var arm_squash: float = clampf(frame_motion * 0.0035 * intensity, -0.035, 0.035)
+			var arm_squash: float = clampf(frame_motion * 0.0012 * intensity, -0.012, 0.012)
 			part.scale = base_scale * Vector2(1.0 + arm_squash, 1.0 - arm_squash)
-			part.position.y += clampf(frame_motion * 0.22 * intensity, -4.0, 4.0)
+			part.position.y += clampf(frame_motion * 0.10 * intensity, -2.0, 2.0)
 
 		elif part_name == "feet":
 			# Compensa parte del rebote global para que los zapatos no floten.
-			part.position.y -= dy * 0.68
+			part.position.y -= dy * 0.42
 
 		elif part_name == "cape":
 			# La capa tiene un pequeño retraso visual respecto al cuerpo.
-			part.position.y -= clampf(frame_motion * 0.20 * intensity, -3.0, 3.0)
+			part.position.y -= clampf(frame_motion * 0.10 * intensity, -2.0, 2.0)
 
 		elif part_name == "mask" or part_name == "hat":
 			# Accesorios de cabeza siguen el rebote, con menos deformación.
