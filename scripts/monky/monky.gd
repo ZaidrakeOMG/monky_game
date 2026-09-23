@@ -501,18 +501,21 @@ func _apply_piece_suit(item: Dictionary) -> void:
 	_clear_piece_suit()
 
 	var parts: Dictionary = item.get("parts", {})
-	var z_order := {
-		"cape": -1,
-		"body": 1,
-		"arms": 2,
-		"feet": 2,
-		"mask": 3,
-		"hat": 4
+
+	# Cada tipo de pieza tiene una zona anatómica propia de Wonky.
+	var layout := {
+		"cape": {"center": Vector2(0, 65), "size": Vector2(390, 300), "z": -1},
+		"body": {"center": Vector2(0, 82), "size": Vector2(300, 235), "z": 1},
+		"arms": {"center": Vector2(0, 82), "size": Vector2(385, 170), "z": 2},
+		"feet": {"center": Vector2(0, 205), "size": Vector2(245, 105), "z": 2},
+		"mask": {"center": Vector2(0, -78), "size": Vector2(250, 105), "z": 3},
+		"hat": {"center": Vector2(0, -210), "size": Vector2(250, 120), "z": 4}
 	}
 
 	for part_name in ["cape", "body", "arms", "feet", "mask", "hat"]:
 		if not parts.has(part_name):
 			continue
+
 		var path: String = str(parts[part_name])
 		if not ResourceLoader.exists(path):
 			continue
@@ -526,11 +529,20 @@ func _apply_piece_suit(item: Dictionary) -> void:
 		spr.texture = texture
 		spr.centered = true
 
-		# Todas las piezas se normalizan al mismo lienzo 520x521 y conservan
-		# sus coordenadas. Por eso NO se desplazan por separado.
-		spr.position = Vector2.ZERO
-		spr.scale = Vector2.ONE
-		spr.z_index = int(z_order.get(part_name, 1))
+		var target: Dictionary = layout[part_name]
+		var target_size: Vector2 = target["size"]
+		var tex_size: Vector2 = texture.get_size()
+		if tex_size.x <= 0.0 or tex_size.y <= 0.0:
+			continue
+
+		var scale_value: float = minf(
+			target_size.x / tex_size.x,
+			target_size.y / tex_size.y
+		)
+
+		spr.scale = Vector2.ONE * scale_value
+		spr.position = target["center"]
+		spr.z_index = int(target["z"])
 		root.add_child(spr)
 
 
@@ -545,21 +557,20 @@ func _prepare_suit_piece_texture(path: String) -> Texture2D:
 
 	image.convert(Image.FORMAT_RGBA8)
 
-	# Algunos generadores exportan el tablero gris/blanco de "transparencia"
-	# como píxeles reales. Si se detecta en los bordes, se elimina.
+	# Elimina el falso patrón de transparencia si el generador lo dibujó.
 	if _has_fake_checkerboard_background(image):
 		_remove_fake_checkerboard_background(image)
 
-	# Independientemente de que el generador entregue 512, 1024, 1200, etc.,
-	# se remapea el lienzo completo al tamaño real de los frames de Wonky.
-	if image.get_width() != int(SUIT_REFERENCE_SIZE.x) or image.get_height() != int(SUIT_REFERENCE_SIZE.y):
-		image.resize(
-			int(SUIT_REFERENCE_SIZE.x),
-			int(SUIT_REFERENCE_SIZE.y),
-			Image.INTERPOLATE_LANCZOS
-		)
+	# Recorta automáticamente todo el espacio transparente. La pieza resultante
+	# se escala después según su zona anatómica (torso, brazos, pies, etc.).
+	var used: Rect2i = image.get_used_rect()
+	if used.size.x <= 1 or used.size.y <= 1:
+		return null
 
-	return ImageTexture.create_from_image(image)
+	var cropped := Image.create(used.size.x, used.size.y, false, Image.FORMAT_RGBA8)
+	cropped.blit_rect(image, used, Vector2i.ZERO)
+
+	return ImageTexture.create_from_image(cropped)
 
 
 func _is_light_neutral_pixel(color: Color) -> bool:
