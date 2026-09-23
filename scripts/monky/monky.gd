@@ -577,18 +577,18 @@ func _has_fake_checkerboard_background(image: Image) -> bool:
 	if w < 4 or h < 4:
 		return false
 
-	var samples := [
+	var samples: Array[Vector2i] = [
 		Vector2i(0, 0),
 		Vector2i(w - 1, 0),
 		Vector2i(0, h - 1),
 		Vector2i(w - 1, h - 1),
-		Vector2i(w / 2, 0),
-		Vector2i(w / 2, h - 1),
-		Vector2i(0, h / 2),
-		Vector2i(w - 1, h / 2)
+		Vector2i(int(w / 2), 0),
+		Vector2i(int(w / 2), h - 1),
+		Vector2i(0, int(h / 2)),
+		Vector2i(w - 1, int(h / 2))
 	]
-	var matches := 0
-	for p in samples:
+	var matches: int = 0
+	for p: Vector2i in samples:
 		if _is_light_neutral_pixel(image.get_pixel(p.x, p.y)):
 			matches += 1
 	return matches >= 5
@@ -605,25 +605,33 @@ func _remove_fake_checkerboard_background(image: Image) -> void:
 
 	# Sembramos desde todo el borde. Solo se elimina gris/blanco conectado
 	# al exterior para no borrar detalles claros dentro del traje.
-	for x in range(w):
-		for y in [0, h - 1]:
-			var idx := y * w + x
-			if visited[idx] == 0 and _is_light_neutral_pixel(image.get_pixel(x, y)):
-				visited[idx] = 1
-				queue.append(idx)
-	for y in range(h):
-		for x in [0, w - 1]:
-			var idx := y * w + x
-			if visited[idx] == 0 and _is_light_neutral_pixel(image.get_pixel(x, y)):
-				visited[idx] = 1
-				queue.append(idx)
+	var edge_rows: PackedInt32Array = PackedInt32Array([0, h - 1])
+	var edge_cols: PackedInt32Array = PackedInt32Array([0, w - 1])
 
-	var read_index := 0
+	for x_value in range(w):
+		var x: int = int(x_value)
+		for y_value in edge_rows:
+			var y: int = int(y_value)
+			var edge_idx: int = y * w + x
+			if visited[edge_idx] == 0 and _is_light_neutral_pixel(image.get_pixel(x, y)):
+				visited[edge_idx] = 1
+				queue.append(edge_idx)
+
+	for y_value in range(h):
+		var y: int = int(y_value)
+		for x_value in edge_cols:
+			var x: int = int(x_value)
+			var edge_idx: int = y * w + x
+			if visited[edge_idx] == 0 and _is_light_neutral_pixel(image.get_pixel(x, y)):
+				visited[edge_idx] = 1
+				queue.append(edge_idx)
+
+	var read_index: int = 0
 	while read_index < queue.size():
-		var idx := queue[read_index]
+		var current_idx: int = int(queue[read_index])
 		read_index += 1
-		var x := idx % w
-		var y := idx / w
+		var x: int = current_idx % w
+		var y: int = int(current_idx / w)
 
 		var c := image.get_pixel(x, y)
 		c.a = 0.0
@@ -647,7 +655,7 @@ func _try_enqueue_checker_pixel(
 	y: int,
 	width: int
 ) -> void:
-	var idx := y * width + x
+	var idx: int = y * width + x
 	if visited[idx] != 0:
 		return
 	visited[idx] = 1
