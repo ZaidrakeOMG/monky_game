@@ -26,6 +26,8 @@ const ANIM_TRACKING_OFFSETS: Dictionary = {
 	"durmiendo": [0, 0, 0, 2, 5, 5, 5, 7, 0, -1, -2, -4, -4, -1, 0, 2, 5, 5, 5, 5, 5, 5, 5, 8, 14, 15, 16, 16, 19, 20, 20, 20, 20, 19, 19, 18, 16, 15, 14, 13, 13, 12, 13, 13, 14, 14, 15, 15, 18, 19, 19, 19, 19, 20, 19, 19, 16, 15, 14, 13]
 }
 
+const SUIT_REFERENCE_SIZE := Vector2(520.0, 521.0)
+
 var is_interacting: bool = false
 var original_scale: Vector2
 var gm: Node = null
@@ -499,13 +501,13 @@ func _apply_piece_suit(item: Dictionary) -> void:
 	_clear_piece_suit()
 
 	var parts: Dictionary = item.get("parts", {})
-	var layout := {
-		"cape": {"pos": Vector2(0, 15), "z": -1},
-		"body": {"pos": Vector2(0, 85), "z": 1},
-		"arms": {"pos": Vector2(0, 70), "z": 2},
-		"feet": {"pos": Vector2(0, 190), "z": 2},
-		"mask": {"pos": Vector2(0, -80), "z": 3},
-		"hat": {"pos": Vector2(0, -205), "z": 4}
+	var z_order := {
+		"cape": -1,
+		"body": 1,
+		"arms": 2,
+		"feet": 2,
+		"mask": 3,
+		"hat": 4
 	}
 
 	for part_name in ["cape", "body", "arms", "feet", "mask", "hat"]:
@@ -515,17 +517,142 @@ func _apply_piece_suit(item: Dictionary) -> void:
 		if not ResourceLoader.exists(path):
 			continue
 
+		var texture := _prepare_suit_piece_texture(path)
+		if texture == null:
+			continue
+
 		var spr := Sprite2D.new()
 		spr.name = String(part_name).capitalize()
-		spr.texture = load(path)
+		spr.texture = texture
 		spr.centered = true
-		spr.position = layout[part_name]["pos"]
-		spr.z_index = int(layout[part_name]["z"])
 
-		# Cada pieza usa el mismo lienzo/base de Wonky, así que no se reescala
-		# automáticamente. Debe venir preparada para este personaje.
+		# Todas las piezas se normalizan al mismo lienzo 520x521 y conservan
+		# sus coordenadas. Por eso NO se desplazan por separado.
+		spr.position = Vector2.ZERO
 		spr.scale = Vector2.ONE
+		spr.z_index = int(z_order.get(part_name, 1))
 		root.add_child(spr)
+
+
+func _prepare_suit_piece_texture(path: String) -> Texture2D:
+	var source = load(path)
+	if source == null or not (source is Texture2D):
+		return null
+
+	var image: Image = source.get_image()
+	if image == null or image.is_empty():
+		return source
+
+	image.convert(Image.FORMAT_RGBA8)
+
+	# Algunos generadores exportan el tablero gris/blanco de "transparencia"
+	# como píxeles reales. Si se detecta en los bordes, se elimina.
+	if _has_fake_checkerboard_background(image):
+		_remove_fake_checkerboard_background(image)
+
+	# Independientemente de que el generador entregue 512, 1024, 1200, etc.,
+	# se remapea el lienzo completo al tamaño real de los frames de Wonky.
+	if image.get_width() != int(SUIT_REFERENCE_SIZE.x) or image.get_height() != int(SUIT_REFERENCE_SIZE.y):
+		image.resize(
+			int(SUIT_REFERENCE_SIZE.x),
+			int(SUIT_REFERENCE_SIZE.y),
+			Image.INTERPOLATE_LANCZOS
+		)
+
+	return ImageTexture.create_from_image(image)
+
+
+func _is_light_neutral_pixel(color: Color) -> bool:
+	if color.a < 0.90:
+		return false
+	var hi := maxf(color.r, maxf(color.g, color.b))
+	var lo := minf(color.r, minf(color.g, color.b))
+	var brightness := (color.r + color.g + color.b) / 3.0
+	return brightness >= 0.62 and (hi - lo) <= 0.11
+
+
+func _has_fake_checkerboard_background(image: Image) -> bool:
+	var w := image.get_width()
+	var h := image.get_height()
+	if w < 4 or h < 4:
+		return false
+
+	var samples := [
+		Vector2i(0, 0),
+		Vector2i(w - 1, 0),
+		Vector2i(0, h - 1),
+		Vector2i(w - 1, h - 1),
+		Vector2i(w / 2, 0),
+		Vector2i(w / 2, h - 1),
+		Vector2i(0, h / 2),
+		Vector2i(w - 1, h / 2)
+	]
+	var matches := 0
+	for p in samples:
+		if _is_light_neutral_pixel(image.get_pixel(p.x, p.y)):
+			matches += 1
+	return matches >= 5
+
+
+func _remove_fake_checkerboard_background(image: Image) -> void:
+	var w := image.get_width()
+	var h := image.get_height()
+	var total := w * h
+	var visited := PackedByteArray()
+	visited.resize(total)
+
+	var queue := PackedInt32Array()
+
+	# Sembramos desde todo el borde. Solo se elimina gris/blanco conectado
+	# al exterior para no borrar detalles claros dentro del traje.
+	for x in range(w):
+		for y in [0, h - 1]:
+			var idx := y * w + x
+			if visited[idx] == 0 and _is_light_neutral_pixel(image.get_pixel(x, y)):
+				visited[idx] = 1
+				queue.append(idx)
+	for y in range(h):
+		for x in [0, w - 1]:
+			var idx := y * w + x
+			if visited[idx] == 0 and _is_light_neutral_pixel(image.get_pixel(x, y)):
+				visited[idx] = 1
+				queue.append(idx)
+
+	var read_index := 0
+	while read_index < queue.size():
+		var idx := queue[read_index]
+		read_index += 1
+		var x := idx % w
+		var y := idx / w
+
+		var c := image.get_pixel(x, y)
+		c.a = 0.0
+		image.set_pixel(x, y, c)
+
+		if x > 0:
+			_try_enqueue_checker_pixel(image, visited, queue, x - 1, y, w)
+		if x + 1 < w:
+			_try_enqueue_checker_pixel(image, visited, queue, x + 1, y, w)
+		if y > 0:
+			_try_enqueue_checker_pixel(image, visited, queue, x, y - 1, w)
+		if y + 1 < h:
+			_try_enqueue_checker_pixel(image, visited, queue, x, y + 1, w)
+
+
+func _try_enqueue_checker_pixel(
+	image: Image,
+	visited: PackedByteArray,
+	queue: PackedInt32Array,
+	x: int,
+	y: int,
+	width: int
+) -> void:
+	var idx := y * width + x
+	if visited[idx] != 0:
+		return
+	visited[idx] = 1
+	if _is_light_neutral_pixel(image.get_pixel(x, y)):
+		queue.append(idx)
 
 
 func _on_animation_frame_changed() -> void:
