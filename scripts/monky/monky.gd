@@ -450,7 +450,14 @@ func _apply_accessory(category: String, item_id: String) -> void:
 	else:
 		if ResourceLoader.exists(slot_tex_path):
 			slot.texture = load(slot_tex_path)
-			if category == "clothes" and bool(item.get("auto_suit", false)):
+			var force_auto_fit: bool = false
+			if category == "clothes" and slot.texture:
+				var tex_size: Vector2 = slot.texture.get_size()
+				force_auto_fit = bool(item.get("auto_suit", false)) \
+					or slot_tex_path.begins_with("res://imagenes/ropa/trajes/") \
+					or tex_size.x > 700.0 \
+					or tex_size.y > 700.0
+			if force_auto_fit:
 				_autofit_suit(slot)
 			else:
 				slot.region_enabled = false
@@ -471,7 +478,8 @@ func _autofit_suit(slot: Sprite2D) -> void:
 	if not slot or not slot.texture:
 		return
 
-	var image: Image = slot.texture.get_image()
+	var source_texture: Texture2D = slot.texture
+	var image: Image = source_texture.get_image()
 	if image == null or image.is_empty():
 		return
 
@@ -502,17 +510,22 @@ func _autofit_suit(slot: Sprite2D) -> void:
 
 		if top_used.size.x > 8 and top_used.size.y > 8 and bottom_used.size.x > 8 and bottom_used.size.y > 8:
 			slot.visible = false
-			_create_suit_part(slot, "AutoMask", top_used, Vector2(0, -20), Vector2(225, 105), 2)
-			_create_suit_part(slot, "AutoBody", bottom_used, Vector2(0, 150), Vector2(315, 240), 1)
+			_create_suit_part(slot, source_texture, "AutoMask", top_used, Vector2(0, -75), Vector2(190, 82), 2)
+			_create_suit_part(slot, source_texture, "AutoBody", bottom_used, Vector2(0, 115), Vector2(255, 205), 1)
+			slot.texture = null
+			slot.region_enabled = false
+			slot.scale = Vector2.ONE
+			slot.position = Vector2.ZERO
+			slot.visible = true
 			return
 
 	# Fallback: si no hay separación clara, normaliza el traje completo.
 	slot.region_enabled = true
 	slot.region_rect = Rect2(used.position, used.size)
-	var fit_scale := minf(315.0 / float(used.size.x), 355.0 / float(used.size.y))
+	var fit_scale := minf(255.0 / float(used.size.x), 300.0 / float(used.size.y))
 	fit_scale = clampf(fit_scale, 0.08, 4.0)
 	slot.scale = Vector2.ONE * fit_scale
-	slot.position = Vector2(0, 85)
+	slot.position = Vector2(0, 65)
 	slot.visible = true
 
 
@@ -584,6 +597,7 @@ func _used_rect_inside(image: Image, search: Rect2i) -> Rect2i:
 
 func _create_suit_part(
 	parent_slot: Sprite2D,
+	source_texture: Texture2D,
 	part_name: String,
 	source_rect: Rect2i,
 	target_center: Vector2,
@@ -592,7 +606,7 @@ func _create_suit_part(
 ) -> void:
 	var part := Sprite2D.new()
 	part.name = part_name
-	part.texture = parent_slot.texture
+	part.texture = source_texture
 	part.region_enabled = true
 	part.region_rect = Rect2(source_rect.position, source_rect.size)
 	var scale_value := minf(
