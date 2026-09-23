@@ -459,6 +459,16 @@ func _apply_accessory(category: String, item_id: String) -> void:
 					or tex_size.y > 700.0
 			if force_auto_fit:
 				_autofit_suit(slot)
+				# Seguridad adicional: cualquier traje grande queda limitado
+				# a una escala visual mucho menor que Wonky.
+				if slot.texture:
+					var source_size: Vector2 = slot.texture.get_size()
+					if source_size.x > 700.0 or source_size.y > 700.0:
+						var hard_scale: float = minf(235.0 / source_size.x, 285.0 / source_size.y)
+						hard_scale = clampf(hard_scale, 0.10, 0.40)
+						if slot.get_node_or_null("AutoMask") == null and slot.get_node_or_null("AutoBody") == null:
+							slot.scale = Vector2.ONE * hard_scale
+							slot.position = Vector2(0, 70)
 			else:
 				slot.region_enabled = false
 				slot.position = item.get("offset", Vector2.ZERO)
@@ -510,8 +520,8 @@ func _autofit_suit(slot: Sprite2D) -> void:
 
 		if top_used.size.x > 8 and top_used.size.y > 8 and bottom_used.size.x > 8 and bottom_used.size.y > 8:
 			slot.visible = false
-			_create_suit_part(slot, source_texture, "AutoMask", top_used, Vector2(0, -75), Vector2(190, 82), 2)
-			_create_suit_part(slot, source_texture, "AutoBody", bottom_used, Vector2(0, 115), Vector2(255, 205), 1)
+			_create_suit_part(slot, source_texture, "AutoMask", top_used, Vector2(0, -60), Vector2(145, 62), 2)
+			_create_suit_part(slot, source_texture, "AutoBody", bottom_used, Vector2(0, 105), Vector2(205, 165), 1)
 			slot.texture = null
 			slot.region_enabled = false
 			slot.scale = Vector2.ONE
@@ -522,10 +532,10 @@ func _autofit_suit(slot: Sprite2D) -> void:
 	# Fallback: si no hay separación clara, normaliza el traje completo.
 	slot.region_enabled = true
 	slot.region_rect = Rect2(used.position, used.size)
-	var fit_scale := minf(255.0 / float(used.size.x), 300.0 / float(used.size.y))
+	var fit_scale := minf(210.0 / float(used.size.x), 245.0 / float(used.size.y))
 	fit_scale = clampf(fit_scale, 0.08, 4.0)
 	slot.scale = Vector2.ONE * fit_scale
-	slot.position = Vector2(0, 65)
+	slot.position = Vector2(0, 70)
 	slot.visible = true
 
 
