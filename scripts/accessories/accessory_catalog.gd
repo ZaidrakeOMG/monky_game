@@ -163,7 +163,7 @@ const ITEMS: Dictionary = {
 		"category": "clothes",
 		"price_coins": 0,
 		"price_diamonds": 0,
-		"texture_path": "res://assets/wonky/trajes/heroe_nocturno/pensando/frame_001.png",
+		"texture_path": "res://assets/wonky/trajes/heroe_nocturno/preview.png",
 		"slot_texture": "",
 		"outfit_id": "heroe_nocturno",
 		"unlocked_default": true
