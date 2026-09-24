@@ -5,28 +5,28 @@
 
 [sub_resource type="AtlasTexture" id="p1"]
 atlas = ExtResource("1_p")
-region = Rect2(0, 0, 128, 128)
+region = Rect2(0, 0, 192, 192)
 [sub_resource type="AtlasTexture" id="p2"]
 atlas = ExtResource("1_p")
-region = Rect2(128, 0, 128, 128)
+region = Rect2(192, 0, 192, 192)
 [sub_resource type="AtlasTexture" id="p3"]
 atlas = ExtResource("1_p")
-region = Rect2(256, 0, 128, 128)
+region = Rect2(384, 0, 192, 192)
 [sub_resource type="AtlasTexture" id="p4"]
 atlas = ExtResource("1_p")
-region = Rect2(384, 0, 128, 128)
+region = Rect2(576, 0, 192, 192)
 [sub_resource type="AtlasTexture" id="p5"]
 atlas = ExtResource("1_p")
-region = Rect2(0, 128, 128, 128)
+region = Rect2(0, 192, 192, 192)
 [sub_resource type="AtlasTexture" id="p6"]
 atlas = ExtResource("1_p")
-region = Rect2(128, 128, 128, 128)
+region = Rect2(192, 192, 192, 192)
 [sub_resource type="AtlasTexture" id="p7"]
 atlas = ExtResource("1_p")
-region = Rect2(256, 128, 128, 128)
+region = Rect2(384, 192, 192, 192)
 [sub_resource type="AtlasTexture" id="p8"]
 atlas = ExtResource("1_p")
-region = Rect2(384, 128, 128, 128)
+region = Rect2(576, 192, 192, 192)
 
 [sub_resource type="AtlasTexture" id="c1"]
 atlas = ExtResource("2_c")
