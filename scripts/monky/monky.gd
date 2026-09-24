@@ -13,7 +13,6 @@ class_name Monky
 @onready var sparkle_particles: CPUParticles2D = $SparkleParticles
 
 @onready var accessory_container: Node2D = get_node_or_null("AccessoryContainer")
-@onready var clothes_slot: Sprite2D = get_node_or_null("AccessoryContainer/ClothesSlot")
 @onready var face_slot: Sprite2D = get_node_or_null("AccessoryContainer/FaceSlot")
 @onready var hat_slot: Sprite2D = get_node_or_null("AccessoryContainer/HatSlot")
 
@@ -31,12 +30,20 @@ var soap_level: float = 0.0
 var bath_animation_time: float = 0.0
 var is_rinsing: bool = false
 
+# Sistema de trajes completos: cada traje aporta SpriteFrames de Wonky ya vestido.
+# Las animaciones no incluidas por el traje usan automáticamente las originales.
+const OUTFIT_RESOURCE_PATTERN := "res://assets/wonky/trajes/%s/animations.tres"
+var base_sprite_frames: SpriteFrames = null
+var current_outfit_id: String = ""
+var active_outfit_animations: Dictionary = {}
+
 
 func _ready() -> void:
 	original_scale = scale
 	gm = get_tree().root.get_node_or_null("GameManager")
 
 	if animated_sprite:
+		base_sprite_frames = animated_sprite.sprite_frames
 		if not animated_sprite.animation_finished.is_connected(_on_animation_finished):
 			animated_sprite.animation_finished.connect(_on_animation_finished)
 		if not animated_sprite.frame_changed.is_connected(_on_animation_frame_changed):
@@ -414,26 +421,110 @@ func on_ball_hit(_ball_vel: Vector2) -> void:
 			)
 
 
-## Actualiza todos los accesorios equipados desde GameManager
+## Sistema de accesorios y trajes completos.
+## Sombreros y lentes siguen siendo capas ligeras; la ropa cambia el set de
+## SpriteFrames completo de Wonky, evitando ropa flotante/superpuesta.
+
+func _copy_sprite_frames(source: SpriteFrames) -> SpriteFrames:
+	var result := SpriteFrames.new()
+	if result.has_animation(&"default"):
+		result.remove_animation(&"default")
+
+	for anim_name in source.get_animation_names():
+		result.add_animation(anim_name)
+		result.set_animation_speed(anim_name, source.get_animation_speed(anim_name))
+		result.set_animation_loop(anim_name, source.get_animation_loop(anim_name))
+		for frame_idx in range(source.get_frame_count(anim_name)):
+			result.add_frame(
+				anim_name,
+				source.get_frame_texture(anim_name, frame_idx),
+				source.get_frame_duration(anim_name, frame_idx)
+			)
+	return result
+
+
+func _merge_outfit_frames(base_frames: SpriteFrames, outfit_frames: SpriteFrames) -> SpriteFrames:
+	var merged := _copy_sprite_frames(base_frames)
+	for anim_name in outfit_frames.get_animation_names():
+		if merged.has_animation(anim_name):
+			merged.remove_animation(anim_name)
+		merged.add_animation(anim_name)
+		merged.set_animation_speed(anim_name, outfit_frames.get_animation_speed(anim_name))
+		merged.set_animation_loop(anim_name, outfit_frames.get_animation_loop(anim_name))
+		for frame_idx in range(outfit_frames.get_frame_count(anim_name)):
+			merged.add_frame(
+				anim_name,
+				outfit_frames.get_frame_texture(anim_name, frame_idx),
+				outfit_frames.get_frame_duration(anim_name, frame_idx)
+			)
+	return merged
+
+
+func _apply_outfit(item_id: String) -> void:
+	if not animated_sprite or not base_sprite_frames:
+		return
+
+	var wanted_animation: StringName = animated_sprite.animation
+	var wanted_frame: int = animated_sprite.frame
+	var item: Dictionary = AccessoryCatalog.get_item(item_id)
+	var outfit_id: String = str(item.get("outfit_id", ""))
+
+	active_outfit_animations.clear()
+
+	if outfit_id == "":
+		current_outfit_id = ""
+		animated_sprite.sprite_frames = base_sprite_frames
+	else:
+		var outfit_path: String = OUTFIT_RESOURCE_PATTERN % outfit_id
+		if ResourceLoader.exists(outfit_path):
+			var outfit_frames := load(outfit_path) as SpriteFrames
+			if outfit_frames:
+				for anim_name in outfit_frames.get_animation_names():
+					active_outfit_animations[str(anim_name)] = true
+				current_outfit_id = outfit_id
+				animated_sprite.sprite_frames = _merge_outfit_frames(base_sprite_frames, outfit_frames)
+			else:
+				current_outfit_id = ""
+				animated_sprite.sprite_frames = base_sprite_frames
+		else:
+			current_outfit_id = ""
+			animated_sprite.sprite_frames = base_sprite_frames
+
+	# Conserva la animación actual al cambiar de traje.
+	if animated_sprite.sprite_frames.has_animation(wanted_animation):
+		animated_sprite.play(wanted_animation)
+		var frame_count: int = animated_sprite.sprite_frames.get_frame_count(wanted_animation)
+		if frame_count > 0:
+			animated_sprite.frame = clampi(wanted_frame, 0, frame_count - 1)
+	else:
+		_play_idle_animation()
+
+
+## Actualiza traje completo, lentes y sombrero desde GameManager.
 func update_accessories() -> void:
 	if not gm:
 		return
-	for cat in ["clothes", "glasses", "hat"]:
+
+	_apply_outfit(gm.get_equipped_accessory("clothes"))
+
+	for cat in ["glasses", "hat"]:
 		var equipped_id: String = gm.get_equipped_accessory(cat)
 		_apply_accessory(cat, equipped_id)
+
 	_update_contextual_accessory_visibility()
 
 
 func _on_accessory_equipped(category: String, item_id: String) -> void:
-	_apply_accessory(category, item_id)
+	if category == "clothes":
+		_apply_outfit(item_id)
+	else:
+		_apply_accessory(category, item_id)
 	_update_contextual_accessory_visibility()
 
 
 func _apply_accessory(category: String, item_id: String) -> void:
 	var slot: Sprite2D = null
 	match category:
-		"clothes":
-			slot = clothes_slot
 		"glasses":
 			slot = face_slot
 		"hat":
@@ -461,13 +552,19 @@ func _apply_accessory(category: String, item_id: String) -> void:
 func _on_animation_frame_changed() -> void:
 	if not animated_sprite or not accessory_container:
 		return
-	var anim_name: String = str(animated_sprite.animation)
-	var current_frame: int = animated_sprite.frame
 
+	var anim_name: String = str(animated_sprite.animation)
+
+	# Los frames de traje completo ya están centrados; no necesitan seguimiento
+	# vertical del antiguo PNG de ropa.
+	if active_outfit_animations.has(anim_name):
+		accessory_container.position.y = 0.0
+		return
+
+	var current_frame: int = animated_sprite.frame
 	var offsets: Array = ANIM_TRACKING_OFFSETS.get(anim_name, [])
 	if current_frame >= 0 and current_frame < offsets.size():
-		var dy: float = float(offsets[current_frame])
-		accessory_container.position.y = dy
+		accessory_container.position.y = float(offsets[current_frame])
 	else:
 		accessory_container.position.y = 0.0
 
@@ -480,18 +577,18 @@ func _update_contextual_accessory_visibility() -> void:
 	var is_in_bath: bool = (anim_name == "bano_jabon") or (bath_animation_time > 0.0) or is_rinsing
 	var is_asleep: bool = (anim_name == "durmiendo") or (anim_name == "dormir_entrada") or gm.is_sleeping
 
-	# 1. En el baño se desviste para lavarse con jabón y agua
+	# En el baño se ocultan sombrero/lentes. La animación de baño se mantiene
+	# original (sin traje) hasta que creemos una variante específica.
 	if is_in_bath:
 		accessory_container.visible = false
 		return
 
 	accessory_container.visible = true
 
-	# 2. Al dormir se quita lentes y sombreros no dormilones
 	var equipped_hat: String = gm.get_equipped_accessory("hat")
 	var equipped_glasses: String = gm.get_equipped_accessory("glasses")
-	var equipped_clothes: String = gm.get_equipped_accessory("clothes")
 
+	# Al dormir se quitan lentes y sombreros no dormilones.
 	if hat_slot:
 		if is_asleep:
 			hat_slot.visible = (equipped_hat == "hat_nightcap")
@@ -503,8 +600,4 @@ func _update_contextual_accessory_visibility() -> void:
 			face_slot.visible = false
 		else:
 			face_slot.visible = (equipped_glasses != "" and not equipped_glasses.begins_with("none"))
-
-	if clothes_slot:
-		clothes_slot.visible = (equipped_clothes != "" and not equipped_clothes.begins_with("none"))
-
 

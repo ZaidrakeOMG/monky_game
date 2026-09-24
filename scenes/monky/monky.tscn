@@ -90,9 +90,6 @@ color = Color(1.0, 0.95, 0.4, 0.95)
 
 [node name="AccessoryContainer" type="Node2D" parent="."]
 
-[node name="ClothesSlot" type="Sprite2D" parent="AccessoryContainer"]
-z_index = 1
-
 [node name="FaceSlot" type="Sprite2D" parent="AccessoryContainer"]
 z_index = 2
 
