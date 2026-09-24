@@ -39,6 +39,13 @@ var current_outfit_id: String = ""
 var active_outfit_animations: Dictionary = {}
 var active_outfit_render_scale: Vector2 = Vector2.ONE
 
+# Velocidades específicas para las animaciones de trajes completas.
+# 20 FPS hace que los 10 frames de "comer" duren aprox. 0.5 s,
+# ocultando mejor pequeñas diferencias entre dibujos.
+const OUTFIT_ANIMATION_SPEEDS: Dictionary = {
+	"comer": 20.0
+}
+
 
 func _ready() -> void:
 	original_scale = scale
@@ -495,12 +502,18 @@ func _build_outfit_frames_from_dir(outfit_dir: String) -> SpriteFrames:
 		var anim_name := StringName(anim_dir_name.to_lower())
 		result.add_animation(anim_name)
 
-		if base_sprite_frames and base_sprite_frames.has_animation(anim_name):
+		var anim_key := anim_dir_name.to_lower()
+		if OUTFIT_ANIMATION_SPEEDS.has(anim_key):
+			result.set_animation_speed(anim_name, float(OUTFIT_ANIMATION_SPEEDS[anim_key]))
+		elif base_sprite_frames and base_sprite_frames.has_animation(anim_name):
 			result.set_animation_speed(anim_name, base_sprite_frames.get_animation_speed(anim_name))
-			result.set_animation_loop(anim_name, base_sprite_frames.get_animation_loop(anim_name))
 		else:
 			result.set_animation_speed(anim_name, 12.0)
-			result.set_animation_loop(anim_name, anim_dir_name.to_lower() in ["pensando", "durmiendo"])
+
+		if base_sprite_frames and base_sprite_frames.has_animation(anim_name):
+			result.set_animation_loop(anim_name, base_sprite_frames.get_animation_loop(anim_name))
+		else:
+			result.set_animation_loop(anim_name, anim_key in ["pensando", "durmiendo"])
 
 		for frame_path in frame_paths:
 			var texture := load(frame_path) as Texture2D
