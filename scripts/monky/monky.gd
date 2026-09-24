@@ -40,10 +40,10 @@ var active_outfit_animations: Dictionary = {}
 var active_outfit_render_scale: Vector2 = Vector2.ONE
 
 # Velocidades específicas para las animaciones de trajes completas.
-# 6 FPS hace que los 10 frames de "comer" duren aprox. 1.67 s,
-# para que la animación no pase demasiado rápido.
+# Velocidades específicas para animaciones de trajes completos.
+# "pensando" usa 2 FPS: con 10 frames dura ~5 segundos, como un idle suave.
 const OUTFIT_ANIMATION_SPEEDS: Dictionary = {
-	"comer": 6.0
+	"pensando": 2.0
 }
 
 
