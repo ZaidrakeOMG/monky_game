@@ -34,8 +34,10 @@ var is_rinsing: bool = false
 # Las animaciones no incluidas por el traje usan automáticamente las originales.
 const OUTFIT_RESOURCE_PATTERN := "res://assets/wonky/trajes/%s/animations.tres"
 var base_sprite_frames: SpriteFrames = null
+var base_animated_sprite_scale: Vector2 = Vector2.ONE
 var current_outfit_id: String = ""
 var active_outfit_animations: Dictionary = {}
+var active_outfit_render_scale: Vector2 = Vector2.ONE
 
 
 func _ready() -> void:
@@ -44,6 +46,7 @@ func _ready() -> void:
 
 	if animated_sprite:
 		base_sprite_frames = animated_sprite.sprite_frames
+		base_animated_sprite_scale = animated_sprite.scale
 		if not animated_sprite.animation_finished.is_connected(_on_animation_finished):
 			animated_sprite.animation_finished.connect(_on_animation_finished)
 		if not animated_sprite.frame_changed.is_connected(_on_animation_frame_changed):
@@ -460,6 +463,27 @@ func _merge_outfit_frames(base_frames: SpriteFrames, outfit_frames: SpriteFrames
 	return merged
 
 
+func _sprite_frames_reference_size(frames: SpriteFrames) -> Vector2:
+	if not frames:
+		return Vector2.ONE
+	for anim_name in frames.get_animation_names():
+		if frames.get_frame_count(anim_name) > 0:
+			var tex := frames.get_frame_texture(anim_name, 0)
+			if tex:
+				return tex.get_size()
+	return Vector2.ONE
+
+
+func _update_outfit_visual_scale() -> void:
+	if not animated_sprite:
+		return
+	var anim_name := str(animated_sprite.animation)
+	if current_outfit_id != "" and active_outfit_animations.has(anim_name):
+		animated_sprite.scale = base_animated_sprite_scale * active_outfit_render_scale
+	else:
+		animated_sprite.scale = base_animated_sprite_scale
+
+
 func _apply_outfit(item_id: String) -> void:
 	if not animated_sprite or not base_sprite_frames:
 		return
@@ -470,10 +494,12 @@ func _apply_outfit(item_id: String) -> void:
 	var outfit_id: String = str(item.get("outfit_id", ""))
 
 	active_outfit_animations.clear()
+	active_outfit_render_scale = Vector2.ONE
 
 	if outfit_id == "":
 		current_outfit_id = ""
 		animated_sprite.sprite_frames = base_sprite_frames
+		animated_sprite.scale = base_animated_sprite_scale
 	else:
 		var outfit_path: String = OUTFIT_RESOURCE_PATTERN % outfit_id
 		if ResourceLoader.exists(outfit_path):
@@ -481,14 +507,20 @@ func _apply_outfit(item_id: String) -> void:
 			if outfit_frames:
 				for anim_name in outfit_frames.get_animation_names():
 					active_outfit_animations[str(anim_name)] = true
+				var base_size := _sprite_frames_reference_size(base_sprite_frames)
+				var outfit_size := _sprite_frames_reference_size(outfit_frames)
+				if outfit_size.x > 0.0 and outfit_size.y > 0.0:
+					active_outfit_render_scale = Vector2(base_size.x / outfit_size.x, base_size.y / outfit_size.y)
 				current_outfit_id = outfit_id
 				animated_sprite.sprite_frames = _merge_outfit_frames(base_sprite_frames, outfit_frames)
 			else:
 				current_outfit_id = ""
 				animated_sprite.sprite_frames = base_sprite_frames
+				animated_sprite.scale = base_animated_sprite_scale
 		else:
 			current_outfit_id = ""
 			animated_sprite.sprite_frames = base_sprite_frames
+			animated_sprite.scale = base_animated_sprite_scale
 
 	# Conserva la animación actual al cambiar de traje.
 	if animated_sprite.sprite_frames.has_animation(wanted_animation):
@@ -498,6 +530,7 @@ func _apply_outfit(item_id: String) -> void:
 			animated_sprite.frame = clampi(wanted_frame, 0, frame_count - 1)
 	else:
 		_play_idle_animation()
+	_update_outfit_visual_scale()
 
 
 ## Actualiza traje completo, lentes y sombrero desde GameManager.
@@ -553,6 +586,7 @@ func _on_animation_frame_changed() -> void:
 	if not animated_sprite or not accessory_container:
 		return
 
+	_update_outfit_visual_scale()
 	var anim_name: String = str(animated_sprite.animation)
 
 	# Los frames de traje completo ya están centrados; no necesitan seguimiento

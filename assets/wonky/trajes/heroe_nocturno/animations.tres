@@ -1,47 +1,83 @@
-[gd_resource type="SpriteFrames" load_steps=17 format=3]
+[gd_resource type="SpriteFrames" load_steps=19 format=3]
 
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_001.png" id="p001"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_002.png" id="p002"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_003.png" id="p003"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_004.png" id="p004"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_005.png" id="p005"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_006.png" id="p006"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_007.png" id="p007"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_008.png" id="p008"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_01.png" id="c01"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_02.png" id="c02"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_03.png" id="c03"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_04.png" id="c04"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_05.png" id="c05"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_06.png" id="c06"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_07.png" id="c07"]
-[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_08.png" id="c08"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando_sheet.png" id="1_p"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer_sheet.png" id="2_c"]
+
+[sub_resource type="AtlasTexture" id="p1"]
+atlas = ExtResource("1_p")
+region = Rect2(0, 0, 128, 128)
+[sub_resource type="AtlasTexture" id="p2"]
+atlas = ExtResource("1_p")
+region = Rect2(128, 0, 128, 128)
+[sub_resource type="AtlasTexture" id="p3"]
+atlas = ExtResource("1_p")
+region = Rect2(256, 0, 128, 128)
+[sub_resource type="AtlasTexture" id="p4"]
+atlas = ExtResource("1_p")
+region = Rect2(384, 0, 128, 128)
+[sub_resource type="AtlasTexture" id="p5"]
+atlas = ExtResource("1_p")
+region = Rect2(0, 128, 128, 128)
+[sub_resource type="AtlasTexture" id="p6"]
+atlas = ExtResource("1_p")
+region = Rect2(128, 128, 128, 128)
+[sub_resource type="AtlasTexture" id="p7"]
+atlas = ExtResource("1_p")
+region = Rect2(256, 128, 128, 128)
+[sub_resource type="AtlasTexture" id="p8"]
+atlas = ExtResource("1_p")
+region = Rect2(384, 128, 128, 128)
+
+[sub_resource type="AtlasTexture" id="c1"]
+atlas = ExtResource("2_c")
+region = Rect2(0, 0, 128, 128)
+[sub_resource type="AtlasTexture" id="c2"]
+atlas = ExtResource("2_c")
+region = Rect2(128, 0, 128, 128)
+[sub_resource type="AtlasTexture" id="c3"]
+atlas = ExtResource("2_c")
+region = Rect2(256, 0, 128, 128)
+[sub_resource type="AtlasTexture" id="c4"]
+atlas = ExtResource("2_c")
+region = Rect2(384, 0, 128, 128)
+[sub_resource type="AtlasTexture" id="c5"]
+atlas = ExtResource("2_c")
+region = Rect2(0, 128, 128, 128)
+[sub_resource type="AtlasTexture" id="c6"]
+atlas = ExtResource("2_c")
+region = Rect2(128, 128, 128, 128)
+[sub_resource type="AtlasTexture" id="c7"]
+atlas = ExtResource("2_c")
+region = Rect2(256, 128, 128, 128)
+[sub_resource type="AtlasTexture" id="c8"]
+atlas = ExtResource("2_c")
+region = Rect2(384, 128, 128, 128)
 
 [resource]
 animations = [{
 "frames": [
-{"duration": 1.0, "texture": ExtResource("p001")},
-{"duration": 1.0, "texture": ExtResource("p002")},
-{"duration": 1.0, "texture": ExtResource("p003")},
-{"duration": 1.0, "texture": ExtResource("p004")},
-{"duration": 1.0, "texture": ExtResource("p005")},
-{"duration": 1.0, "texture": ExtResource("p006")},
-{"duration": 1.0, "texture": ExtResource("p007")},
-{"duration": 1.0, "texture": ExtResource("p008")}
+{"duration": 1.0, "texture": SubResource("p1")},
+{"duration": 1.0, "texture": SubResource("p2")},
+{"duration": 1.0, "texture": SubResource("p3")},
+{"duration": 1.0, "texture": SubResource("p4")},
+{"duration": 1.0, "texture": SubResource("p5")},
+{"duration": 1.0, "texture": SubResource("p6")},
+{"duration": 1.0, "texture": SubResource("p7")},
+{"duration": 1.0, "texture": SubResource("p8")}
 ],
 "loop": true,
 "name": &"pensando",
 "speed": 1.6
 }, {
 "frames": [
-{"duration": 1.0, "texture": ExtResource("c01")},
-{"duration": 1.0, "texture": ExtResource("c02")},
-{"duration": 1.0, "texture": ExtResource("c03")},
-{"duration": 1.0, "texture": ExtResource("c04")},
-{"duration": 1.0, "texture": ExtResource("c05")},
-{"duration": 1.0, "texture": ExtResource("c06")},
-{"duration": 1.0, "texture": ExtResource("c07")},
-{"duration": 1.0, "texture": ExtResource("c08")}
+{"duration": 1.0, "texture": SubResource("c1")},
+{"duration": 1.0, "texture": SubResource("c2")},
+{"duration": 1.0, "texture": SubResource("c3")},
+{"duration": 1.0, "texture": SubResource("c4")},
+{"duration": 1.0, "texture": SubResource("c5")},
+{"duration": 1.0, "texture": SubResource("c6")},
+{"duration": 1.0, "texture": SubResource("c7")},
+{"duration": 1.0, "texture": SubResource("c8")}
 ],
 "loop": false,
 "name": &"comer",
