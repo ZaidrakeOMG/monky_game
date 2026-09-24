@@ -598,6 +598,11 @@ func load_game() -> void:
 		"clothes": "none_clothes"
 	})
 
+	# Migra ropa antigua del sistema superpuesto que ya no existe en el catálogo.
+	var equipped_clothes_id: String = str(equipped_accessories.get("clothes", "none_clothes"))
+	if AccessoryCatalog.get_item(equipped_clothes_id).is_empty():
+		equipped_accessories["clothes"] = "none_clothes"
+
 	var last_time: int = config.get_value("game", "last_timestamp", 0)
 	if last_time > 0:
 		var current_time: int = int(Time.get_unix_time_from_system())

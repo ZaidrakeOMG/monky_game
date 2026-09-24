@@ -13,11 +13,8 @@ class_name Monky
 @onready var sparkle_particles: CPUParticles2D = $SparkleParticles
 
 @onready var accessory_container: Node2D = get_node_or_null("AccessoryContainer")
-@onready var clothes_slot: Sprite2D = get_node_or_null("AccessoryContainer/ClothesSlot")
 @onready var face_slot: Sprite2D = get_node_or_null("AccessoryContainer/FaceSlot")
 @onready var hat_slot: Sprite2D = get_node_or_null("AccessoryContainer/HatSlot")
-
-@onready var suit_parts_root: Node2D = get_node_or_null("AccessoryContainer/SuitParts")
 
 const ANIM_TRACKING_OFFSETS: Dictionary = {
 	"pensando": [0, 0, 0, 0, 6, 16, 22, 21, 9, -3, -3, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 11, 15, 15, 12, 3, 0, -1, -1, -1, -1, 0, -1, -1, -3, -4, -1, 0, 0, 3, 3, 3, 3, 6, 12, 19, 21, 15, 3, -4, -4, -1, -3, -3, -3],
@@ -26,16 +23,19 @@ const ANIM_TRACKING_OFFSETS: Dictionary = {
 	"durmiendo": [0, 0, 0, 2, 5, 5, 5, 7, 0, -1, -2, -4, -4, -1, 0, 2, 5, 5, 5, 5, 5, 5, 5, 8, 14, 15, 16, 16, 19, 20, 20, 20, 20, 19, 19, 18, 16, 15, 14, 13, 13, 12, 13, 13, 14, 14, 15, 15, 18, 19, 19, 19, 19, 20, 19, 19, 16, 15, 14, 13]
 }
 
-const SUIT_REFERENCE_SIZE := Vector2(520.0, 521.0)
-
 var is_interacting: bool = false
 var original_scale: Vector2
 var gm: Node = null
 var soap_level: float = 0.0
 var bath_animation_time: float = 0.0
 var is_rinsing: bool = false
-var last_suit_tracking_dy: float = 0.0
-var last_suit_tracking_anim: String = ""
+
+# Sistema de trajes completos: cada traje aporta SpriteFrames de Wonky ya vestido.
+# Las animaciones no incluidas por el traje usan automáticamente las originales.
+const OUTFIT_RESOURCE_PATTERN := "res://assets/wonky/trajes/%s/animations.tres"
+var base_sprite_frames: SpriteFrames = null
+var current_outfit_id: String = ""
+var active_outfit_animations: Dictionary = {}
 
 
 func _ready() -> void:
@@ -43,6 +43,7 @@ func _ready() -> void:
 	gm = get_tree().root.get_node_or_null("GameManager")
 
 	if animated_sprite:
+		base_sprite_frames = animated_sprite.sprite_frames
 		if not animated_sprite.animation_finished.is_connected(_on_animation_finished):
 			animated_sprite.animation_finished.connect(_on_animation_finished)
 		if not animated_sprite.frame_changed.is_connected(_on_animation_frame_changed):
@@ -420,26 +421,110 @@ func on_ball_hit(_ball_vel: Vector2) -> void:
 			)
 
 
-## Actualiza todos los accesorios equipados desde GameManager
+## Sistema de accesorios y trajes completos.
+## Sombreros y lentes siguen siendo capas ligeras; la ropa cambia el set de
+## SpriteFrames completo de Wonky, evitando ropa flotante/superpuesta.
+
+func _copy_sprite_frames(source: SpriteFrames) -> SpriteFrames:
+	var result := SpriteFrames.new()
+	if result.has_animation(&"default"):
+		result.remove_animation(&"default")
+
+	for anim_name in source.get_animation_names():
+		result.add_animation(anim_name)
+		result.set_animation_speed(anim_name, source.get_animation_speed(anim_name))
+		result.set_animation_loop(anim_name, source.get_animation_loop(anim_name))
+		for frame_idx in range(source.get_frame_count(anim_name)):
+			result.add_frame(
+				anim_name,
+				source.get_frame_texture(anim_name, frame_idx),
+				source.get_frame_duration(anim_name, frame_idx)
+			)
+	return result
+
+
+func _merge_outfit_frames(base_frames: SpriteFrames, outfit_frames: SpriteFrames) -> SpriteFrames:
+	var merged := _copy_sprite_frames(base_frames)
+	for anim_name in outfit_frames.get_animation_names():
+		if merged.has_animation(anim_name):
+			merged.remove_animation(anim_name)
+		merged.add_animation(anim_name)
+		merged.set_animation_speed(anim_name, outfit_frames.get_animation_speed(anim_name))
+		merged.set_animation_loop(anim_name, outfit_frames.get_animation_loop(anim_name))
+		for frame_idx in range(outfit_frames.get_frame_count(anim_name)):
+			merged.add_frame(
+				anim_name,
+				outfit_frames.get_frame_texture(anim_name, frame_idx),
+				outfit_frames.get_frame_duration(anim_name, frame_idx)
+			)
+	return merged
+
+
+func _apply_outfit(item_id: String) -> void:
+	if not animated_sprite or not base_sprite_frames:
+		return
+
+	var wanted_animation: StringName = animated_sprite.animation
+	var wanted_frame: int = animated_sprite.frame
+	var item: Dictionary = AccessoryCatalog.get_item(item_id)
+	var outfit_id: String = str(item.get("outfit_id", ""))
+
+	active_outfit_animations.clear()
+
+	if outfit_id == "":
+		current_outfit_id = ""
+		animated_sprite.sprite_frames = base_sprite_frames
+	else:
+		var outfit_path: String = OUTFIT_RESOURCE_PATTERN % outfit_id
+		if ResourceLoader.exists(outfit_path):
+			var outfit_frames := load(outfit_path) as SpriteFrames
+			if outfit_frames:
+				for anim_name in outfit_frames.get_animation_names():
+					active_outfit_animations[str(anim_name)] = true
+				current_outfit_id = outfit_id
+				animated_sprite.sprite_frames = _merge_outfit_frames(base_sprite_frames, outfit_frames)
+			else:
+				current_outfit_id = ""
+				animated_sprite.sprite_frames = base_sprite_frames
+		else:
+			current_outfit_id = ""
+			animated_sprite.sprite_frames = base_sprite_frames
+
+	# Conserva la animación actual al cambiar de traje.
+	if animated_sprite.sprite_frames.has_animation(wanted_animation):
+		animated_sprite.play(wanted_animation)
+		var frame_count: int = animated_sprite.sprite_frames.get_frame_count(wanted_animation)
+		if frame_count > 0:
+			animated_sprite.frame = clampi(wanted_frame, 0, frame_count - 1)
+	else:
+		_play_idle_animation()
+
+
+## Actualiza traje completo, lentes y sombrero desde GameManager.
 func update_accessories() -> void:
 	if not gm:
 		return
-	for cat in ["clothes", "glasses", "hat"]:
+
+	_apply_outfit(gm.get_equipped_accessory("clothes"))
+
+	for cat in ["glasses", "hat"]:
 		var equipped_id: String = gm.get_equipped_accessory(cat)
 		_apply_accessory(cat, equipped_id)
+
 	_update_contextual_accessory_visibility()
 
 
 func _on_accessory_equipped(category: String, item_id: String) -> void:
-	_apply_accessory(category, item_id)
+	if category == "clothes":
+		_apply_outfit(item_id)
+	else:
+		_apply_accessory(category, item_id)
 	_update_contextual_accessory_visibility()
 
 
 func _apply_accessory(category: String, item_id: String) -> void:
 	var slot: Sprite2D = null
 	match category:
-		"clothes":
-			slot = clothes_slot
 		"glasses":
 			slot = face_slot
 		"hat":
@@ -448,234 +533,20 @@ func _apply_accessory(category: String, item_id: String) -> void:
 	if not slot:
 		return
 
-	if category == "clothes":
-		_clear_piece_suit()
-
 	var item: Dictionary = AccessoryCatalog.get_item(item_id)
-
-	if category == "clothes" and bool(item.get("piece_suit", false)):
-		slot.texture = null
-		slot.visible = false
-		_apply_piece_suit(item)
-		return
-
 	var slot_tex_path: String = str(item.get("slot_texture", ""))
 	if slot_tex_path == "" or item_id.begins_with("none"):
 		slot.texture = null
 		slot.visible = false
-		return
-
-	if ResourceLoader.exists(slot_tex_path):
-		slot.texture = load(slot_tex_path)
-		slot.region_enabled = false
-		slot.position = item.get("offset", Vector2.ZERO)
-		slot.scale = item.get("scale", Vector2.ONE)
-		slot.visible = true
 	else:
-		slot.texture = null
-		slot.visible = false
-
-
-func _ensure_suit_parts_root() -> Node2D:
-	if suit_parts_root and is_instance_valid(suit_parts_root):
-		return suit_parts_root
-	if not accessory_container:
-		return null
-	var root := Node2D.new()
-	root.name = "SuitParts"
-	accessory_container.add_child(root)
-	suit_parts_root = root
-	return root
-
-
-func _clear_piece_suit() -> void:
-	var root := _ensure_suit_parts_root()
-	if not root:
-		return
-	for child in root.get_children():
-		child.queue_free()
-
-
-func _apply_piece_suit(item: Dictionary) -> void:
-	var root := _ensure_suit_parts_root()
-	if not root:
-		return
-	_clear_piece_suit()
-
-	var parts: Dictionary = item.get("parts", {})
-
-	# Cada tipo de pieza tiene una zona anatómica propia de Wonky.
-	var layout := {
-		"cape": {"center": Vector2(0, 68), "size": Vector2(360, 270), "z": -1},
-		"body": {"center": Vector2(0, 92), "size": Vector2(278, 208), "z": 1},
-		"arms": {"center": Vector2(0, 88), "size": Vector2(342, 142), "z": 2},
-		"feet": {"center": Vector2(0, 205), "size": Vector2(202, 82), "z": 2},
-		"mask": {"center": Vector2(0, -78), "size": Vector2(240, 100), "z": 3},
-		"hat": {"center": Vector2(0, -210), "size": Vector2(240, 112), "z": 4}
-	}
-
-	for part_name in ["cape", "body", "arms", "feet", "mask", "hat"]:
-		if not parts.has(part_name):
-			continue
-
-		var path: String = str(parts[part_name])
-		if not ResourceLoader.exists(path):
-			continue
-
-		var texture := _prepare_suit_piece_texture(path)
-		if texture == null:
-			continue
-
-		var spr := Sprite2D.new()
-		spr.name = String(part_name).capitalize()
-		spr.texture = texture
-		spr.centered = true
-
-		var target: Dictionary = layout[part_name]
-		var target_size: Vector2 = target["size"]
-		var tex_size: Vector2 = texture.get_size()
-		if tex_size.x <= 0.0 or tex_size.y <= 0.0:
-			continue
-
-		# Ajuste anatómico: cada pieza llena exactamente su zona objetivo.
-		# Esto evita que un PNG con proporciones raras quede como "sticker".
-		var scale_x: float = target_size.x / tex_size.x
-		var scale_y: float = target_size.y / tex_size.y
-		spr.scale = Vector2(scale_x, scale_y)
-		spr.position = target["center"]
-		spr.z_index = int(target["z"])
-		spr.set_meta("suit_base_position", spr.position)
-		spr.set_meta("suit_base_scale", spr.scale)
-		spr.set_meta("suit_base_rotation", spr.rotation)
-		root.add_child(spr)
-
-
-func _prepare_suit_piece_texture(path: String) -> Texture2D:
-	var source = load(path)
-	if source == null or not (source is Texture2D):
-		return null
-
-	var image: Image = source.get_image()
-	if image == null or image.is_empty():
-		return source
-
-	image.convert(Image.FORMAT_RGBA8)
-
-	# Elimina el falso patrón de transparencia si el generador lo dibujó.
-	if _has_fake_checkerboard_background(image):
-		_remove_fake_checkerboard_background(image)
-
-	# Recorta automáticamente todo el espacio transparente. La pieza resultante
-	# se escala después según su zona anatómica (torso, brazos, pies, etc.).
-	var used: Rect2i = image.get_used_rect()
-	if used.size.x <= 1 or used.size.y <= 1:
-		return null
-
-	var cropped := Image.create(used.size.x, used.size.y, false, Image.FORMAT_RGBA8)
-	cropped.blit_rect(image, used, Vector2i.ZERO)
-
-	return ImageTexture.create_from_image(cropped)
-
-
-func _is_light_neutral_pixel(color: Color) -> bool:
-	if color.a < 0.90:
-		return false
-	var hi := maxf(color.r, maxf(color.g, color.b))
-	var lo := minf(color.r, minf(color.g, color.b))
-	var brightness := (color.r + color.g + color.b) / 3.0
-	return brightness >= 0.62 and (hi - lo) <= 0.11
-
-
-func _has_fake_checkerboard_background(image: Image) -> bool:
-	var w := image.get_width()
-	var h := image.get_height()
-	if w < 4 or h < 4:
-		return false
-
-	var samples: Array[Vector2i] = [
-		Vector2i(0, 0),
-		Vector2i(w - 1, 0),
-		Vector2i(0, h - 1),
-		Vector2i(w - 1, h - 1),
-		Vector2i(int(w / 2), 0),
-		Vector2i(int(w / 2), h - 1),
-		Vector2i(0, int(h / 2)),
-		Vector2i(w - 1, int(h / 2))
-	]
-	var matches: int = 0
-	for p: Vector2i in samples:
-		if _is_light_neutral_pixel(image.get_pixel(p.x, p.y)):
-			matches += 1
-	return matches >= 5
-
-
-func _remove_fake_checkerboard_background(image: Image) -> void:
-	var w := image.get_width()
-	var h := image.get_height()
-	var total := w * h
-	var visited := PackedByteArray()
-	visited.resize(total)
-
-	var queue := PackedInt32Array()
-
-	# Sembramos desde todo el borde. Solo se elimina gris/blanco conectado
-	# al exterior para no borrar detalles claros dentro del traje.
-	var edge_rows: PackedInt32Array = PackedInt32Array([0, h - 1])
-	var edge_cols: PackedInt32Array = PackedInt32Array([0, w - 1])
-
-	for x_value in range(w):
-		var x: int = int(x_value)
-		for y_value in edge_rows:
-			var y: int = int(y_value)
-			var edge_idx: int = y * w + x
-			if visited[edge_idx] == 0 and _is_light_neutral_pixel(image.get_pixel(x, y)):
-				visited[edge_idx] = 1
-				queue.append(edge_idx)
-
-	for y_value in range(h):
-		var y: int = int(y_value)
-		for x_value in edge_cols:
-			var x: int = int(x_value)
-			var edge_idx: int = y * w + x
-			if visited[edge_idx] == 0 and _is_light_neutral_pixel(image.get_pixel(x, y)):
-				visited[edge_idx] = 1
-				queue.append(edge_idx)
-
-	var read_index: int = 0
-	while read_index < queue.size():
-		var current_idx: int = int(queue[read_index])
-		read_index += 1
-		var x: int = current_idx % w
-		var y: int = int(current_idx / w)
-
-		var c := image.get_pixel(x, y)
-		c.a = 0.0
-		image.set_pixel(x, y, c)
-
-		if x > 0:
-			_try_enqueue_checker_pixel(image, visited, queue, x - 1, y, w)
-		if x + 1 < w:
-			_try_enqueue_checker_pixel(image, visited, queue, x + 1, y, w)
-		if y > 0:
-			_try_enqueue_checker_pixel(image, visited, queue, x, y - 1, w)
-		if y + 1 < h:
-			_try_enqueue_checker_pixel(image, visited, queue, x, y + 1, w)
-
-
-func _try_enqueue_checker_pixel(
-	image: Image,
-	visited: PackedByteArray,
-	queue: PackedInt32Array,
-	x: int,
-	y: int,
-	width: int
-) -> void:
-	var idx: int = y * width + x
-	if visited[idx] != 0:
-		return
-	visited[idx] = 1
-	if _is_light_neutral_pixel(image.get_pixel(x, y)):
-		queue.append(idx)
+		if ResourceLoader.exists(slot_tex_path):
+			slot.texture = load(slot_tex_path)
+			slot.position = item.get("offset", Vector2.ZERO)
+			slot.scale = item.get("scale", Vector2.ONE)
+			slot.visible = true
+		else:
+			slot.texture = null
+			slot.visible = false
 
 
 func _on_animation_frame_changed() -> void:
@@ -683,102 +554,19 @@ func _on_animation_frame_changed() -> void:
 		return
 
 	var anim_name: String = str(animated_sprite.animation)
-	var current_frame: int = animated_sprite.frame
-	var dy: float = 0.0
 
+	# Los frames de traje completo ya están centrados; no necesitan seguimiento
+	# vertical del antiguo PNG de ropa.
+	if active_outfit_animations.has(anim_name):
+		accessory_container.position.y = 0.0
+		return
+
+	var current_frame: int = animated_sprite.frame
 	var offsets: Array = ANIM_TRACKING_OFFSETS.get(anim_name, [])
 	if current_frame >= 0 and current_frame < offsets.size():
-		dy = float(offsets[current_frame])
-
-	# Seguimiento general: sombreros, lentes y todo el traje acompañan
-	# el desplazamiento vertical real medido en cada frame de Wonky.
-	accessory_container.position.y = dy
-
-	# Seguimiento V2: cada pieza del traje recibe microajustes propios
-	# para que el torso respire/rebote y los pies se mantengan más anclados.
-	_update_suit_frame_tracking(anim_name, current_frame, dy)
-
-
-func _update_suit_frame_tracking(anim_name: String, _frame: int, dy: float) -> void:
-	var root := _ensure_suit_parts_root()
-	if not root or root.get_child_count() == 0:
-		last_suit_tracking_dy = dy
-		last_suit_tracking_anim = anim_name
-		return
-
-	if anim_name != last_suit_tracking_anim:
-		last_suit_tracking_dy = dy
-		last_suit_tracking_anim = anim_name
-		_reset_suit_part_tracking()
-
-	var frame_motion: float = dy - last_suit_tracking_dy
-	last_suit_tracking_dy = dy
-
-	var intensity: float = 1.0
-	match anim_name:
-		"pensando":
-			intensity = 1.0
-		"comer":
-			intensity = 1.20
-		"rechazar_comida":
-			intensity = 1.35
-		"durmiendo":
-			intensity = 0.45
-		_:
-			intensity = 0.70
-
-	for child_node in root.get_children():
-		if not (child_node is Sprite2D):
-			continue
-
-		var part := child_node as Sprite2D
-		var base_position: Vector2 = part.get_meta("suit_base_position", part.position)
-		var base_scale: Vector2 = part.get_meta("suit_base_scale", part.scale)
-		var base_rotation: float = float(part.get_meta("suit_base_rotation", 0.0))
-
-		part.position = base_position
-		part.scale = base_scale
-		part.rotation = base_rotation
-
-		var part_name: String = str(part.name).to_lower()
-
-		if part_name == "body":
-			# Cuando Wonky sube/baja, el torso se estira/suaviza ligeramente.
-			var squash: float = clampf(frame_motion * 0.0015 * intensity, -0.015, 0.015)
-			part.scale = base_scale * Vector2(1.0 + squash, 1.0 - squash)
-			part.position.y += clampf(dy * 0.02, -1.0, 2.0)
-
-		elif part_name == "arms":
-			# Los brazos responden un poco más al cambio entre frames.
-			var arm_squash: float = clampf(frame_motion * 0.0012 * intensity, -0.012, 0.012)
-			part.scale = base_scale * Vector2(1.0 + arm_squash, 1.0 - arm_squash)
-			part.position.y += clampf(frame_motion * 0.10 * intensity, -2.0, 2.0)
-
-		elif part_name == "feet":
-			# Compensa parte del rebote global para que los zapatos no floten.
-			part.position.y -= dy * 0.42
-
-		elif part_name == "cape":
-			# La capa tiene un pequeño retraso visual respecto al cuerpo.
-			part.position.y -= clampf(frame_motion * 0.10 * intensity, -2.0, 2.0)
-
-		elif part_name == "mask" or part_name == "hat":
-			# Accesorios de cabeza siguen el rebote, con menos deformación.
-			part.position.y += clampf(frame_motion * 0.10 * intensity, -2.0, 2.0)
-
-
-func _reset_suit_part_tracking() -> void:
-	var root := _ensure_suit_parts_root()
-	if not root:
-		return
-
-	for child_node in root.get_children():
-		if not (child_node is Sprite2D):
-			continue
-		var part := child_node as Sprite2D
-		part.position = part.get_meta("suit_base_position", part.position)
-		part.scale = part.get_meta("suit_base_scale", part.scale)
-		part.rotation = float(part.get_meta("suit_base_rotation", 0.0))
+		accessory_container.position.y = float(offsets[current_frame])
+	else:
+		accessory_container.position.y = 0.0
 
 
 func _update_contextual_accessory_visibility() -> void:
@@ -789,18 +577,18 @@ func _update_contextual_accessory_visibility() -> void:
 	var is_in_bath: bool = (anim_name == "bano_jabon") or (bath_animation_time > 0.0) or is_rinsing
 	var is_asleep: bool = (anim_name == "durmiendo") or (anim_name == "dormir_entrada") or gm.is_sleeping
 
-	# 1. En el baño se desviste para lavarse con jabón y agua
+	# En el baño se ocultan sombrero/lentes. La animación de baño se mantiene
+	# original (sin traje) hasta que creemos una variante específica.
 	if is_in_bath:
 		accessory_container.visible = false
 		return
 
 	accessory_container.visible = true
 
-	# 2. Al dormir se quita lentes y sombreros no dormilones
 	var equipped_hat: String = gm.get_equipped_accessory("hat")
 	var equipped_glasses: String = gm.get_equipped_accessory("glasses")
-	var equipped_clothes: String = gm.get_equipped_accessory("clothes")
 
+	# Al dormir se quitan lentes y sombreros no dormilones.
 	if hat_slot:
 		if is_asleep:
 			hat_slot.visible = (equipped_hat == "hat_nightcap")
@@ -812,11 +600,4 @@ func _update_contextual_accessory_visibility() -> void:
 			face_slot.visible = false
 		else:
 			face_slot.visible = (equipped_glasses != "" and not equipped_glasses.begins_with("none"))
-
-	if clothes_slot:
-		clothes_slot.visible = (equipped_clothes != "" and not equipped_clothes.begins_with("none"))
-
-	if suit_parts_root:
-		suit_parts_root.visible = (equipped_clothes != "" and not equipped_clothes.begins_with("none"))
-
 

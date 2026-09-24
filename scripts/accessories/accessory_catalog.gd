@@ -143,7 +143,9 @@ const ITEMS: Dictionary = {
 		"unlocked_default": false
 	},
 
-	# ==================== ROPA / TRAJES ====================
+	# ==================== ROPA / TRAJES COMPLETOS ====================
+	# La ropa ya NO se dibuja como PNG superpuesto. Cada traje apunta a un
+	# set completo de animaciones de Wonky ya vestido.
 	"none_clothes": {
 		"id": "none_clothes",
 		"name": "Sin Ropa",
@@ -152,81 +154,19 @@ const ITEMS: Dictionary = {
 		"price_diamonds": 0,
 		"texture_path": "res://imagenes/accesorios/none.png",
 		"slot_texture": "",
-		"offset": Vector2(0, 0),
-		"scale": Vector2(1, 1),
+		"outfit_id": "",
 		"unlocked_default": true
 	},
-	"clothes_pajamas": {
-		"id": "clothes_pajamas",
-		"name": "Pijama Estrellado",
+	"clothes_heroe_nocturno": {
+		"id": "clothes_heroe_nocturno",
+		"name": "Héroe Nocturno",
 		"category": "clothes",
 		"price_coins": 0,
 		"price_diamonds": 0,
-		"texture_path": "res://imagenes/accesorios/clothes_pajamas.png",
-		"slot_texture": "res://imagenes/accesorios/clothes_pajamas.png",
-		"offset": Vector2(0, 100),
-		"scale": Vector2(1.0, 1.0),
+		"texture_path": "res://assets/wonky/trajes/heroe_nocturno/pensando/frame_001.png",
+		"slot_texture": "",
+		"outfit_id": "heroe_nocturno",
 		"unlocked_default": true
-	},
-	"clothes_stripes": {
-		"id": "clothes_stripes",
-		"name": "Camiseta a Rayas",
-		"category": "clothes",
-		"price_coins": 150,
-		"price_diamonds": 0,
-		"texture_path": "res://imagenes/accesorios/clothes_stripes.png",
-		"slot_texture": "res://imagenes/accesorios/clothes_stripes.png",
-		"offset": Vector2(0, 100),
-		"scale": Vector2(1.0, 1.0),
-		"unlocked_default": false
-	},
-	"clothes_tuxedo": {
-		"id": "clothes_tuxedo",
-		"name": "Esmoquin Elegante",
-		"category": "clothes",
-		"price_coins": 300,
-		"price_diamonds": 0,
-		"texture_path": "res://imagenes/accesorios/clothes_tuxedo.png",
-		"slot_texture": "res://imagenes/accesorios/clothes_tuxedo.png",
-		"offset": Vector2(0, 100),
-		"scale": Vector2(1.0, 1.0),
-		"unlocked_default": false
-	},
-	"clothes_tshirt_red": {
-		"id": "clothes_tshirt_red",
-		"name": "Camiseta Estrella",
-		"category": "clothes",
-		"price_coins": 100,
-		"price_diamonds": 0,
-		"texture_path": "res://imagenes/accesorios/clothes_tshirt_red.png",
-		"slot_texture": "res://imagenes/accesorios/clothes_tshirt_red.png",
-		"offset": Vector2(0, 100),
-		"scale": Vector2(1.0, 1.0),
-		"unlocked_default": true
-	},
-	"clothes_hoodie": {
-		"id": "clothes_hoodie",
-		"name": "Sudadera Turquesa",
-		"category": "clothes",
-		"price_coins": 200,
-		"price_diamonds": 0,
-		"texture_path": "res://imagenes/accesorios/clothes_hoodie.png",
-		"slot_texture": "res://imagenes/accesorios/clothes_hoodie.png",
-		"offset": Vector2(0, 100),
-		"scale": Vector2(1.0, 1.0),
-		"unlocked_default": false
-	},
-	"clothes_superhero": {
-		"id": "clothes_superhero",
-		"name": "Capa Heroica",
-		"category": "clothes",
-		"price_coins": 0,
-		"price_diamonds": 25,
-		"texture_path": "res://imagenes/accesorios/clothes_superhero.png",
-		"slot_texture": "res://imagenes/accesorios/clothes_superhero.png",
-		"offset": Vector2(0, 100),
-		"scale": Vector2(1.0, 1.0),
-		"unlocked_default": false
 	}
 }
 
@@ -344,6 +284,10 @@ static func get_item(item_id: String) -> Dictionary:
 			if str(item.get("id", "")) == item_id:
 				return item
 	return {}
+
+static func get_outfit_id(item_id: String) -> String:
+	var item: Dictionary = get_item(item_id)
+	return str(item.get("outfit_id", ""))
 
 static func get_items_by_category(category: String) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []

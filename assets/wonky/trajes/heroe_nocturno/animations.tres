@@ -1,0 +1,49 @@
+[gd_resource type="SpriteFrames" load_steps=17 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_001.png" id="p001"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_002.png" id="p002"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_003.png" id="p003"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_004.png" id="p004"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_005.png" id="p005"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_006.png" id="p006"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_007.png" id="p007"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/pensando/frame_008.png" id="p008"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_01.png" id="c01"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_02.png" id="c02"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_03.png" id="c03"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_04.png" id="c04"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_05.png" id="c05"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_06.png" id="c06"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_07.png" id="c07"]
+[ext_resource type="Texture2D" path="res://assets/wonky/trajes/heroe_nocturno/comer/frame_08.png" id="c08"]
+
+[resource]
+animations = [{
+"frames": [
+{"duration": 1.0, "texture": ExtResource("p001")},
+{"duration": 1.0, "texture": ExtResource("p002")},
+{"duration": 1.0, "texture": ExtResource("p003")},
+{"duration": 1.0, "texture": ExtResource("p004")},
+{"duration": 1.0, "texture": ExtResource("p005")},
+{"duration": 1.0, "texture": ExtResource("p006")},
+{"duration": 1.0, "texture": ExtResource("p007")},
+{"duration": 1.0, "texture": ExtResource("p008")}
+],
+"loop": true,
+"name": &"pensando",
+"speed": 1.6
+}, {
+"frames": [
+{"duration": 1.0, "texture": ExtResource("c01")},
+{"duration": 1.0, "texture": ExtResource("c02")},
+{"duration": 1.0, "texture": ExtResource("c03")},
+{"duration": 1.0, "texture": ExtResource("c04")},
+{"duration": 1.0, "texture": ExtResource("c05")},
+{"duration": 1.0, "texture": ExtResource("c06")},
+{"duration": 1.0, "texture": ExtResource("c07")},
+{"duration": 1.0, "texture": ExtResource("c08")}
+],
+"loop": false,
+"name": &"comer",
+"speed": 12.0
+}]
