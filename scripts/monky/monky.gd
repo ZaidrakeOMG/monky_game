@@ -32,7 +32,7 @@ var is_rinsing: bool = false
 
 # Sistema de trajes completos: cada traje aporta SpriteFrames de Wonky ya vestido.
 # Las animaciones no incluidas por el traje usan automáticamente las originales.
-const OUTFIT_RESOURCE_PATTERN := "res://assets/wonky/trajes/%s/animations.tres"
+const LEGACY_OUTFIT_RESOURCE_PATTERN := "res://assets/wonky/trajes/%s/animations.tres"
 var base_sprite_frames: SpriteFrames = null
 var base_animated_sprite_scale: Vector2 = Vector2.ONE
 var current_outfit_id: String = ""
@@ -428,6 +428,91 @@ func on_ball_hit(_ball_vel: Vector2) -> void:
 ## Sombreros y lentes siguen siendo capas ligeras; la ropa cambia el set de
 ## SpriteFrames completo de Wonky, evitando ropa flotante/superpuesta.
 
+func _frame_number(path: String) -> int:
+	var base := path.get_file().get_basename()
+	var pos := base.rfind("_")
+	if pos >= 0 and pos + 1 < base.length():
+		var suffix := base.substr(pos + 1)
+		if suffix.is_valid_int():
+			return suffix.to_int()
+	return 0
+
+
+func _list_outfit_pngs(dir_path: String) -> Array[String]:
+	var result: Array[String] = []
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return result
+
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while entry != "":
+		if not dir.current_is_dir():
+			var resource_name := entry
+			if resource_name.ends_with(".remap"):
+				resource_name = resource_name.substr(0, resource_name.length() - 6)
+			if resource_name.to_lower().ends_with(".png"):
+				var path := dir_path.path_join(resource_name)
+				if ResourceLoader.exists(path):
+					result.append(path)
+		entry = dir.get_next()
+	dir.list_dir_end()
+
+	result.sort_custom(func(a: String, b: String):
+		var na := _frame_number(a)
+		var nb := _frame_number(b)
+		if na == nb:
+			return a.naturalnocasecmp_to(b) < 0
+		return na < nb
+	)
+	return result
+
+
+func _build_outfit_frames_from_dir(outfit_dir: String) -> SpriteFrames:
+	var result := SpriteFrames.new()
+	if result.has_animation(&"default"):
+		result.remove_animation(&"default")
+
+	var dir := DirAccess.open(outfit_dir)
+	if dir == null:
+		return result
+
+	var animation_dirs: Array[String] = []
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while entry != "":
+		if dir.current_is_dir() and not entry.begins_with(".") and not entry.begins_with("_"):
+			animation_dirs.append(entry)
+		entry = dir.get_next()
+	dir.list_dir_end()
+	animation_dirs.sort_custom(func(a: String, b: String): return a.naturalnocasecmp_to(b) < 0)
+
+	for anim_dir_name in animation_dirs:
+		var frame_paths := _list_outfit_pngs(outfit_dir.path_join(anim_dir_name))
+		if frame_paths.is_empty():
+			continue
+
+		var anim_name := StringName(anim_dir_name.to_lower())
+		result.add_animation(anim_name)
+
+		if base_sprite_frames and base_sprite_frames.has_animation(anim_name):
+			result.set_animation_speed(anim_name, base_sprite_frames.get_animation_speed(anim_name))
+			result.set_animation_loop(anim_name, base_sprite_frames.get_animation_loop(anim_name))
+		else:
+			result.set_animation_speed(anim_name, 12.0)
+			result.set_animation_loop(anim_name, anim_dir_name.to_lower() in ["pensando", "durmiendo"])
+
+		for frame_path in frame_paths:
+			var texture := load(frame_path) as Texture2D
+			if texture:
+				result.add_frame(anim_name, texture, 1.0)
+
+		if result.get_frame_count(anim_name) == 0:
+			result.remove_animation(anim_name)
+
+	return result
+
+
 func _copy_sprite_frames(source: SpriteFrames) -> SpriteFrames:
 	var result := SpriteFrames.new()
 	if result.has_animation(&"default"):
@@ -492,6 +577,7 @@ func _apply_outfit(item_id: String) -> void:
 	var wanted_frame: int = animated_sprite.frame
 	var item: Dictionary = AccessoryCatalog.get_item(item_id)
 	var outfit_id: String = str(item.get("outfit_id", ""))
+	var outfit_dir: String = str(item.get("outfit_dir", ""))
 
 	active_outfit_animations.clear()
 	active_outfit_render_scale = Vector2.ONE
@@ -501,22 +587,30 @@ func _apply_outfit(item_id: String) -> void:
 		animated_sprite.sprite_frames = base_sprite_frames
 		animated_sprite.scale = base_animated_sprite_scale
 	else:
-		var outfit_path: String = OUTFIT_RESOURCE_PATTERN % outfit_id
-		if ResourceLoader.exists(outfit_path):
-			var outfit_frames := load(outfit_path) as SpriteFrames
-			if outfit_frames:
-				for anim_name in outfit_frames.get_animation_names():
-					active_outfit_animations[str(anim_name)] = true
-				var base_size := _sprite_frames_reference_size(base_sprite_frames)
-				var outfit_size := _sprite_frames_reference_size(outfit_frames)
-				if outfit_size.x > 0.0 and outfit_size.y > 0.0:
-					active_outfit_render_scale = Vector2(base_size.x / outfit_size.x, base_size.y / outfit_size.y)
-				current_outfit_id = outfit_id
-				animated_sprite.sprite_frames = _merge_outfit_frames(base_sprite_frames, outfit_frames)
-			else:
-				current_outfit_id = ""
-				animated_sprite.sprite_frames = base_sprite_frames
-				animated_sprite.scale = base_animated_sprite_scale
+		var outfit_frames: SpriteFrames = null
+
+		# Sistema principal: detecta automáticamente carpetas como
+		# <traje>/pensando/*.png, <traje>/comer/*.png, etc.
+		if outfit_dir != "":
+			var generated := _build_outfit_frames_from_dir(outfit_dir)
+			if generated.get_animation_names().size() > 0:
+				outfit_frames = generated
+
+		# Compatibilidad temporal con trajes antiguos que tengan animations.tres.
+		if outfit_frames == null:
+			var legacy_path := LEGACY_OUTFIT_RESOURCE_PATTERN % outfit_id
+			if ResourceLoader.exists(legacy_path):
+				outfit_frames = load(legacy_path) as SpriteFrames
+
+		if outfit_frames:
+			for anim_name in outfit_frames.get_animation_names():
+				active_outfit_animations[str(anim_name)] = true
+			var base_size := _sprite_frames_reference_size(base_sprite_frames)
+			var outfit_size := _sprite_frames_reference_size(outfit_frames)
+			if outfit_size.x > 0.0 and outfit_size.y > 0.0:
+				active_outfit_render_scale = Vector2(base_size.x / outfit_size.x, base_size.y / outfit_size.y)
+			current_outfit_id = outfit_id
+			animated_sprite.sprite_frames = _merge_outfit_frames(base_sprite_frames, outfit_frames)
 		else:
 			current_outfit_id = ""
 			animated_sprite.sprite_frames = base_sprite_frames

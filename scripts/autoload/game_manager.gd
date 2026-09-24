@@ -598,10 +598,12 @@ func load_game() -> void:
 		"clothes": "none_clothes"
 	})
 
-	# Migra ropa antigua del sistema superpuesto que ya no existe en el catálogo.
+	# Migra IDs antiguos y valida el traje equipado contra las carpetas actuales.
 	var equipped_clothes_id: String = str(equipped_accessories.get("clothes", "none_clothes"))
+	equipped_clothes_id = AccessoryCatalog.normalize_item_id(equipped_clothes_id)
 	if AccessoryCatalog.get_item(equipped_clothes_id).is_empty():
-		equipped_accessories["clothes"] = "none_clothes"
+		equipped_clothes_id = "none_clothes"
+	equipped_accessories["clothes"] = equipped_clothes_id
 
 	var last_time: int = config.get_value("game", "last_timestamp", 0)
 	if last_time > 0:
