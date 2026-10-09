@@ -1,0 +1,79 @@
+name: Godot quality checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: godot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    env:
+      GODOT_VERSION: '4.7.2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Preserve reproducible audit snapshot
+        run: git archive --format=zip --output="$RUNNER_TEMP/monky-source.zip" HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monky-audit-source
+          path: ${{ runner.temp }}/monky-source.zip
+          retention-days: 3
+      - name: Install official Godot binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable"
+          archive="Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          mkdir -p "$RUNNER_TEMP/godot" reports
+          curl --fail --location --retry 3 "$base/$archive" -o "$RUNNER_TEMP/godot/$archive"
+          curl --fail --location --retry 3 "$base/SHA512-SUMS.txt" -o "$RUNNER_TEMP/godot/SHA512-SUMS.txt"
+          (cd "$RUNNER_TEMP/godot" && grep " $archive\$" SHA512-SUMS.txt | sha512sum --check -)
+          unzip -q "$RUNNER_TEMP/godot/$archive" -d "$RUNNER_TEMP/godot"
+          chmod +x "$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          ln -s "$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" "$RUNNER_TEMP/godot/godot"
+          echo "$RUNNER_TEMP/godot" >> "$GITHUB_PATH"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: godot-validation-engine
+          path: ${{ runner.temp }}/godot/*.zip
+          retention-days: 3
+      - name: Import project and compile scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --version | tee reports/engine.txt
+          timeout 240 godot --headless --path . --editor --import 2>&1 | tee reports/import.log
+          ! grep -E 'SCRIPT ERROR:|Parse Error:|Failed to load script' reports/import.log
+      - name: Run regression tests when present
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f tests/regression.gd; then
+            timeout 120 godot --headless --path . --script tests/regression.gd 2>&1 | tee reports/regression.log
+            ! grep -E 'SCRIPT ERROR:|Parse Error:|ASSERTION FAILED' reports/regression.log
+          fi
+      - name: Smoke test startup
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120 godot --headless --path . --quit-after 180 2>&1 | tee reports/startup.log
+          ! grep -E 'SCRIPT ERROR:|Parse Error:|Failed to load' reports/startup.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: godot-quality-report
+          path: reports/
+          retention-days: 14
+          if-no-files-found: ignore
