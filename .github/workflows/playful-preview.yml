@@ -1,0 +1,33 @@
+name: Playful world source preview
+
+on:
+  push:
+    branches: [feature/monky-playful-world-20261009]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playful-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Package exact tracked source
+        run: |
+          mkdir -p "$RUNNER_TEMP/preview"
+          git archive --format=zip HEAD -o "$RUNNER_TEMP/preview/monky-source.zip"
+          git rev-parse HEAD > "$RUNNER_TEMP/preview/COMMIT.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monky-playful-source
+          path: ${{ runner.temp }}/preview/
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
