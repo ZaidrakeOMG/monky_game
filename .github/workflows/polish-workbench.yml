@@ -1,0 +1,80 @@
+name: Polish workbench
+
+on:
+  push:
+    branches: [polish/professional-2026-10-09]
+    paths:
+      - .github/workflows/polish-workbench.yml
+      - tools/apply_polish.py
+      - scripts/**
+      - tests/**
+      - scenes/**
+      - project.godot
+
+permissions:
+  contents: write
+
+concurrency:
+  group: polish-workbench
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: polish/professional-2026-10-09
+          fetch-depth: 1
+      - name: Source inventory
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+          for name in ['scripts/ui/hud.gd', 'scripts/minigames/wonky_runner.gd', 'scripts/minigames/monky_jump.gd', 'scripts/minigames/fruit_catcher.gd', 'scripts/minigames/flappy_monky.gd']:
+              p = pathlib.Path(name)
+              print('\nSOURCE', name)
+              for n, line in enumerate(p.read_text().splitlines(), 1):
+                  if line.startswith('func '): print(n, line)
+          for p in pathlib.Path('imagenes').rglob('*'):
+              if p.is_file() and p.suffix == '.png' and any(x in str(p).lower() for x in ['reaccion', 'emoji', 'mensaj']):
+                  print('REACTION', p)
+          PY
+      - name: Apply reviewed source edits
+        run: |
+          if [ -f tools/apply_polish.py ]; then python3 tools/apply_polish.py; fi
+      - name: Install pinned Godot 4.7.2
+        run: |
+          mkdir -p "$RUNNER_TEMP/godot"
+          curl --fail --location --retry 3 'https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip' -o "$RUNNER_TEMP/godot/engine.zip"
+          unzip -q "$RUNNER_TEMP/godot/engine.zip" -d "$RUNNER_TEMP/godot"
+          chmod +x "$RUNNER_TEMP/godot/Godot_v4.7.2-stable_linux.x86_64"
+          echo "$RUNNER_TEMP/godot" >> "$GITHUB_PATH"
+      - name: Import and parse project
+        env:
+          GODOT_SILENCE_ROOT_WARNING: '1'
+        run: |
+          set -o pipefail
+          timeout 600 Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --import 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eq 'SCRIPT ERROR:|Parse Error:|Compile Error:' "$RUNNER_TEMP/import.log"; then exit 1; fi
+      - name: Run regression tests
+        env:
+          GODOT_SILENCE_ROOT_WARNING: '1'
+        run: |
+          if [ -f tests/test_polish.gd ]; then
+            set -o pipefail
+            timeout 180 Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script tests/test_polish.gd 2>&1 | tee "$RUNNER_TEMP/tests.log"
+            if grep -Eq 'SCRIPT ERROR:|Parse Error:|Compile Error:' "$RUNNER_TEMP/tests.log"; then exit 1; fi
+          fi
+      - name: Commit verified edits on the isolated branch
+        run: |
+          if [ -f tools/apply_polish.py ]; then
+            git add scripts scenes resources project.godot
+            if ! git diff --cached --quiet; then
+              git config user.name 'github-actions[bot]'
+              git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+              git commit -m 'feat: apply validated interface and runtime polish'
+              git push origin HEAD:polish/professional-2026-10-09
+            fi
+          fi
+          git diff --stat
