@@ -135,6 +135,9 @@ var multiplier_time: float = 0.0
 var shield_active: bool = false
 var revive_used: bool = false
 var rewards_given: bool = false
+var _run_token: String = ""
+var _item_pool: Array[Node2D] = []
+const ITEM_POOL_LIMIT := 64
 var best_score: int = 0
 var start_grace: float = 0.85
 
@@ -420,6 +423,7 @@ func _make_hud_label(text_value: String, pos: Vector2, size_value: Vector2, font
 
 func _build_pause_overlay(root: Control) -> void:
 	pause_overlay = Control.new()
+	pause_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
 	pause_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	pause_overlay.visible = false
 	pause_overlay.z_index = 80
@@ -532,10 +536,11 @@ func _build_intro_overlay(root: Control) -> void:
 	intro_overlay.add_child(help)
 
 func _start_game() -> void:
-	for item in active_items:
-		if is_instance_valid(item):
-			item.queue_free()
-	active_items.clear()
+	get_tree().paused = false
+	_cancel_movement()
+	_run_token = gm.begin_run("runner")
+	for item in active_items.duplicate():
+		_remove_item(item)
 
 	lane_index = 1
 	score = 0.0
@@ -586,7 +591,7 @@ func _start_game() -> void:
 	intro_overlay.modulate.a = 1.0
 	_update_hud()
 
-	var tween: Tween = create_tween()
+	var tween: Tween = UIEffects.tween_for(intro_overlay, "intro")
 	tween.tween_interval(1.65)
 	tween.tween_property(intro_overlay, "modulate:a", 0.0, 0.30)
 	tween.finished.connect(func():
@@ -594,7 +599,7 @@ func _start_game() -> void:
 		intro_overlay.modulate.a = 1.0
 	)
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if is_paused or is_game_over:
 		return
 
@@ -655,6 +660,8 @@ func _clear_speed_particles() -> void:
 	speed_particles.clear()
 
 func _spawn_speed_particle() -> void:
+	if gm.reduced_effects or speed_particles.size() >= 12:
+		return
 	if SPEED_PARTICLES.is_empty():
 		return
 	var fx: Sprite2D = Sprite2D.new()
@@ -685,9 +692,10 @@ func _update_speed_particles(delta: float) -> void:
 		# Mucho menos tráfico visual que V13: ayuda a que no maree.
 		particle_clock = lerpf(0.70, 0.43, speed_factor)
 
-	for fx in speed_particles.duplicate():
+	for index in range(speed_particles.size() - 1, -1, -1):
+		var fx: Sprite2D = speed_particles[index]
 		if not is_instance_valid(fx):
-			speed_particles.erase(fx)
+			speed_particles.remove_at(index)
 			continue
 		var vy: float = float(fx.get_meta("vy", 240.0))
 		var vx: float = float(fx.get_meta("vx", 0.0))
@@ -712,7 +720,7 @@ func _update_dust(delta: float) -> void:
 	dust.position.y = PLAYER_Y + 18.0
 	dust.rotation = sin(elapsed * 6.0) * 0.02
 	dust.modulate.a = 0.14 + 0.06 * (0.5 + 0.5 * sin(elapsed * 8.0))
-	dust.visible = not is_jumping and not is_sliding and hit_lock <= 0.0
+	dust.visible = not gm.reduced_effects and not is_jumping and not is_sliding and hit_lock <= 0.0
 
 func _spawn_pattern() -> void:
 	var roll: float = randf()
@@ -763,24 +771,33 @@ func _spawn_powerup() -> void:
 	_spawn_item(power_kind, lane, 0.0)
 
 func _spawn_item(kind: String, lane: int, start_progress: float) -> void:
-	var holder: Node2D = Node2D.new()
+	if active_items.size() >= ITEM_POOL_LIMIT:
+		return
+	var holder: Node2D
+	if _item_pool.is_empty():
+		holder = Node2D.new()
+		var visual := Sprite2D.new()
+		visual.name = "Sprite"
+		holder.add_child(visual)
+		world.add_child(holder)
+	else:
+		holder = _item_pool.pop_back()
+	holder.modulate = Color.WHITE
 	holder.name = "RunnerItem_" + kind
 	holder.set_meta("kind", kind)
 	holder.set_meta("lane", lane)
 	holder.set_meta("p", start_progress)
 	holder.set_meta("resolved", false)
 
-	var sprite: Sprite2D = Sprite2D.new()
+	var sprite := holder.get_node("Sprite") as Sprite2D
 	sprite.texture = _texture_for(kind)
-	sprite.name = "Sprite"
-	sprite.centered = true
-	holder.add_child(sprite)
+	sprite.rotation = 0.0
+	sprite.modulate = Color.WHITE
 
 	# Se dimensiona ANTES de entrar al árbol para evitar cualquier frame gigante.
 	var initial_t: float = clampf(maxf(start_progress, 0.0), 0.0, 1.0)
 	_apply_item_transform(holder, sprite, kind, lane, initial_t)
 	holder.visible = start_progress >= 0.0
-	world.add_child(holder)
 	active_items.append(holder)
 
 func _texture_for(kind: String) -> Texture2D:
@@ -850,9 +867,10 @@ func _apply_item_transform(holder: Node2D, sprite: Sprite2D, kind: String, lane:
 	holder.z_index = int(2.0 + y / 115.0)
 
 func _update_items(delta: float) -> void:
-	for item in active_items.duplicate():
+	for index in range(active_items.size() - 1, -1, -1):
+		var item: Node2D = active_items[index]
 		if not is_instance_valid(item):
-			active_items.erase(item)
+			active_items.remove_at(index)
 			continue
 
 		var p: float = float(item.get_meta("p")) + delta * scroll_speed
@@ -946,8 +964,14 @@ func _spawn_pickup_fx(pos: Vector2) -> void:
 	tw.finished.connect(fx.queue_free)
 
 func _remove_item(item: Node2D) -> void:
+	if not is_instance_valid(item) or not item in active_items:
+		return
 	active_items.erase(item)
-	if is_instance_valid(item):
+	item.hide()
+	item.set_meta("resolved", true)
+	if _item_pool.size() < ITEM_POOL_LIMIT:
+		_item_pool.append(item)
+	else:
 		item.queue_free()
 
 func _crash() -> void:
@@ -990,6 +1014,7 @@ func _flash_player(color_value: Color) -> void:
 func _trigger_game_over() -> void:
 	if is_game_over:
 		return
+	_cancel_movement()
 	is_game_over = true
 	is_jumping = false
 	is_sliding = false
@@ -999,9 +1024,8 @@ func _trigger_game_over() -> void:
 	enemy.play("celebrate")
 
 	var final_score: int = int(score)
-	if final_score > best_score:
-		best_score = final_score
-		_save_best_score()
+	_award_rewards()
+	best_score = gm.get_record("runner")
 
 	final_score_label.text = "PUNTOS  " + str(final_score)
 	final_best_label.text = "RÉCORD  " + str(best_score)
@@ -1009,14 +1033,19 @@ func _trigger_game_over() -> void:
 	final_coins_label.text = "MONEDAS  +" + str(coins_collected + bonus)
 	revive_button.modulate = Color(1.0, 1.0, 1.0, 0.38) if revive_used else Color.WHITE
 	revive_button.mouse_filter = Control.MOUSE_FILTER_IGNORE if revive_used else Control.MOUSE_FILTER_STOP
+	if not rewards_given:
+		final_coins_label.text = "Guardado pendiente · reintenta"
 	game_over_overlay.visible = true
 	game_over_overlay.modulate.a = 0.0
-	var tw: Tween = create_tween()
+	var tw: Tween = UIEffects.tween_for(game_over_overlay, "result")
 	tw.tween_property(game_over_overlay, "modulate:a", 1.0, 0.20)
 
 func _revive() -> void:
 	if not is_game_over or revive_used:
 		return
+	if not _award_rewards() or not gm.resume_run(_run_token):
+		return
+	rewards_given = false
 	revive_used = true
 	is_game_over = false
 	game_over_overlay.visible = false
@@ -1038,31 +1067,30 @@ func _clear_near_player() -> void:
 			_remove_item(item)
 
 func _restart_from_game_over() -> void:
-	_award_rewards()
+	if not _award_rewards():
+		return
 	_start_game()
 
 func _leave_to_menu() -> void:
-	_award_rewards()
-	get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/minigames_menu.tscn")
-
-func _award_rewards() -> void:
-	if rewards_given:
+	if not _award_rewards():
 		return
-	rewards_given = true
-	if gm != null:
-		var earned: int = coins_collected + int(score / 300.0)
-		if earned > 0:
-			gm.add_coins(earned)
-		gm.play_with_monky(28.0)
-		gm.add_xp(minf(score / 115.0, 24.0))
-		if gm.has_method("save_game"):
-			gm.save_game()
+	get_tree().paused = false
+	SceneRouter.go.call_deferred("res://scenes/minigames/minigames_menu.tscn")
+
+func _award_rewards() -> bool:
+	if rewards_given:
+		return true
+	rewards_given = gm != null and gm.settle_run(_run_token, int(score), coins_collected)
+	return rewards_given
 
 func _toggle_pause() -> void:
 	if is_game_over:
 		return
 	is_paused = not is_paused
 	pause_overlay.visible = is_paused
+	get_tree().paused = is_paused
+	touch_tracking = false
+	mouse_tracking = false
 	if is_paused:
 		player.pause()
 		enemy.pause()
@@ -1082,9 +1110,9 @@ func _toggle_pause() -> void:
 
 func _update_hud() -> void:
 	if score_label != null:
-		score_label.text = str(int(score))
+		UIEffects.set_text(score_label, str(int(score)))
 	if coin_label != null:
-		coin_label.text = str(coins_collected)
+		UIEffects.set_text(coin_label, str(coins_collected))
 	if power_label != null:
 		var parts: Array[String] = []
 		if magnet_time > 0.0:
@@ -1093,9 +1121,11 @@ func _update_hud() -> void:
 			parts.append("ESCUDO")
 		if multiplier_time > 0.0:
 			parts.append("x2 " + str(int(ceil(multiplier_time))) + "s")
-		power_label.text = "  ·  ".join(parts)
+		UIEffects.set_text(power_label, "  ·  ".join(parts))
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
+	if event.device == InputEvent.DEVICE_ID_EMULATION:
+		return
 	if is_game_over or is_paused:
 		return
 
@@ -1151,30 +1181,25 @@ func _handle_swipe(delta_swipe: Vector2) -> void:
 			_slide()
 
 func _change_lane(direction: int) -> void:
-	if is_game_over:
+	if is_game_over or is_paused:
 		return
-	var new_lane: int = clampi(lane_index + direction, 0, 2)
-	if new_lane == lane_index:
+	var next_lane := clampi(lane_index + direction, 0, 2)
+	if next_lane == lane_index:
 		return
-	lane_index = new_lane
-	var target_x: float = _lane_x_at_y(lane_index, PLAYER_Y)
-	var tilt: float = -0.025 if direction < 0 else 0.025
-	var tw: Tween = create_tween()
-	tw.set_parallel(true)
-	tw.tween_property(player, "position:x", target_x, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(player, "rotation", tilt, 0.09)
-	var dust_tw: Tween = create_tween()
-	dust_tw.tween_property(dust, "position:x", target_x, 0.19).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	var reset: Tween = create_tween()
-	reset.tween_interval(0.10)
-	reset.tween_property(player, "rotation", 0.0, 0.11)
+	lane_index = next_lane
+	var target := _lane_x_at_y(lane_index, PLAYER_Y)
+	var move := UIEffects.tween_for(player, "lane")
+	move.tween_property(player, "position:x", target, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	var tilt := UIEffects.tween_for(player, "tilt")
+	tilt.tween_property(player, "rotation", -0.025 if direction < 0 else 0.025, 0.09)
+	tilt.tween_property(player, "rotation", 0.0, 0.11)
 
 func _jump() -> void:
 	if is_jumping or is_sliding or hit_lock > 0.0 or is_game_over:
 		return
 	is_jumping = true
 	player.play("jump")
-	var tw: Tween = create_tween()
+	var tw: Tween = UIEffects.tween_for(player, "jump")
 	tw.tween_property(player, "position:y", PLAYER_Y - 230.0, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tw.tween_property(player, "position:y", PLAYER_Y, 0.36).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.finished.connect(_finish_jump)
@@ -1200,11 +1225,16 @@ func _finish_slide() -> void:
 		player.play("run")
 
 func _load_best_score() -> void:
-	var cfg: ConfigFile = ConfigFile.new()
-	if cfg.load("user://wonky_runner.cfg") == OK:
-		best_score = int(cfg.get_value("runner", "best_score", 0))
+	best_score = gm.get_record("runner") if gm else 0
 
 func _save_best_score() -> void:
-	var cfg: ConfigFile = ConfigFile.new()
-	cfg.set_value("runner", "best_score", best_score)
-	cfg.save("user://wonky_runner.cfg")
+	_award_rewards()
+
+
+func _cancel_movement() -> void:
+	if is_instance_valid(player):
+		for channel in ["lane", "tilt", "jump"]:
+			UIEffects.cancel(player, channel)
+
+func _exit_tree() -> void:
+	get_tree().paused = false

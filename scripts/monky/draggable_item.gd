@@ -19,6 +19,7 @@ var total_bites: int = 3
 var can_bite: bool = true
 var rub_timer: float = 0.0
 var is_eating_sequence: bool = false
+var _finishing: bool = false
 
 var gm: Node = null
 
@@ -169,8 +170,9 @@ func take_bite(monky_ref: Node2D) -> void:
 			take_bite(monky_ref)
 
 func finish_and_destroy() -> void:
-	if not is_inside_tree():
+	if not is_inside_tree() or _finishing:
 		return
+	_finishing = true
 	if item_type == "shower" and AudioManager:
 		AudioManager.stop_shower()
 	is_dragging = false
@@ -180,3 +182,9 @@ func finish_and_destroy() -> void:
 		item_finished.emit()
 		queue_free()
 	)
+
+func _exit_tree() -> void:
+	if item_type == "shower":
+		AudioManager.stop_shower()
+	if item_type == "food":
+		AudioManager.stop_eat()

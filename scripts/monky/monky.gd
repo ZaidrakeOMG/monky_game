@@ -61,6 +61,9 @@ func _ready() -> void:
 			gm.accessory_equipped.connect(_on_accessory_equipped)
 
 	update_accessories()
+	_apply_effects_budget()
+	if gm:
+		gm.settings_changed.connect(_apply_effects_budget)
 
 	if touch_area:
 		if not touch_area.input_event.is_connected(_on_touch_area_input_event):
@@ -601,3 +604,12 @@ func _update_contextual_accessory_visibility() -> void:
 		else:
 			face_slot.visible = (equipped_glasses != "" and not equipped_glasses.begins_with("none"))
 
+
+func _apply_effects_budget() -> void:
+	for particles in [soap_particles, water_particles, sparkle_particles]:
+		if particles == null:
+			continue
+		if not particles.has_meta("original_amount"):
+			particles.set_meta("original_amount", particles.amount)
+		var original: int = particles.get_meta("original_amount")
+		particles.amount = maxi(4, original / 3) if gm and gm.reduced_effects else original

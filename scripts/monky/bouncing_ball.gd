@@ -34,7 +34,7 @@ func _physics_process(delta: float) -> void:
 	if is_dragged:
 		var current_mouse = get_global_mouse_position()
 		global_position = current_mouse + drag_offset
-		mouse_velocity = (current_mouse - prev_mouse_pos) / delta
+		mouse_velocity = (current_mouse - prev_mouse_pos) / maxf(delta, 0.0001)
 		prev_mouse_pos = current_mouse
 		velocity = mouse_velocity
 		return
@@ -93,7 +93,7 @@ func _check_monky_collision() -> void:
 
 func _play_squash() -> void:
 	if abs(velocity.y) > 150.0:
-		var tween = create_tween()
+		var tween = UIEffects.tween_for(self, "bounce")
 		tween.tween_property(self, "scale", Vector2(1.2, 0.8), 0.06)
 		tween.tween_property(self, "scale", Vector2.ONE, 0.1)
 
@@ -106,7 +106,7 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 			velocity = Vector2.ZERO
 		else:
 			is_dragged = false
-			velocity = mouse_velocity * 1.15
+			velocity = (mouse_velocity * 1.15).limit_length(2400.0)
 	elif event is InputEventScreenTouch:
 		if event.pressed:
 			is_dragged = true
@@ -115,10 +115,10 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 			velocity = Vector2.ZERO
 		else:
 			is_dragged = false
-			velocity = mouse_velocity * 1.15
+			velocity = (mouse_velocity * 1.15).limit_length(2400.0)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if is_dragged:
 		if (event is InputEventMouseButton and not event.pressed) or (event is InputEventScreenTouch and not event.pressed):
 			is_dragged = false
-			velocity = mouse_velocity * 1.15
+			velocity = (mouse_velocity * 1.15).limit_length(2400.0)

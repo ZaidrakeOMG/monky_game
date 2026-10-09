@@ -36,11 +36,15 @@ var coins_earned: int = 0
 var is_game_started: bool = false
 var is_game_over: bool = false
 var gm: Node = null
+var _run_token: String = ""
+var _reward_saved: bool = false
 
 func _ready() -> void:
 	gm = get_tree().root.get_node_or_null("GameManager")
 	_setup_background()
 	_setup_game_ui_icons()
+	player.collision_layer = 1
+	player.collision_mask = 2
 	_setup_signals()
 	reset_game()
 
@@ -78,12 +82,17 @@ func _setup_signals() -> void:
 	player.area_entered.connect(_on_player_area_entered)
 
 func reset_game() -> void:
+	if not _run_token.is_empty() and not _reward_saved and not _settle_reward():
+		return
+	_run_token = gm.begin_run("flappy") if gm else ""
+	_reward_saved = false
 	is_game_started = false
 	is_game_over = false
 	velocity_y = 0.0
 	score = 0
 	coins_earned = 0
 	player.position = Vector2(280, 960)
+	UIEffects.cancel(player, "flight")
 	player.rotation = 0.0
 	background.position = Vector2(540, 960)
 	tap_hint.visible = true
@@ -96,10 +105,12 @@ func reset_game() -> void:
 	_update_hud()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.device == InputEvent.DEVICE_ID_EMULATION:
+		return
 	if is_game_over:
 		return
 
-	var is_tap = false
+	var is_tap: bool = event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_up")
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		is_tap = true
 	elif event is InputEventScreenTouch and event.pressed:
@@ -117,10 +128,10 @@ func _on_jump() -> void:
 	if AudioManager:
 		AudioManager.play_jump()
 	velocity_y = JUMP_VELOCITY
-	var tween = create_tween()
+	var tween = UIEffects.tween_for(player, "flight")
 	tween.tween_property(player, "rotation", deg_to_rad(-22.0), 0.1)
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if not is_game_started or is_game_over:
 		return
 
@@ -131,7 +142,7 @@ func _process(delta: float) -> void:
 	# Rotación hacia abajo al caer
 	if velocity_y > 100.0:
 		var target_rot = clampf(deg_to_rad((velocity_y - 100.0) * 0.08), -0.4, 1.2)
-		player.rotation = lerpf(player.rotation, target_rot, 8.0 * delta)
+		player.rotation = lerpf(player.rotation, target_rot, minf(1.0, 8.0 * delta))
 
 	# Límites superior e inferior
 	if player.position.y < 40.0:
@@ -139,6 +150,7 @@ func _process(delta: float) -> void:
 		velocity_y = 0.0
 	elif player.position.y > 1860.0:
 		_trigger_game_over()
+		return
 
 	# Mover obstáculos
 	for pipe in pipes_container.get_children():
@@ -168,6 +180,9 @@ func _spawn_pipe_obstacle() -> void:
 
 	# Tubo Superior
 	var top_area = Area2D.new()
+	top_area.collision_layer = 2
+	top_area.collision_mask = 0
+	top_area.monitoring = false
 	top_area.set_meta("obstacle", true)
 	var top_col = CollisionShape2D.new()
 	var top_shape = RectangleShape2D.new()
@@ -178,6 +193,7 @@ func _spawn_pipe_obstacle() -> void:
 	top_area.add_child(top_col)
 
 	var top_rect = ColorRect.new()
+	top_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_rect.color = Color(0.2, 0.65, 0.25, 0.95)
 	top_rect.size = Vector2(110.0, top_height)
 	top_rect.position = Vector2(-55.0, 0.0)
@@ -186,6 +202,9 @@ func _spawn_pipe_obstacle() -> void:
 
 	# Tubo Inferior
 	var bot_area = Area2D.new()
+	bot_area.collision_layer = 2
+	bot_area.collision_mask = 0
+	bot_area.monitoring = false
 	bot_area.set_meta("obstacle", true)
 	var bot_col = CollisionShape2D.new()
 	var bot_shape = RectangleShape2D.new()
@@ -197,6 +216,7 @@ func _spawn_pipe_obstacle() -> void:
 	bot_area.add_child(bot_col)
 
 	var bot_rect = ColorRect.new()
+	bot_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bot_rect.color = Color(0.2, 0.65, 0.25, 0.95)
 	bot_rect.size = Vector2(110.0, bot_height)
 	bot_rect.position = Vector2(-55.0, bot_y_start)
@@ -205,6 +225,9 @@ func _spawn_pipe_obstacle() -> void:
 
 	# Moneda en el hueco
 	var coin_area = Area2D.new()
+	coin_area.collision_layer = 2
+	coin_area.collision_mask = 0
+	coin_area.monitoring = false
 	coin_area.position = Vector2(0, center_y)
 	coin_area.set_meta("coin", true)
 	var coin_col = CollisionShape2D.new()
@@ -214,7 +237,7 @@ func _spawn_pipe_obstacle() -> void:
 	coin_area.add_child(coin_col)
 
 	var coin_sprite = Sprite2D.new()
-	coin_sprite.texture = load("res://imagenes/opt/hud/moneda.png") as Texture2D
+	coin_sprite.texture = preload("res://imagenes/opt/hud/moneda.png")
 	if coin_sprite.texture:
 		var size = coin_sprite.texture.get_size()
 		coin_sprite.scale = Vector2.ONE * (70.0 / maxf(size.x, size.y))
@@ -224,10 +247,11 @@ func _spawn_pipe_obstacle() -> void:
 	pipes_container.add_child(pipe_pair)
 
 func _on_player_area_entered(area: Area2D) -> void:
-	if is_game_over:
+	if is_game_over or area.get_meta("consumed", false):
 		return
 
 	if area.has_meta("coin"):
+		area.set_meta("consumed", true)
 		coins_earned += 1
 		if AudioManager:
 			AudioManager.play_coins()
@@ -246,17 +270,15 @@ func _trigger_game_over() -> void:
 		AudioManager.play_game_over()
 
 	# Recompensas al GameManager
-	if gm:
-		var extra_coins = int(float(score) / 5.0)
-		gm.add_coins(coins_earned + extra_coins)
-		gm.play_with_monky(100.0)
-		gm.hygiene = maxf(0.0, gm.hygiene - 8.0) # Se ensucia jugando
-		gm.add_xp(minf(score * 0.8, 20.0))
+	_settle_reward()
 
 	final_score_label.text = str(score) + " pts"
 	final_coins_label.text = "+" + str(coins_earned + int(float(score) / 5.0)) + " monedas"
-	high_score_label.text = str(score) + " pts"
+	high_score_label.text = str(gm.get_record("flappy") if gm else score) + " pts"
 
+
+	if not _reward_saved:
+		final_coins_label.text = "Guardado pendiente · reintenta"
 
 	game_over_modal.visible = true
 	game_over_modal.scale = Vector2(0.5, 0.5)
@@ -273,7 +295,7 @@ func _spawn_floating_text(text: String, pos: Vector2, color: Color) -> void:
 	label.z_index = 50
 	add_child(label)
 
-	var tween = create_tween()
+	var tween = label.create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(label, "position:y", label.position.y - 70, 0.6).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(label, "modulate:a", 0.0, 0.6).set_ease(Tween.EASE_IN)
@@ -284,4 +306,19 @@ func _update_hud() -> void:
 	coins_label.text = "MONEDAS +" + str(coins_earned)
 
 func _on_btn_home_pressed() -> void:
-	get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/minigames_menu.tscn")
+	if not _settle_reward():
+		return
+	get_tree().paused = false
+	SceneRouter.go.call_deferred("res://scenes/minigames/minigames_menu.tscn")
+
+func _settle_reward() -> bool:
+	if _reward_saved:
+		return true
+	# Leaving an untouched game does not farm care/XP.
+	if score == 0 and coins_earned == 0 and not is_game_over:
+		_reward_saved = true
+		return true
+	_reward_saved = gm != null and gm.settle_run(_run_token, score, coins_earned)
+	if not _reward_saved:
+		final_coins_label.text = "Guardado pendiente · reintenta"
+	return _reward_saved

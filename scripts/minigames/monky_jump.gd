@@ -4,7 +4,7 @@ extends Node2D
 ## Interfaz basada en iconos: los niños pueden jugar sin depender de texto.
 ## Fondos consecutivos 01-22 + zona infinita (parche integrado).
 
-@onready var background: Sprite2D = $Background
+@onready var background: Node2D = $BackgroundStrip
 @onready var player: Area2D = $Player
 @onready var monky_sprite: AnimatedSprite2D = $Player/MonkySprite
 @onready var platforms_container: Node2D = $PlatformsContainer
@@ -30,16 +30,6 @@ const SUPER_JUMP_POWER: float = -1680.0
 const SCREEN_WIDTH: float = 1080.0
 const SCREEN_HEIGHT: float = 1920.0
 
-# Fondos del modo Jump. Nómbralos fondo_01.png ... fondo_22.png.
-# Después de la última escena, el juego sigue infinito.
-# Opcional: agrega fondo_infinito_01.png, fondo_infinito_02.png, etc.
-const BACKGROUND_DIR: String = "res://imagenes/jump/fondos"
-const STORY_BACKGROUND_COUNT: int = 22
-const INFINITE_BACKGROUND_MAX: int = 20
-const BACKGROUND_START_CENTER_Y: float = 960.0
-const BACKGROUND_KEEP_BEHIND: int = 1
-const BACKGROUND_KEEP_AHEAD: int = 2
-
 # Texturas ya recortadas del material que el proyecto traía en /imagenes.
 # Se precargan una sola vez para evitar load() durante el juego.
 const TEX_PLATFORM_NORMAL: Texture2D = preload("res://assets/ui/jump/platform_normal.png")
@@ -60,148 +50,14 @@ var is_game_over: bool = false
 var highest_platform_y: float = 1400.0
 var last_milestone: int = 0
 var gm: Node = null
-
-# Sistema de escenarios verticales.
-var background_layer: Node2D = null
-var story_backgrounds: Array[String] = []
-var infinite_backgrounds: Array[String] = []
-var active_background_tiles: Dictionary = {}
-
+var _run_token: String = ""
+var _reward_saved: bool = false
 
 func _ready() -> void:
 	gm = get_tree().root.get_node_or_null("GameManager")
 	_load_best_score()
-	_setup_background_system()
 	_setup_signals()
 	start_game()
-
-
-func _setup_background_system() -> void:
-	_discover_backgrounds()
-
-	# Si todavía no hay fondos en la carpeta nueva, conserva el fondo original.
-	if story_backgrounds.is_empty():
-		if background and background.texture:
-			var tex_size: Vector2 = background.texture.get_size()
-			if tex_size.x > 0.0 and tex_size.y > 0.0:
-				background.scale = Vector2(
-					SCREEN_WIDTH / tex_size.x,
-					SCREEN_HEIGHT / tex_size.y
-				)
-		return
-
-	# El Sprite2D Background de la escena queda como respaldo, pero ya no se usa.
-	if background:
-		background.visible = false
-
-	background_layer = Node2D.new()
-	background_layer.name = "DynamicBackgrounds"
-	background_layer.z_index = -100
-	add_child(background_layer)
-
-
-func _discover_backgrounds() -> void:
-	story_backgrounds.clear()
-	infinite_backgrounds.clear()
-
-	# Escenas principales consecutivas: fondo_01.png ... fondo_22.png.
-	for i in range(1, STORY_BACKGROUND_COUNT + 1):
-		var path: String = "%s/fondo_%02d.png" % [BACKGROUND_DIR, i]
-		if ResourceLoader.exists(path):
-			story_backgrounds.append(path)
-
-	# Variantes opcionales para la zona infinita.
-	for i in range(1, INFINITE_BACKGROUND_MAX + 1):
-		var path: String = "%s/fondo_infinito_%02d.png" % [BACKGROUND_DIR, i]
-		if ResourceLoader.exists(path):
-			infinite_backgrounds.append(path)
-
-
-func _background_path_for_tile(tile_index: int) -> String:
-	if story_backgrounds.is_empty():
-		return ""
-
-	if tile_index < story_backgrounds.size():
-		return story_backgrounds[maxi(tile_index, 0)]
-
-	# Tras la última escena, entra el modo infinito. Si existen variantes
-	# fondo_infinito_XX.png, las alterna. Si no, repite la última escena.
-	if not infinite_backgrounds.is_empty():
-		var infinite_index: int = (tile_index - story_backgrounds.size()) % infinite_backgrounds.size()
-		return infinite_backgrounds[infinite_index]
-
-	return story_backgrounds[story_backgrounds.size() - 1]
-
-
-func _create_background_tile(tile_index: int) -> void:
-	if background_layer == null or active_background_tiles.has(tile_index):
-		return
-
-	var path: String = _background_path_for_tile(tile_index)
-	if path.is_empty():
-		return
-
-	var texture := ResourceLoader.load(path) as Texture2D
-	if texture == null:
-		return
-
-	var sprite := Sprite2D.new()
-	sprite.texture = texture
-	sprite.centered = true
-	sprite.position = Vector2(
-		SCREEN_WIDTH * 0.5,
-		BACKGROUND_START_CENTER_Y - float(tile_index) * SCREEN_HEIGHT
-	)
-	sprite.z_index = -100
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-
-	var tex_size: Vector2 = texture.get_size()
-	if tex_size.x > 0.0 and tex_size.y > 0.0:
-		# 4 px extra de alto evitan una línea visible entre dos fondos.
-		sprite.scale = Vector2(
-			SCREEN_WIDTH / tex_size.x,
-			(SCREEN_HEIGHT + 4.0) / tex_size.y
-		)
-
-	# Si no hay variantes infinitas, alternar espejo horizontal hace menos
-	# evidente la repetición del último fondo sin afectar el gameplay.
-	if tile_index >= story_backgrounds.size() and infinite_backgrounds.is_empty():
-		sprite.flip_h = ((tile_index - story_backgrounds.size()) % 2) == 1
-
-	background_layer.add_child(sprite)
-	active_background_tiles[tile_index] = sprite
-
-
-func _update_background_tiles(force_refresh: bool = false) -> void:
-	if background_layer == null or story_backgrounds.is_empty():
-		return
-
-	var current_index: int = maxi(0, int(floor(
-		(BACKGROUND_START_CENTER_Y - camera.position.y) / SCREEN_HEIGHT + 0.5
-	)))
-	var min_index: int = maxi(0, current_index - BACKGROUND_KEEP_BEHIND)
-	var max_index: int = current_index + BACKGROUND_KEEP_AHEAD
-
-	if force_refresh:
-		for node in active_background_tiles.values():
-			if is_instance_valid(node):
-				node.queue_free()
-		active_background_tiles.clear()
-
-	for i in range(min_index, max_index + 1):
-		_create_background_tile(i)
-
-	var to_remove: Array[int] = []
-	for key in active_background_tiles.keys():
-		var idx: int = int(key)
-		if idx < min_index or idx > max_index:
-			var node: Node = active_background_tiles[key]
-			if is_instance_valid(node):
-				node.queue_free()
-			to_remove.append(idx)
-
-	for idx in to_remove:
-		active_background_tiles.erase(idx)
 
 
 func _setup_signals() -> void:
@@ -216,6 +72,10 @@ func _setup_signals() -> void:
 
 
 func start_game() -> void:
+	if not _run_token.is_empty() and not _reward_saved and not _settle_reward():
+		return
+	_run_token = gm.begin_run("jump") if gm else ""
+	_reward_saved = false
 	is_game_over = false
 	score = 0
 	coins_earned = 0
@@ -225,10 +85,8 @@ func start_game() -> void:
 	player.position = Vector2(540.0, 1400.0)
 	player.scale = Vector2.ONE
 	camera.position = Vector2(540.0, 960.0)
-	if background_layer != null:
-		_update_background_tiles(true)
-	elif background:
-		background.position = Vector2(540.0, 960.0)
+	if background and background.has_method("reset_strip"):
+		background.reset_strip()
 	game_over_modal.visible = false
 	game_over_shade.visible = false
 
@@ -249,7 +107,7 @@ func _get_difficulty_factor() -> float:
 	return clampf(float(score) / 240.0, 0.0, 1.0)
 
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if is_game_over:
 		return
 
@@ -285,10 +143,6 @@ func _process(delta: float) -> void:
 	if player.position.y < camera.position.y:
 		camera.position.y = player.position.y
 
-	if background_layer != null:
-		_update_background_tiles()
-	elif background:
-		background.position = camera.position
 
 	var current_height: float = 1400.0 - player.position.y
 	if current_height > float(score) * 10.0:
@@ -494,7 +348,7 @@ func _on_player_area_entered(area: Area2D) -> void:
 				area.set_meta("broken", true)
 				velocity.y = JUMP_POWER
 				_spawn_floating_icon(TEX_ALERT, area.position + Vector2(0.0, -78.0), 65.0)
-				var tween_break := create_tween()
+				var tween_break := area.create_tween()
 				tween_break.set_parallel(true)
 				tween_break.tween_property(area, "position:y", area.position.y + 140.0, 0.38).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 				tween_break.tween_property(area, "modulate:a", 0.0, 0.38)
@@ -504,13 +358,13 @@ func _on_player_area_entered(area: Area2D) -> void:
 				area.set_meta("broken", true)
 				velocity.y = JUMP_POWER
 				_spawn_floating_icon(TEX_GHOST, area.position + Vector2(0.0, -82.0), 68.0)
-				var tween_vanish := create_tween()
+				var tween_vanish := area.create_tween()
 				tween_vanish.tween_property(area, "modulate:a", 0.0, 0.28)
 				tween_vanish.finished.connect(area.queue_free)
 			_:
 				velocity.y = JUMP_POWER
 
-		var tween := create_tween()
+		var tween := UIEffects.tween_for(player, "bounce")
 		tween.tween_property(player, "scale", Vector2(1.14, 0.88), 0.07)
 		tween.tween_property(player, "scale", Vector2.ONE, 0.11)
 
@@ -524,22 +378,17 @@ func _trigger_game_over() -> void:
 
 	var total_coins: int = coins_earned + int(float(score) / 30.0)
 
-	if gm:
-		gm.add_coins(total_coins)
-		gm.play_with_monky(100.0)
-		gm.hygiene = maxf(0.0, gm.hygiene - 8.0)
-		gm.add_xp(minf(float(score) * 0.15, 20.0))
+	_settle_reward()
+	best_score = gm.get_record("jump") if gm else best_score
 
-	if score > best_score:
-		best_score = score
-		_save_best_score()
-
-	# Solo números; los iconos de cada tarjeta explican qué representa cada valor.
 	final_score_label.text = str(score)
 	final_coins_label.text = str(total_coins)
 	high_score_label.text = str(best_score)
 
 	game_over_shade.visible = true
+	if not _reward_saved:
+		final_coins_label.text = "Guardado pendiente · reintenta"
+
 	game_over_modal.visible = true
 	game_over_modal.scale = Vector2(0.72, 0.72)
 	game_over_modal.modulate.a = 0.0
@@ -563,7 +412,7 @@ func _spawn_floating_icon(texture: Texture2D, pos: Vector2, size_px: float = 76.
 	sprite.z_index = 50
 	add_child(sprite)
 
-	var tween := create_tween()
+	var tween := sprite.create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(sprite, "position:y", sprite.position.y - 92.0, 0.62).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(sprite, "scale", sprite.scale * 1.25, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -577,16 +426,25 @@ func _update_hud() -> void:
 
 
 func _load_best_score() -> void:
-	var config := ConfigFile.new()
-	if config.load("user://monky_jump_score.cfg") == OK:
-		best_score = int(config.get_value("score", "best", 0))
-
+	best_score = gm.get_record("jump") if gm else 0
 
 func _save_best_score() -> void:
-	var config := ConfigFile.new()
-	config.set_value("score", "best", best_score)
-	config.save("user://monky_jump_score.cfg")
-
+	_settle_reward()
 
 func _on_btn_home_pressed() -> void:
-	get_tree().change_scene_to_file.call_deferred("res://scenes/minigames/minigames_menu.tscn")
+	if not _settle_reward():
+		return
+	get_tree().paused = false
+	SceneRouter.go.call_deferred("res://scenes/minigames/minigames_menu.tscn")
+
+func _settle_reward() -> bool:
+	if _reward_saved:
+		return true
+	# Leaving an untouched game does not farm care/XP.
+	if score == 0 and coins_earned == 0 and not is_game_over:
+		_reward_saved = true
+		return true
+	_reward_saved = gm != null and gm.settle_run(_run_token, score, coins_earned)
+	if not _reward_saved:
+		final_coins_label.text = "Guardado pendiente · reintenta"
+	return _reward_saved

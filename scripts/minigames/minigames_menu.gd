@@ -28,6 +28,8 @@ func _ready() -> void:
 	_setup_visuals()
 	_setup_buttons()
 	_update_coins()
+	if gm:
+		gm.coins_changed.connect(func(_value): _update_coins())
 
 func _setup_background() -> void:
 	if background and background.texture:
@@ -112,20 +114,7 @@ func _set_big_icon(button: Button, path: String, title_text: String) -> void:
 	_bind_tap_feedback(button)
 
 func _bind_tap_feedback(button: Button) -> void:
-	if not button or button.has_meta("wonky_tap_fx"):
-		return
-	button.set_meta("wonky_tap_fx", true)
-	button.resized.connect(func(): button.pivot_offset = button.size * 0.5)
-	button.button_down.connect(func():
-		var tween := create_tween()
-		tween.tween_property(button, "scale", Vector2(0.9, 0.9), 0.07).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	)
-	button.button_up.connect(func():
-		var tween := create_tween()
-		tween.tween_property(button, "scale", Vector2(1.05, 1.05), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tween.tween_property(button, "scale", Vector2.ONE, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	)
-
+	UIEffects.bind_button(button)
 
 func _hide_card_text(card: Control) -> void:
 	if not card:
@@ -223,12 +212,7 @@ func _add_runner_button() -> void:
 	_set_big_icon(btn_play_runner, "res://imagenes/runner/cover.png", "WONKY RUN")
 
 func _open_scene(path: String) -> void:
-	if not ResourceLoader.exists(path):
-		push_error("No existe la escena: " + path)
-		return
-	var err := get_tree().change_scene_to_file(path)
-	if err != OK:
-		push_error("No se pudo abrir la escena " + path + ". Error: " + str(err))
+	SceneRouter.go(path)
 
 func _setup_buttons() -> void:
 	btn_back.pressed.connect(func():
