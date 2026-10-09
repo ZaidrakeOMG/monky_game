@@ -37,6 +37,8 @@ const MUSIC_PATHS: Dictionary = {
 
 const PLAYLIST: Array[String] = ["main", "main2", "main3"]
 var _playlist_idx: int = 0
+var _music_tween: Tween
+var _desired_music_db: float = DEFAULT_MUSIC_DB
 
 const POOL_SIZE: int = 8
 const DEFAULT_MUSIC_DB: float = -6.0
@@ -103,17 +105,6 @@ func _preload_streams() -> void:
 			if stream:
 				_sfx_streams[sfx_key] = stream
 				
-	for music_key in MUSIC_PATHS:
-		var path: String = MUSIC_PATHS[music_key]
-		if ResourceLoader.exists(path):
-			var stream = load(path)
-			if stream:
-				# Si hay playlist de múltiples pistas, dejamos loop = false para rotación automática al terminar
-				if stream is AudioStreamOggVorbis:
-					stream.loop = false
-				elif stream is AudioStreamMP3:
-					stream.loop = false
-				_music_streams[music_key] = stream
 
 func _connect_game_signals() -> void:
 	if GameManager:
@@ -145,52 +136,49 @@ func play_next_track(fade_sec: float = 1.0) -> void:
 	play_music(PLAYLIST[_playlist_idx], DEFAULT_MUSIC_DB, fade_sec)
 
 func play_music(music_key: String = "main", target_db: float = DEFAULT_MUSIC_DB, fade_sec: float = 1.0) -> void:
-	if not is_instance_valid(_music_player):
+	if not is_instance_valid(_music_player) or not GameManager.music_enabled or not MUSIC_PATHS.has(music_key):
 		return
-	if not GameManager or not GameManager.music_enabled:
-		return
+	_cancel_music_tween()
 	if not _music_streams.has(music_key):
-		return
-		
+		var stream := load(str(MUSIC_PATHS[music_key])) as AudioStream
+		if stream == null:
+			return
+		_music_streams.clear() # only the current music resource is retained
+		if stream is AudioStreamOggVorbis or stream is AudioStreamMP3:
+			stream.loop = false
+		_music_streams[music_key] = stream
 	var stream: AudioStream = _music_streams[music_key]
-	
-	if _music_player.playing and _music_player.stream == stream:
-		return
-		
-	var idx := PLAYLIST.find(music_key)
-	if idx != -1:
-		_playlist_idx = idx
-		
-	_music_player.stream = stream
-	_music_player.volume_db = -40.0
-	_music_player.play()
-	
-	var tween := create_tween()
-	tween.tween_property(_music_player, "volume_db", target_db, fade_sec)
+	var index := PLAYLIST.find(music_key)
+	if index >= 0:
+		_playlist_idx = index
+	_desired_music_db = SLEEP_MUSIC_DB if GameManager.is_sleeping else target_db
+	if _music_player.stream != stream or not _music_player.playing:
+		_music_player.stream = stream
+		_music_player.volume_db = -40.0
+		_music_player.play()
+	set_music_volume_db(_desired_music_db, fade_sec)
 
 func stop_music(fade_sec: float = 0.8) -> void:
+	_cancel_music_tween()
 	if not is_instance_valid(_music_player) or not _music_player.playing:
 		return
-	var tween := create_tween()
-	tween.tween_property(_music_player, "volume_db", -40.0, fade_sec)
-	tween.finished.connect(func():
-		if is_instance_valid(_music_player):
-			_music_player.stop()
-	)
+	_music_tween = create_tween()
+	_music_tween.tween_property(_music_player, "volume_db", -40.0, maxf(fade_sec, 0.0))
+	_music_tween.tween_callback(_music_player.stop)
 
 func set_music_volume_db(target_db: float, duration: float = 0.5) -> void:
-	if not is_instance_valid(_music_player) or not _music_player.playing:
+	_desired_music_db = clampf(target_db, -60.0, 0.0)
+	if not is_instance_valid(_music_player) or not _music_player.playing or not GameManager.music_enabled:
 		return
-	var tween := create_tween()
-	tween.tween_property(_music_player, "volume_db", target_db, duration)
+	_cancel_music_tween()
+	_music_tween = create_tween()
+	_music_tween.tween_property(_music_player, "volume_db", _desired_music_db, maxf(duration, 0.0))
 
 func set_music_enabled(enabled: bool) -> void:
 	if not enabled:
 		stop_music(0.3)
-	else:
-		if is_instance_valid(_music_player):
-			if not _music_player.playing and not PLAYLIST.is_empty():
-				play_music(PLAYLIST[_playlist_idx], DEFAULT_MUSIC_DB, 0.8)
+	elif not PLAYLIST.is_empty():
+		play_music(PLAYLIST[_playlist_idx], DEFAULT_MUSIC_DB, 0.3)
 
 func set_sfx_enabled(enabled: bool) -> void:
 	if not enabled:
@@ -218,15 +206,18 @@ func play_sfx(sfx_key: String, volume_db: float = 0.0, pitch_scale: float = 1.0)
 	_play_on_pool(stream, volume_db, pitch_scale)
 
 func _play_on_pool(stream: AudioStream, volume_db: float, pitch_scale: float) -> void:
-	var player := _players[_current_player_idx]
+	if _players.is_empty() or stream == null:
+		return
+	var player: AudioStreamPlayer = _players[_current_player_idx]
+	for candidate in _players:
+		if not candidate.playing:
+			player = candidate
+			break
 	_current_player_idx = (_current_player_idx + 1) % POOL_SIZE
-	
 	player.stream = stream
-	player.volume_db = volume_db
-	player.pitch_scale = pitch_scale
+	player.volume_db = clampf(volume_db, -60.0, 6.0)
+	player.pitch_scale = clampf(pitch_scale, 0.1, 4.0)
 	player.play()
-
-# ==================== SHORTCUTS DE EFECTOS ====================
 
 func play_buy() -> void:
 	play_sfx("buy", 0.0, randf_range(0.98, 1.02))
@@ -344,13 +335,29 @@ func _on_accessory_unlocked(_item_id: String) -> void:
 func _on_accessory_equipped(_cat: String, _item_id: String) -> void:
 	play_equip()
 
-func _on_monky_state_changed(state: String) -> void:
-	if state == "sleeping":
-		# Muffle/atenuar música suavemente durante el sueño e iniciar ronquidos
-		set_music_volume_db(SLEEP_MUSIC_DB, 1.5)
+func _on_monky_state_changed(_state: String) -> void:
+	var target := SLEEP_MUSIC_DB if GameManager.is_sleeping else DEFAULT_MUSIC_DB
+	if not is_equal_approx(_desired_music_db, target):
+		set_music_volume_db(target, 0.8)
+	if GameManager.is_sleeping:
 		start_snore()
-	elif state == "idle" or state == "happy":
-		# Restaurar volumen normal y detener ronquidos
+	else:
 		stop_snore()
-		if is_instance_valid(_music_player) and _music_player.volume_db < DEFAULT_MUSIC_DB:
-			set_music_volume_db(DEFAULT_MUSIC_DB, 1.0)
+
+
+func _cancel_music_tween() -> void:
+	if _music_tween != null and _music_tween.is_valid():
+		_music_tween.kill()
+	_music_tween = null
+
+func stop_all() -> void:
+	_cancel_music_tween()
+	for player in _players + [_loop_player, _eat_player, _snore_player, _music_player]:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
+
+func _exit_tree() -> void:
+	stop_all()
+	_sfx_streams.clear()
+	_music_streams.clear()

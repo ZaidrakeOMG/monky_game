@@ -19,6 +19,7 @@ run/max_fps=60
 
 GameManager="*res://scripts/autoload/game_manager.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
+SceneRouter="*res://scripts/autoload/scene_router.gd"
 
 [display]
 
@@ -27,7 +28,8 @@ window/size/viewport_height=1920
 window/size/window_width_override=424
 window/size/window_height_override=752
 window/stretch/mode="canvas_items"
-window/stretch/aspect="expand"
+window/stretch/aspect="keep"
+window/handheld/orientation=1
 
 [file_customization]
 
