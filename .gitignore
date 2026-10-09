@@ -36,3 +36,7 @@ $RECYCLE.BIN/
 *.bak
 scratch/
 
+
+# Reproducible QA artifacts and obsolete script backups
+reports/
+*.gd.bak_*
