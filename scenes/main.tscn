@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://1fod1swr4x3p"]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://dsqvdguvo6cqr" path="res://escenarios imagenes/principal/cuarto-principal.png" id="2_bg"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/cuarto-principal.png" id="2_bg"]
 [ext_resource type="PackedScene" uid="uid://cx6qvh7m0a1mn" path="res://scenes/monky/monky.tscn" id="3_monky"]
 [ext_resource type="PackedScene" uid="uid://cb8a4j26k7qnx" path="res://scenes/ui/hud.tscn" id="4_hud"]
 

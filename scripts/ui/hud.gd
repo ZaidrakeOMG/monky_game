@@ -36,8 +36,14 @@ class_name HUD
 @onready var btn_pack_daily: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/RewardsGrid/BtnDaily
 @onready var btn_pack_ad: Button = $ShopPopup/Panel/Margin/VBox/Scroll/ContentVBox/RewardsGrid/BtnAd
 
-var iap_confirm_popup: Control = null
-var current_iap_pack: Dictionary = {}
+var _ui_textures: Dictionary = {}
+var _shop_ready: bool = false
+var _market_ready: bool = false
+var _sleep_mode: String = ""
+var _market_quantities: Dictionary = {}
+var _notice: Label
+var _notice_icon: TextureRect
+var _effects_toggle: Button
 
 # Modal de Mercado de Comidas
 @onready var food_market_popup: Control = $FoodMarketPopup
@@ -112,8 +118,6 @@ var wardrobe_diamonds_balance: Label = null
 @onready var btn_close_level: Button = $LevelUpPopup/Margin/VBox/BtnClaim
 
 var gm: Node = null
-var ui_refresh_accumulator: float = 0.0
-var shop_refresh_accumulator: float = 0.0
 
 const STICKER_SHADER: Shader = preload("res://resources/ui_sticker.gdshader")
 
@@ -199,7 +203,6 @@ func _ready() -> void:
 	_setup_atmosphere_overlays()
 	_setup_visual_assets()
 	_setup_protein_ui()
-	_setup_food_details_popup()
 	_style_sleep_bar()
 	# V7 hotfix: las texturas de barra tienen un tamaño nativo muy grande.
 	# Se mantienen desactivadas en el HUD principal hasta montarlas con recorte/NinePatch.
@@ -226,43 +229,45 @@ func _ready() -> void:
 
 	_setup_dock_buttons()
 	_setup_action_drawers()
-	_setup_shop_modal()
-	_setup_food_market()
-	_setup_settings_modal()
 	_setup_scroll_support()
 	_update_room_view(gm.current_room if gm else "dormitorio")
+	_polish_header()
+	var ui_clock := Timer.new()
+	ui_clock.wait_time = 1.0
+	ui_clock.autostart = true
+	ui_clock.timeout.connect(_on_ui_clock)
+	add_child(ui_clock)
+	if gm:
+		gm.show_floating_text.connect(_show_notice)
+		gm.monky_state_changed.connect(func(_state): _update_sleep_button())
+		if gm._save_read_only:
+			_show_notice("No se pudo recuperar tu partida. Se conservaron los archivos dañados.", Vector2.ZERO, Color(1, 0.7, 0.5))
 
+	# Entry points must be connected before their lazy modal is constructed.
+	btn_coins.pressed.connect(_open_shop)
+	btn_diamonds.pressed.connect(_open_shop)
 	if btn_settings:
 		btn_settings.pressed.connect(_open_settings_modal)
 
-func _process(delta: float) -> void:
-	# Actualizaciones visuales limitadas para evitar trabajo innecesario en Android.
-	ui_refresh_accumulator += delta
-	if ui_refresh_accumulator >= 0.25:
-		ui_refresh_accumulator = 0.0
+func _on_ui_clock() -> void:
+	if gm and gm.is_sleeping:
 		_update_sleep_button()
-
-	if shop_popup and shop_popup.visible:
-		shop_refresh_accumulator += delta
-		if shop_refresh_accumulator >= 1.0:
-			shop_refresh_accumulator = 0.0
-			_update_shop_timers()
-
+	if _shop_ready and shop_popup.visible:
+		_update_shop_timers()
 
 func _update_sleep_button() -> void:
 	if not gm or not btn_lamp:
 		return
-
+	var mode: String = "wake" if gm.is_sleeping else "sleep"
+	var caption := "Dormir · Agotado" if gm.energy <= 0.0 else "Dormir"
 	if gm.is_sleeping:
-		var missing_energy: float = gm.MAX_STAT - gm.energy
-		var seconds_remaining: int = maxi(0, int((missing_energy / gm.MAX_STAT) * gm.SLEEP_DURATION_SEC))
-		var mins: int = seconds_remaining / 60
-		var secs: int = seconds_remaining % 60
-		_set_image_button(btn_lamp, str(UI_ICON["wake"]), 124, Vector2(320, 205), "Despertar  %02d:%02d" % [mins, secs], 24)
-	elif gm.energy <= 0.0:
-		_set_image_button(btn_lamp, str(UI_ICON["sleep"]), 124, Vector2(320, 205), "Dormir · Agotado", 24)
+		var seconds := maxi(0, int(ceil((gm.MAX_STAT - gm.energy) / gm.MAX_STAT * gm.SLEEP_DURATION_SEC)))
+		caption = "Despertar  %02d:%02d" % [seconds / 60, seconds % 60]
+	if mode != _sleep_mode:
+		_sleep_mode = mode
+		_set_image_button(btn_lamp, str(UI_ICON[mode]), 124, Vector2(320, 205), caption, 26)
 	else:
-		_set_image_button(btn_lamp, str(UI_ICON["sleep"]), 124, Vector2(320, 205), "Dormir", 25)
+		_update_image_button_label(btn_lamp, caption, 26)
 
 func _setup_protein_ui() -> void:
 	# Cinco medidores claros y respirados. El icono manda; el texto sólo acompaña.
@@ -271,12 +276,12 @@ func _setup_protein_ui() -> void:
 
 	for bar in [hunger_bar, protein_bar, energy_bar, fun_bar, hygiene_bar]:
 		if bar:
-			bar.custom_minimum_size = Vector2(150, 18)
+			bar.custom_minimum_size = Vector2(150, 24)
 			bar.show_percentage = false
 
 	for label in [hunger_label, protein_label, energy_label, fun_label, hygiene_label]:
 		if label:
-			label.add_theme_font_size_override("font_size", 16)
+			label.add_theme_font_size_override("font_size", 26)
 			label.add_theme_color_override("font_color", Color("#FFF9EA"))
 			label.add_theme_color_override("font_outline_color", Color("#26160F"))
 			label.add_theme_constant_override("outline_size", 4)
@@ -311,9 +316,11 @@ func _style_caption(label: Label, font_size: int, color: Color = Color.WHITE) ->
 	label.add_theme_constant_override("shadow_offset_y", 3)
 
 func _load_ui_texture(path: String) -> Texture2D:
-	if path != "" and ResourceLoader.exists(path):
-		return load(path)
-	return null
+	if path.is_empty():
+		return null
+	if not _ui_textures.has(path):
+		_ui_textures[path] = load(path) as Texture2D if ResourceLoader.exists(path) else null
+	return _ui_textures[path]
 
 func _set_button_icon(button: Button, image_path: String, label_text: String, icon_width: int = 72) -> void:
 	if not button:
@@ -378,8 +385,8 @@ func _set_image_button(button: Button, image_path: String, icon_width: int = 110
 			caption.anchor_right = 1.0
 			caption.anchor_top = 1.0
 			caption.anchor_bottom = 1.0
-			caption.offset_left = -10.0
-			caption.offset_right = -10.0
+			caption.offset_left = 0.0
+			caption.offset_right = 0.0
 			caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			button.add_child(caption)
@@ -407,41 +414,25 @@ func _update_image_button_label(button: Button, label_text: String, label_size: 
 		caption.anchor_right = 1.0
 		caption.anchor_top = 1.0
 		caption.anchor_bottom = 1.0
-		caption.offset_left = -10.0
-		caption.offset_right = -10.0
+		caption.offset_left = 0.0
+		caption.offset_right = 0.0
 		caption.offset_top = -42.0
 		caption.offset_bottom = -2.0
 		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		button.add_child(caption)
 	caption.visible = true
-	caption.text = label_text
-	_style_caption(caption, label_size)
+	if caption.text != label_text:
+		caption.text = label_text
+		_style_caption(caption, label_size)
 
 func _bind_image_button_feedback(button: Button) -> void:
-	if not button or button.has_meta("wonky_image_button_fx"):
-		return
-	button.set_meta("wonky_image_button_fx", true)
-	button.resized.connect(func():
-		button.pivot_offset = button.size * 0.5
-	)
-	button.button_down.connect(func():
-		_tween_image_button(button, Vector2(0.88, 0.88), 0.07)
-	)
-	button.button_up.connect(func():
-		var tween := create_tween()
-		tween.tween_property(button, "scale", Vector2(1.06, 1.06), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tween.tween_property(button, "scale", Vector2.ONE, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	)
-	button.mouse_exited.connect(func():
-		if not button.button_pressed:
-			_tween_image_button(button, Vector2.ONE, 0.08)
-	)
+	UIEffects.bind_button(button)
 
 func _tween_image_button(button: Button, target_scale: Vector2, duration: float) -> void:
 	if not is_instance_valid(button):
 		return
-	var tween := create_tween()
+	var tween := UIEffects.tween_for(button, "press")
 	tween.tween_property(button, "scale", target_scale, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
@@ -931,28 +922,16 @@ func _setup_food_market() -> void:
 		market_grid.add_theme_constant_override("v_separation", 22)
 
 func _open_food_market() -> void:
-	if not food_market_popup:
-		return
-	if AudioManager:
-		AudioManager.play_pop()
+	if not _market_ready:
+		_setup_food_market()
+		_market_ready = true
 	_populate_market_grid()
 	_update_market_balance()
-	food_market_popup.visible = true
-	var panel = food_market_popup.get_node("Panel")
-	panel.scale = Vector2(0.82, 0.82)
-	panel.pivot_offset = panel.size / 2.0
-	var tween = create_tween()
-	tween.tween_property(panel, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	AudioManager.play_pop()
+	UIEffects.popup(food_market_popup, true)
 
 func _close_food_market() -> void:
-	if not food_market_popup:
-		return
-	if AudioManager:
-		AudioManager.play_pop()
-	var panel = food_market_popup.get_node("Panel")
-	var tween = create_tween()
-	tween.tween_property(panel, "scale", Vector2(0.84, 0.84), 0.14).set_ease(Tween.EASE_IN)
-	tween.finished.connect(func(): food_market_popup.visible = false)
+	UIEffects.popup(food_market_popup, false)
 
 func _update_market_balance() -> void:
 	if gm and market_balance_label:
@@ -960,9 +939,13 @@ func _update_market_balance() -> void:
 
 
 func _populate_market_grid() -> void:
+	if gm and not _market_quantities.is_empty() and _market_quantities == gm.food_inventory:
+		return
+	_market_quantities = gm.food_inventory.duplicate(true) if gm else {}
 	if not market_grid:
 		return
 	for child in market_grid.get_children():
+		market_grid.remove_child(child)
 		child.queue_free()
 
 	var catalog = gm.FOOD_CATALOG if gm else []
@@ -1216,16 +1199,13 @@ func _navigate_food_details(dir: int) -> void:
 	_update_food_details_view()
 
 func _open_food_details(food_data: Dictionary) -> void:
-	if food_data.is_empty() and gm and not gm.FOOD_CATALOG.is_empty():
+	if not food_details_popup:
+		_setup_food_details_popup()
+	if food_data.is_empty() and gm:
 		food_data = gm.FOOD_CATALOG[0]
 	current_inspected_food = food_data
 	_update_food_details_view()
-	food_details_popup.visible = true
-	var panel = food_details_popup.get_node("Panel")
-	panel.scale = Vector2(0.7, 0.7)
-	panel.pivot_offset = panel.size / 2.0
-	var tween = create_tween()
-	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	UIEffects.popup(food_details_popup, true)
 
 func _update_food_details_view() -> void:
 	if current_inspected_food.is_empty():
@@ -1253,14 +1233,8 @@ func _update_food_details_view() -> void:
 	_decorate_button_with_art(details_buy_btn, str(V6_ART["shop_coin"]), str(UI_ICON["coin"]), str(f.get("price", 10)) + " MONEDAS  ·  COMPRAR", 46, 21)
 
 func _close_food_details() -> void:
-	if not food_details_popup:
-		return
-	var panel = food_details_popup.get_node("Panel")
-	var tween = create_tween()
-	tween.tween_property(panel, "scale", Vector2(0.7, 0.7), 0.15).set_ease(Tween.EASE_IN)
-	tween.finished.connect(func():
-		food_details_popup.visible = false
-	)
+	if food_details_popup:
+		UIEffects.popup(food_details_popup, false)
 
 func _create_card_style(bg_col: Color, border_col: Color) -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
@@ -1322,38 +1296,26 @@ func _make_category_art(parent: VBoxContainer, node_name: String, texture_path: 
 	parent.add_child(art)
 
 
-func _decorate_shop_slot(button: Button, icon_path: String, top_text: String, bottom_text: String, icon_width: int = 78) -> void:
-	if not button:
-		return
+func _decorate_shop_slot(button: Button, icon_path: String, top_text: String, bottom_text: String, icon_width: int = 112) -> void:
 	button.text = ""
 	button.icon = null
-	button.expand_icon = false
-	button.focus_mode = Control.FOCUS_NONE
-	button.flat = true
-	button.clip_contents = false
-	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-
-	var old_bg := button.get_node_or_null("V7ProductBG")
-	if old_bg:
-		old_bg.queue_free()
-	var old_icon := button.get_node_or_null("V7ProductIcon")
-	if old_icon:
-		old_icon.queue_free()
-	var old_label := button.get_node_or_null("V7ProductLabel")
-	if old_label:
-		old_label.queue_free()
-
-	var bg := TextureRect.new()
-	bg.name = "V8SlotBG"
-	bg.texture = _load_ui_texture(str(V7_ART["food_crate"]))
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bg.show_behind_parent = true
-	button.add_child(bg)
-
+	button.flat = false
+	button.custom_minimum_size = Vector2(275, 246)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for child in button.get_children():
+		button.remove_child(child)
+		child.queue_free()
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("#FFFCF3") if state != "pressed" else Color("#F4DFA4")
+		style.border_color = Color("#D4AE64")
+		style.set_border_width_all(2)
+		style.set_corner_radius_all(22)
+		if state == "hover":
+			style.border_color = Color("#87552F")
+		if state == "disabled":
+			style.bg_color = Color("#E6DDD0")
+		button.add_theme_stylebox_override(state, style)
 	var icon := TextureRect.new()
 	icon.name = "V8SlotIcon"
 	icon.texture = _load_ui_texture(icon_path)
@@ -1361,194 +1323,155 @@ func _decorate_shop_slot(button: Button, icon_path: String, top_text: String, bo
 	icon.anchor_right = 0.5
 	icon.offset_left = -float(icon_width) * 0.5
 	icon.offset_right = float(icon_width) * 0.5
-	icon.offset_top = 22.0
-	icon.offset_bottom = 22.0 + float(icon_width)
+	icon.offset_top = 12.0
+	icon.offset_bottom = 12.0 + float(icon_width)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(icon)
-
-	var title := Label.new()
-	title.name = "V8SlotTitle"
-	title.anchor_left = 0.05
-	title.anchor_right = 0.95
-	title.anchor_top = 0.55
-	title.anchor_bottom = 0.73
-	title.text = top_text
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 19)
-	title.add_theme_color_override("font_color", Color("#5A2D1B"))
-	title.add_theme_color_override("font_outline_color", Color("#FFF0C8"))
-	title.add_theme_constant_override("outline_size", 3)
-	button.add_child(title)
-
-	var sub := Label.new()
-	sub.name = "V8SlotSub"
-	sub.anchor_left = 0.05
-	sub.anchor_right = 0.95
-	sub.anchor_top = 0.72
-	sub.anchor_bottom = 0.96
-	sub.text = bottom_text
-	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	sub.add_theme_font_size_override("font_size", 16)
-	sub.add_theme_color_override("font_color", Color("#7A4A30"))
-	button.add_child(sub)
+	for data in [["V8SlotTitle", top_text, 135, 174, 26], ["V8SlotSub", bottom_text, 174, 238, 23]]:
+		var label := Label.new()
+		label.name = data[0]
+		label.text = data[1]
+		label.anchor_left = 0.04
+		label.anchor_right = 0.96
+		label.offset_top = data[2]
+		label.offset_bottom = data[3]
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		label.add_theme_font_size_override("font_size", data[4])
+		label.add_theme_color_override("font_color", Color("#573726"))
+		button.add_child(label)
 	_bind_image_button_feedback(button)
 
-
 func _setup_shop_modal() -> void:
-	var panel := shop_popup.get_node_or_null("Panel") as PanelContainer
-	var title_lbl := shop_popup.get_node_or_null("Panel/Margin/VBox/HeaderRow/Title") as Label
-	if panel:
-		_decorate_panel_with_frame(panel, str(V7_ART["window_frame"]))
-		# V8: el marco ya tiene una placa superior; no usamos el letrero colgante
-		# gigante que desacomodaba el contenido.
-		var old_sign := panel.get_node_or_null("V7TitleSign")
-		if old_sign: old_sign.queue_free()
-		var old_text := panel.get_node_or_null("V7TitleText")
-		if old_text: old_text.queue_free()
-
-	# Título centrado sobre la placa de madera del marco.
-	if panel and not panel.has_node("V8ShopTitle"):
-		var board_title := Label.new()
-		board_title.name = "V8ShopTitle"
-		board_title.position = Vector2(190, 35)
-		board_title.size = Vector2(620, 90)
-		board_title.text = "TIENDA DE WONKY"
-		board_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		board_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_style_caption(board_title, 34, Color("#FFF2CC"))
-		board_title.add_theme_color_override("font_outline_color", Color("#4A2417"))
-		panel.add_child(board_title)
-
-	var margin := shop_popup.get_node_or_null("Panel/Margin") as MarginContainer
-	if margin:
-		margin.add_theme_constant_override("margin_left", 58)
-		margin.add_theme_constant_override("margin_right", 58)
-		margin.add_theme_constant_override("margin_top", 180)
-		margin.add_theme_constant_override("margin_bottom", 58)
-
-	var header := shop_popup.get_node_or_null("Panel/Margin/VBox/HeaderRow") as HBoxContainer
-	if header:
-		header.custom_minimum_size.y = 96
-		header.add_theme_constant_override("separation", 12)
-
-	if title_lbl:
-		title_lbl.visible = false
-
-	if shop_coins_balance:
-		shop_coins_balance.add_theme_font_size_override("font_size", 19)
-		shop_coins_balance.add_theme_color_override("font_color", Color("#6B391F"))
-	if shop_diamonds_balance:
-		shop_diamonds_balance.add_theme_font_size_override("font_size", 19)
-		shop_diamonds_balance.add_theme_color_override("font_color", Color("#2471A3"))
-	if btn_close_shop:
-		_set_image_button(btn_close_shop, str(UI_ICON["close"]), 48, Vector2(62, 62))
-
-	var content := shop_popup.get_node_or_null("Panel/Margin/VBox/Scroll/ContentVBox") as VBoxContainer
-	if content:
-		content.add_theme_constant_override("separation", 16)
-
-		# Quitar el puesto gigante repetido de V7 y usar una portada compacta.
-		var old_hero := content.get_node_or_null("V7ShopHero")
-		if old_hero:
-			old_hero.queue_free()
-		if not content.has_node("V8ShopHero"):
-			var hero := TextureRect.new()
-			hero.name = "V8ShopHero"
-			hero.texture = _load_ui_texture(str(V7_ART["shop_main"]))
-			hero.custom_minimum_size = Vector2(0, 220)
-			hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			content.add_child(hero)
-			content.move_child(hero, 0)
-
-	var sec_iap := shop_popup.get_node_or_null("Panel/Margin/VBox/Scroll/ContentVBox/SecIapTitle") as Label
-	var sec_exch := shop_popup.get_node_or_null("Panel/Margin/VBox/Scroll/ContentVBox/SecExchangeTitle") as Label
-	var sec_pots := shop_popup.get_node_or_null("Panel/Margin/VBox/Scroll/ContentVBox/SecPotionsTitle") as Label
-	var sec_rew := shop_popup.get_node_or_null("Panel/Margin/VBox/Scroll/ContentVBox/SecRewardsTitle") as Label
-	if sec_iap: sec_iap.text = "DIAMANTES"
-	if sec_exch: sec_exch.text = "MONEDAS"
-	if sec_pots: sec_pots.text = "POCIONES"
-	if sec_rew: sec_rew.text = "REGALOS"
-	_style_v6_section(sec_iap, Color("#2689C8"))
-	_style_v6_section(sec_exch, Color("#B46B1B"))
-	_style_v6_section(sec_pots, Color("#7D49AF"))
-	_style_v6_section(sec_rew, Color("#CF5574"))
-
-	for grid_path in [
-		"Panel/Margin/VBox/Scroll/ContentVBox/IapGrid",
-		"Panel/Margin/VBox/Scroll/ContentVBox/ExchangeGrid",
-		"Panel/Margin/VBox/Scroll/ContentVBox/PotionsGrid"
-	]:
-		var grid := shop_popup.get_node_or_null(grid_path) as GridContainer
-		if grid:
-			grid.columns = 3
-			grid.add_theme_constant_override("h_separation", 12)
-			grid.add_theme_constant_override("v_separation", 12)
-
-	# Cada producto ahora es un cajón de tienda con un icono claro; dejamos de
-	# repetir tres puestos completos de diamantes/monedas.
-	_decorate_shop_slot(btn_iap_50, str(UI_ICON["diamond"]), "50 DIAMANTES", "$0.99 USD", 72)
-	_decorate_shop_slot(btn_iap_300, str(UI_ICON["diamond"]), "300 DIAMANTES", "$2.99 USD", 82)
-	_decorate_shop_slot(btn_iap_1000, str(UI_ICON["diamond"]), "1000 DIAMANTES", "$7.99 USD", 92)
-	_decorate_shop_slot(btn_exch_250, str(UI_ICON["coin"]), "+250 MONEDAS", "10 DIAMANTES", 72)
-	_decorate_shop_slot(btn_exch_1000, str(UI_ICON["coin"]), "+1000 MONEDAS", "30 DIAMANTES", 82)
-	_decorate_shop_slot(btn_exch_3500, str(UI_ICON["coin"]), "+3500 MONEDAS", "80 DIAMANTES", 92)
-	_decorate_shop_slot(btn_pot_energy, str(V7_ART["potion_energy"]), "ENERGÍA 100%", "80 MON. / 4 DIAM.", 86)
-	_decorate_shop_slot(btn_pot_hygiene, str(V7_ART["potion_hygiene"]), "HIGIENE 100%", "60 MON. / 3 DIAM.", 86)
-	_decorate_shop_slot(btn_pot_mega, str(V7_ART["potion_supreme"]), "SUPREMA", "200 MON. / 10 DIAM.", 86)
-	_decorate_shop_slot(btn_pack_daily, str(UI_ICON["daily"]), "REGALO DIARIO", "+20 MON. +1 DIAM.", 82)
-	_decorate_shop_slot(btn_pack_ad, str(UI_ICON["ad"]), "VER VIDEO", "+15 MONEDAS", 82)
-
-	for b in [btn_iap_50, btn_iap_300, btn_iap_1000, btn_exch_250, btn_exch_1000, btn_exch_3500, btn_pot_energy, btn_pot_hygiene, btn_pot_mega]:
-		if b:
-			b.custom_minimum_size = Vector2(275, 205)
-	for b in [btn_pack_daily, btn_pack_ad]:
-		if b:
-			b.custom_minimum_size = Vector2(420, 205)
-
-	if btn_coins: btn_coins.pressed.connect(_open_shop)
-	if btn_diamonds: btn_diamonds.pressed.connect(_open_shop)
-	if btn_close_shop: btn_close_shop.pressed.connect(_close_shop)
-	if btn_iap_50: btn_iap_50.pressed.connect(func(): _prompt_iap_purchase(50, 0.99, "Bolsita de Gemas"))
-	if btn_iap_300: btn_iap_300.pressed.connect(func(): _prompt_iap_purchase(300, 2.99, "Cofre de Gemas"))
-	if btn_iap_1000: btn_iap_1000.pressed.connect(func(): _prompt_iap_purchase(1000, 7.99, "Bóveda de Gemas"))
-	if btn_exch_250: btn_exch_250.pressed.connect(func(): _exchange_diamonds_for_coins(10, 250))
-	if btn_exch_1000: btn_exch_1000.pressed.connect(func(): _exchange_diamonds_for_coins(30, 1000))
-	if btn_exch_3500: btn_exch_3500.pressed.connect(func(): _exchange_diamonds_for_coins(80, 3500))
-	if btn_pot_energy: btn_pot_energy.pressed.connect(func(): _buy_potion("energy", 80, 4))
-	if btn_pot_hygiene: btn_pot_hygiene.pressed.connect(func(): _buy_potion("hygiene", 60, 3))
-	if btn_pot_mega: btn_pot_mega.pressed.connect(func(): _buy_potion("mega", 200, 10))
-	if btn_pack_daily: btn_pack_daily.pressed.connect(_claim_daily_reward)
-	if btn_pack_ad: btn_pack_ad.pressed.connect(_claim_ad_reward)
-	_setup_iap_confirm_popup()
+	# Preserve the existing button references and signals while replacing the
+	# overlapping frame with a container-driven, scrollable layout.
+	var retained: Array[Control] = [shop_coins_balance, shop_diamonds_balance,
+		btn_close_shop, btn_iap_50, btn_iap_300, btn_iap_1000, btn_exch_250,
+		btn_exch_1000, btn_exch_3500, btn_pot_energy, btn_pot_hygiene,
+		btn_pot_mega, btn_pack_daily, btn_pack_ad]
+	for control in retained:
+		control.reparent(shop_popup, false)
+	var old_panel := shop_popup.get_node("Panel")
+	shop_popup.remove_child(old_panel)
+	old_panel.queue_free()
+	var panel := PanelContainer.new()
+	panel.name = "Panel"
+	panel.position = Vector2(60, 235)
+	panel.size = Vector2(960, 1450)
+	var frame := StyleBoxFlat.new()
+	frame.bg_color = Color("#FFF1D5")
+	frame.border_color = Color("#B58B49")
+	frame.set_border_width_all(5)
+	frame.set_corner_radius_all(36)
+	frame.shadow_color = Color(0.08, 0.03, 0.01, 0.45)
+	frame.shadow_size = 16
+	panel.add_theme_stylebox_override("panel", frame)
+	shop_popup.add_child(panel)
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 30)
+	panel.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 18)
+	margin.add_child(box)
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 16)
+	box.add_child(header)
+	var art := TextureRect.new()
+	art.texture = _load_ui_texture(str(V7_ART["shop_main"]))
+	art.custom_minimum_size = Vector2(115, 105)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_child(art)
+	var title := Label.new()
+	title.text = "TIENDA DE WONKY"
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_theme_font_size_override("font_size", 38)
+	title.add_theme_color_override("font_color", Color("#573726"))
+	header.add_child(title)
+	btn_close_shop.reparent(header, false)
+	_set_image_button(btn_close_shop, str(UI_ICON["close"]), 68, Vector2(90, 95))
+	var wallet := HBoxContainer.new()
+	wallet.add_theme_constant_override("separation", 18)
+	box.add_child(wallet)
+	for item in [[UI_ICON["coin"], shop_coins_balance], [UI_ICON["diamond"], shop_diamonds_balance]]:
+		var icon := TextureRect.new()
+		icon.texture = _load_ui_texture(item[0])
+		icon.custom_minimum_size = Vector2(52, 52)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		wallet.add_child(icon)
+		var balance: Label = item[1]
+		balance.reparent(wallet, false)
+		balance.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		balance.add_theme_font_size_override("font_size", 30)
+		balance.add_theme_color_override("font_color", Color("#573726"))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(scroll)
+	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 16)
+	scroll.add_child(content)
+	var sections := [
+		["CANJEA TUS DIAMANTES", [btn_exch_250, btn_exch_1000, btn_exch_3500]],
+		["POCIONES", [btn_pot_energy, btn_pot_hygiene, btn_pot_mega]],
+		["RECOMPENSAS", [btn_pack_daily, btn_pack_ad]]]
+	for section in sections:
+		var heading := Label.new()
+		heading.text = section[0]
+		heading.add_theme_font_size_override("font_size", 29)
+		heading.add_theme_color_override("font_color", Color("#785033"))
+		content.add_child(heading)
+		var grid := GridContainer.new()
+		grid.columns = section[1].size()
+		grid.add_theme_constant_override("h_separation", 14)
+		grid.add_theme_constant_override("v_separation", 14)
+		content.add_child(grid)
+		for button in section[1]:
+			button.reparent(grid, false)
+	_decorate_shop_slot(btn_exch_250, str(UI_ICON["coin"]), "+250 monedas", "10 diamantes")
+	_decorate_shop_slot(btn_exch_1000, str(UI_ICON["coin"]), "+1000 monedas", "30 diamantes")
+	_decorate_shop_slot(btn_exch_3500, str(UI_ICON["coin"]), "+3500 monedas", "80 diamantes")
+	_decorate_shop_slot(btn_pot_energy, str(V7_ART["potion_energy"]), "Energía al 100%", "80 monedas / 4 diamantes")
+	_decorate_shop_slot(btn_pot_hygiene, str(V7_ART["potion_hygiene"]), "Higiene al 100%", "60 monedas / 3 diamantes")
+	_decorate_shop_slot(btn_pot_mega, str(V7_ART["potion_supreme"]), "Suprema", "200 monedas / 10 diamantes")
+	_decorate_shop_slot(btn_pack_daily, str(UI_ICON["daily"]), "Regalo diario", "+20 monedas +1 diamante")
+	_decorate_shop_slot(btn_pack_ad, str(UI_ICON["ad"]), "Anuncios", "No disponibles")
+	var note := Label.new()
+	note.text = "Las pociones usan monedas primero; diamantes solo si no alcanzan.\nLas compras con dinero real y los anuncios no están disponibles."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.add_theme_font_size_override("font_size", 23)
+	note.add_theme_color_override("font_color", Color("#785033"))
+	content.add_child(note)
+	btn_close_shop.pressed.connect(_close_shop)
+	btn_exch_250.pressed.connect(func(): _exchange_diamonds_for_coins(10, 250))
+	btn_exch_1000.pressed.connect(func(): _exchange_diamonds_for_coins(30, 1000))
+	btn_exch_3500.pressed.connect(func(): _exchange_diamonds_for_coins(80, 3500))
+	btn_pot_energy.pressed.connect(func(): _buy_potion("energy", 80, 4))
+	btn_pot_hygiene.pressed.connect(func(): _buy_potion("hygiene", 60, 3))
+	btn_pot_mega.pressed.connect(func(): _buy_potion("mega", 200, 10))
+	btn_pack_daily.pressed.connect(_claim_daily_reward)
+	_configure_unavailable_services()
 
 func _open_shop() -> void:
-	if AudioManager:
-		AudioManager.play_pop()
+	if not _shop_ready:
+		_setup_shop_modal()
+		_shop_ready = true
 	_update_shop_balance()
 	_update_shop_timers()
-	shop_popup.visible = true
-	var panel = shop_popup.get_node("Panel")
-	panel.scale = Vector2(0.7, 0.7)
-	panel.pivot_offset = panel.size / 2.0
-	var tween = create_tween()
-	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	AudioManager.play_pop()
+	UIEffects.popup(shop_popup, true)
 
 func _close_shop() -> void:
-	if AudioManager:
-		AudioManager.play_pop()
-	var panel = shop_popup.get_node("Panel")
-	var tween = create_tween()
-	tween.tween_property(panel, "scale", Vector2(0.7, 0.7), 0.15).set_ease(Tween.EASE_IN)
-	tween.finished.connect(func():
-		shop_popup.visible = false
-	)
+	UIEffects.popup(shop_popup, false)
 
 func _update_shop_balance() -> void:
 	if not gm:
@@ -1559,244 +1482,52 @@ func _update_shop_balance() -> void:
 		shop_diamonds_balance.text = str(gm.diamonds) + " diamantes"
 
 func _update_shop_timers() -> void:
-	if not gm:
+	if not gm or not btn_pack_daily:
 		return
-	var now: int = int(Time.get_unix_time_from_system())
-
-	# Recompensa Diaria (24 Horas)
-	if btn_pack_daily:
-		var daily_label := btn_pack_daily.get_node_or_null("V8SlotSub") as Label
-		if gm.last_daily_reward_time == 0 or (now - gm.last_daily_reward_time) >= 86400:
-			if daily_label:
-				daily_label.text = "+20 MON. +1 DIAM. · ¡RECLAMAR!"
-			else:
-				_set_button_icon(btn_pack_daily, str(UI_ICON["daily"]), "Recompensa diaria\n+20 monedas  +1 diamante\nRECLAMAR", 62)
-			btn_pack_daily.modulate = Color.WHITE
-		else:
-			var wait_sec: int = maxi(0, 86400 - (now - gm.last_daily_reward_time))
-			var h: int = wait_sec / 3600
-			var m: int = (wait_sec % 3600) / 60
-			var s: int = wait_sec % 60
-			if daily_label:
-				daily_label.text = "LISTO EN %02dh %02dm %02ds" % [h, m, s]
-			else:
-				_set_button_icon(btn_pack_daily, str(UI_ICON["daily"]), "Recompensa diaria\nEn %02dh %02dm %02ds\nESPERA" % [h, m, s], 62)
-			btn_pack_daily.modulate = Color(0.72, 0.72, 0.72, 1.0)
-
-	# Anuncio (2 minutos)
-	if btn_pack_ad:
-		var ad_label := btn_pack_ad.get_node_or_null("V8SlotSub") as Label
-		if gm.last_ad_reward_time == 0 or (now - gm.last_ad_reward_time) >= 120:
-			if ad_label:
-				ad_label.text = "+15 MONEDAS · ¡VER!"
-			else:
-				_set_button_icon(btn_pack_ad, str(UI_ICON["ad"]), "Ver anuncio\n+15 monedas\nVER VIDEO", 62)
-			btn_pack_ad.modulate = Color.WHITE
-		else:
-			var wait_sec: int = maxi(0, 120 - (now - gm.last_ad_reward_time))
-			var m: int = wait_sec / 60
-			var s: int = wait_sec % 60
-			if ad_label:
-				ad_label.text = "VER VIDEO\nESPERA %02d:%02d" % [m, s]
-			else:
-				_set_button_icon(btn_pack_ad, str(UI_ICON["ad"]), "Ver anuncio\nEspera %02d:%02d\nESPERA" % [m, s], 62)
-			btn_pack_ad.modulate = Color(0.72, 0.72, 0.72, 1.0)
+	var now := int(Time.get_unix_time_from_system())
+	var ready: bool = gm.last_daily_reward_time == 0 or now - gm.last_daily_reward_time >= 86400
+	btn_pack_daily.disabled = not ready
+	var label := btn_pack_daily.get_node_or_null("V8SlotSub") as Label
+	if label:
+		var remaining := maxi(0, 86400 - (now - gm.last_daily_reward_time))
+		UIEffects.set_text(label, "+20 MONEDAS +1 DIAMANTE" if ready else "VUELVE EN %02d:%02d:%02d" % [remaining / 3600, (remaining % 3600) / 60, remaining % 60])
+	btn_pack_ad.disabled = true
 
 func _claim_daily_reward() -> void:
-	if not gm:
-		return
-	var now: int = int(Time.get_unix_time_from_system())
-	if gm.last_daily_reward_time == 0 or (now - gm.last_daily_reward_time) >= 86400:
-		gm.last_daily_reward_time = now
-		gm.add_coins(20)
-		gm.add_diamonds(1)
-		gm.save_game()
-		_update_shop_balance()
-		_update_shop_timers()
-		gm.show_floating_text.emit("Recompensa diaria: +20 monedas +1 diamante", Vector2(540, 850), Color(1.0, 0.85, 0.2))
-	else:
-		var wait_sec: int = maxi(0, 86400 - (now - gm.last_daily_reward_time))
-		var h: int = wait_sec / 3600
-		var m: int = (wait_sec % 3600) / 60
-		gm.show_floating_text.emit("Vuelve en %02dh %02dm" % [h, m], Vector2(540, 850), Color(1.0, 0.6, 0.3))
+	if gm and gm.claim_daily_reward():
+		AudioManager.play_coins()
+		_show_notice("Recompensa diaria: +20 monedas +1 diamante", Vector2.ZERO, Color(1, 0.85, 0.2))
+	_update_shop_balance()
+	_update_shop_timers()
 
 func _claim_ad_reward() -> void:
-	if not gm:
-		return
-	var now: int = int(Time.get_unix_time_from_system())
-	if gm.last_ad_reward_time == 0 or (now - gm.last_ad_reward_time) >= 120:
-		gm.last_ad_reward_time = now
-		gm.add_coins(15)
-		gm.save_game()
-		_update_shop_balance()
-		_update_shop_timers()
-		gm.show_floating_text.emit("Video completado: +15 monedas", Vector2(540, 850), Color(0.4, 1.0, 0.6))
-	else:
-		var wait_sec: int = maxi(0, 120 - (now - gm.last_ad_reward_time))
-		var m: int = wait_sec / 60
-		var s: int = wait_sec % 60
-		gm.show_floating_text.emit("Espera %02d:%02d" % [m, s], Vector2(540, 850), Color(1.0, 0.6, 0.3))
+	_show_notice("Anuncios no disponibles. No se conceden recompensas simuladas.", Vector2.ZERO, Color(1, 0.85, 0.5))
 
 func _exchange_diamonds_for_coins(gem_cost: int, coin_gain: int) -> void:
-	if not gm:
-		return
-	if gm.spend_diamonds(gem_cost):
-		gm.add_coins(coin_gain)
-		gm.save_game()
-		_update_shop_balance()
-		gm.show_floating_text.emit("Canje exitoso: +" + str(coin_gain) + " monedas", Vector2(540, 850), Color(1.0, 0.85, 0.2))
+	if gm and gm.exchange_diamonds(gem_cost, coin_gain):
+		AudioManager.play_coins()
+		_show_notice("Canje guardado: +%d monedas" % coin_gain, Vector2.ZERO, Color(1, 0.85, 0.2))
 	else:
-		gm.show_floating_text.emit("Necesitas " + str(gem_cost) + " diamantes", Vector2(540, 850), Color(1.0, 0.4, 0.4))
-
-func _buy_potion(pot_type: String, coin_cost: int, gem_cost: int) -> void:
-	if not gm:
-		return
-	var paid: bool = false
-	var payment_msg: String = ""
-
-	if gm.spend_coins(coin_cost):
-		paid = true
-		payment_msg = " (-" + str(coin_cost) + " monedas)"
-	elif gm.spend_diamonds(gem_cost):
-		paid = true
-		payment_msg = " (-" + str(gem_cost) + " diamantes)"
-
-	if not paid:
-		gm.show_floating_text.emit("Requiere " + str(coin_cost) + " monedas o " + str(gem_cost) + " diamantes", Vector2(540, 850), Color(1.0, 0.4, 0.4))
-		return
-
-	if AudioManager:
-		AudioManager.play_potion()
-
-	match pot_type:
-		"energy":
-			gm.energy = 100.0
-			gm.show_floating_text.emit("Energía al 100%" + payment_msg, Vector2(540, 900), Color(1.0, 0.9, 0.2))
-		"hygiene":
-			gm.hygiene = 100.0
-			gm.show_floating_text.emit("Higiene al 100%" + payment_msg, Vector2(540, 900), Color(0.3, 0.9, 1.0))
-		"mega":
-			gm.hunger = 100.0
-			gm.protein = 100.0
-			gm.energy = 100.0
-			gm.fun = 100.0
-			gm.hygiene = 100.0
-			gm.show_floating_text.emit("Poción suprema usada" + payment_msg, Vector2(540, 900), Color(1.0, 0.4, 1.0))
-
-	gm.save_game()
+		_show_notice("No se realizó el canje. Revisa tu saldo y el guardado.", Vector2.ZERO, Color(1, 0.7, 0.5))
 	_update_shop_balance()
 
-# Modal IAP Simulado para Comprar Diamantes
-func _setup_iap_confirm_popup() -> void:
-	iap_confirm_popup = Control.new()
-	iap_confirm_popup.name = "IapConfirmPopup"
-	iap_confirm_popup.visible = false
-	iap_confirm_popup.z_index = 90
-	iap_confirm_popup.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(iap_confirm_popup)
+func _buy_potion(pot_type: String, _coin_cost: int, _gem_cost: int) -> void:
+	if gm and gm.buy_potion(pot_type):
+		AudioManager.play_potion()
+		_show_notice("Poción aplicada y guardada", Vector2.ZERO, Color(0.5, 1, 0.7), "res://imagenes/opt/reacciones/check.png")
+	else:
+		_show_notice("Sin cobro: revisa saldo, estadísticas y guardado.", Vector2.ZERO, Color(1, 0.8, 0.5), "res://imagenes/opt/reacciones/alerta.png")
+	_update_shop_balance()
 
-	var backdrop = ColorRect.new()
-	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	backdrop.color = Color(0, 0, 0, 0.8)
-	backdrop.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed:
-			iap_confirm_popup.visible = false
-	)
-	iap_confirm_popup.add_child(backdrop)
+func _configure_unavailable_services() -> void:
+	# No billing/ad SDK is installed. Never pretend a purchase or video succeeded.
+	for button in [btn_iap_50, btn_iap_300, btn_iap_1000]:
+		button.disabled = true
+		button.hide()
+		button.tooltip_text = "Compras con dinero real no disponibles"
+	btn_pack_ad.disabled = true
+	btn_pack_ad.tooltip_text = "No hay proveedor de anuncios conectado"
 
-	var panel = PanelContainer.new()
-	panel.name = "Panel"
-	panel.custom_minimum_size = Vector2(800, 520)
-	panel.size = Vector2(800, 520)
-	panel.position = Vector2(140, 700)
-	panel.add_theme_stylebox_override("panel", _create_card_style(Color(0.16, 0.12, 0.25, 0.98), Color(0.4, 0.85, 1.0)))
-	iap_confirm_popup.add_child(panel)
-
-	var margin = MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 36)
-	margin.add_theme_constant_override("margin_right", 36)
-	margin.add_theme_constant_override("margin_top", 32)
-	margin.add_theme_constant_override("margin_bottom", 32)
-	panel.add_child(margin)
-
-	var vbox = VBoxContainer.new()
-	vbox.name = "VBox"
-	vbox.add_theme_constant_override("separation", 24)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	margin.add_child(vbox)
-
-	var title = Label.new()
-	title.name = "Title"
-	title.text = "TIENDA OFICIAL (IAP SIMULADO)"
-	title.add_theme_font_size_override("font_size", 34)
-	title.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(title)
-
-	var desc = Label.new()
-	desc.name = "Desc"
-	desc.text = "¿Deseas adquirir este paquete de Diamantes?"
-	desc.add_theme_font_size_override("font_size", 24)
-	desc.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95))
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(desc)
-
-	var hbox = HBoxContainer.new()
-	hbox.name = "HBox"
-	hbox.add_theme_constant_override("separation", 20)
-	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-
-	var btn_cancel = Button.new()
-	btn_cancel.custom_minimum_size = Vector2(280, 80)
-	_set_button_icon(btn_cancel, str(UI_ICON["close"]), "Cancelar", 44)
-	btn_cancel.add_theme_font_size_override("font_size", 28)
-	btn_cancel.add_theme_stylebox_override("normal", _create_card_style(Color(0.3, 0.3, 0.4), Color(0.6, 0.6, 0.7)))
-	btn_cancel.pressed.connect(func():
-		iap_confirm_popup.visible = false
-	)
-	hbox.add_child(btn_cancel)
-
-	var btn_confirm = Button.new()
-	btn_confirm.name = "BtnConfirm"
-	btn_confirm.custom_minimum_size = Vector2(280, 80)
-	_set_button_icon(btn_confirm, str(UI_ICON["diamond"]), "Comprar", 44)
-	btn_confirm.add_theme_font_size_override("font_size", 28)
-	btn_confirm.add_theme_stylebox_override("normal", _create_card_style(Color(0.18, 0.6, 0.35), Color(0.4, 0.95, 0.55)))
-	btn_confirm.pressed.connect(func():
-		if gm and not current_iap_pack.is_empty():
-			var gems = current_iap_pack.get("gems", 0)
-			var price = current_iap_pack.get("price", 0.0)
-			gm.add_diamonds(gems)
-			gm.save_game()
-			_update_shop_balance()
-			gm.show_floating_text.emit("+" + str(gems) + " diamantes comprados", Vector2(540, 800), Color(0.4, 0.9, 1.0))
-		iap_confirm_popup.visible = false
-	)
-	hbox.add_child(btn_confirm)
-	vbox.add_child(hbox)
-
-func _prompt_iap_purchase(gems: int, price: float, pack_name: String) -> void:
-	current_iap_pack = {
-		"gems": gems,
-		"price": price,
-		"name": pack_name
-	}
-	if not iap_confirm_popup:
-		return
-	var desc = iap_confirm_popup.get_node_or_null("Panel/Margin/VBox/Desc")
-	if desc:
-		desc.text = "Paquete: " + pack_name + "\nRecibes: " + str(gems) + " diamantes\nPrecio: $" + str(price) + " USD\n\n¿Confirmar transacción simulada?"
-	var btn_conf: Button = iap_confirm_popup.get_node_or_null("Panel/Margin/VBox/HBox/BtnConfirm") as Button
-	if btn_conf:
-		_set_button_icon(btn_conf, str(UI_ICON["diamond"]), "Pagar $" + str(price), 44)
-	
-	iap_confirm_popup.visible = true
-	var panel = iap_confirm_popup.get_node("Panel")
-	panel.scale = Vector2(0.6, 0.6)
-	panel.pivot_offset = panel.size / 2.0
-	var tween = create_tween()
-	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func _setup_custom_stat_bars() -> void:
@@ -1925,17 +1656,9 @@ func _update_stat_ui(stat_name: String, value: float, max_val: float) -> void:
 		tween.tween_property(pretty, "value", value, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 	if target_label:
-		match stat_name:
-			"hunger":
-				target_label.text = "HAMBRE  " + str(int(value)) + "%"
-			"protein":
-				target_label.text = "PROTEÍNA  " + str(int(value)) + "%"
-			"energy":
-				target_label.text = "SUEÑO  " + str(int(value)) + "%"
-			"fun":
-				target_label.text = "JUEGO  " + str(int(value)) + "%"
-			"hygiene":
-				target_label.text = "HIGIENE  " + str(int(value)) + "%"
+		var names := {"hunger": "Hambre", "protein": "Proteína", "energy": "Energía", "fun": "Juego", "hygiene": "Higiene"}
+		UIEffects.set_text(target_label, "%s\n%d%%" % [names.get(stat_name, stat_name), int(value)])
+		target_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func _on_coins_changed(new_coins: int) -> void:
 	if coins_label:
@@ -2028,9 +1751,8 @@ func _update_room_view(room_name: String) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		if iap_confirm_popup and iap_confirm_popup.visible:
-			iap_confirm_popup.visible = false
-		elif confirm_reset_popup and confirm_reset_popup.visible:
+		get_viewport().set_input_as_handled()
+		if confirm_reset_popup and confirm_reset_popup.visible:
 			confirm_reset_popup.visible = false
 		elif settings_popup and settings_popup.visible:
 			_close_settings_modal()
@@ -2127,8 +1849,12 @@ func _add_settings_icon_toggle(parent: HBoxContainer, title_text: String, on_ico
 	button.set_meta("settings_accent", accent)
 	_set_image_button(button, on_icon, 112, Vector2(220, 205), title_text, 24)
 
-	# V8: sin círculo/halo genérico detrás. La ilustración queda limpia y el
-	# estado aparece como una pequeña etiqueta debajo.
+	var caption := button.get_node("ButtonLabel") as Label
+	caption.offset_top = -68.0
+	caption.offset_bottom = -34.0
+	caption.add_theme_font_size_override("font_size", 30)
+	caption.add_theme_constant_override("outline_size", 0)
+	# Keep the state badge below, not on top of the caption.
 	var state := Label.new()
 	state.name = "StateBadge"
 	state.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2138,11 +1864,11 @@ func _add_settings_icon_toggle(parent: HBoxContainer, title_text: String, on_ico
 	state.anchor_bottom = 1.0
 	state.offset_left = -76.0
 	state.offset_right = 76.0
-	state.offset_top = -24.0
-	state.offset_bottom = 6.0
+	state.offset_top = -28.0
+	state.offset_bottom = 0.0
 	state.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	state.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	state.add_theme_font_size_override("font_size", 16)
+	state.add_theme_font_size_override("font_size", 21)
 	state.add_theme_color_override("font_outline_color", Color("#FFF4D8"))
 	state.add_theme_constant_override("outline_size", 3)
 	button.add_child(state)
@@ -2221,7 +1947,7 @@ func _setup_settings_modal() -> void:
 	content.position = Vector2(82, 178)
 	content.size = Vector2(696, 760)
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
-	content.add_theme_constant_override("separation", 20)
+	content.add_theme_constant_override("separation", 12)
 	panel.add_child(content)
 
 	var intro := Label.new()
@@ -2256,6 +1982,26 @@ func _setup_settings_modal() -> void:
 			_update_settings_ui()
 	)
 
+	_effects_toggle = Button.new()
+	_effects_toggle.toggle_mode = true
+	_effects_toggle.text = "Efectos reducidos: " + ("ACTIVOS" if gm.reduced_effects else "DESACTIVADOS")
+	_effects_toggle.custom_minimum_size = Vector2(650, 84)
+	_effects_toggle.add_theme_font_size_override("font_size", 28)
+	var effects_style := StyleBoxFlat.new()
+	effects_style.bg_color = Color("#F2DDB0")
+	effects_style.set_corner_radius_all(16)
+	_effects_toggle.add_theme_stylebox_override("normal", effects_style)
+	UIEffects.bind_button(_effects_toggle)
+	_effects_toggle.add_theme_color_override("font_color", Color("#553421"))
+	_effects_toggle.button_pressed = gm.reduced_effects
+	_effects_toggle.tooltip_text = "Menos partículas, vibración visual y animaciones; mismas físicas y recompensas"
+	_effects_toggle.toggled.connect(func(value: bool):
+		if not gm._commit_transaction({"reduced_effects": value}):
+			_effects_toggle.set_pressed_no_signal(gm.reduced_effects)
+		_effects_toggle.text = "Efectos reducidos: " + ("ACTIVOS" if gm.reduced_effects else "DESACTIVADOS")
+	)
+	content.add_child(_effects_toggle)
+
 	var divider := Label.new()
 	divider.text = "★   •   ★   •   ★"
 	divider.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -2286,8 +2032,8 @@ func _setup_settings_modal() -> void:
 	_set_image_button(btn_quit, str(UI_ICON["quit"]), 118, Vector2(245, 205), "Salir", 24)
 	btn_quit.tooltip_text = "Salir del juego"
 	btn_quit.pressed.connect(func():
-		if gm:
-			gm.save_game()
+		if gm and not gm.save_game():
+			return
 		get_tree().quit()
 	)
 	actions.add_child(btn_quit)
@@ -2295,7 +2041,7 @@ func _setup_settings_modal() -> void:
 	var hint := Label.new()
 	hint.text = "Toca un icono para cambiar su estado"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 17)
+	hint.add_theme_font_size_override("font_size", 23)
 	hint.add_theme_color_override("font_color", Color("#8B6956"))
 	content.add_child(hint)
 
@@ -2322,34 +2068,16 @@ func _update_settings_ui() -> void:
 
 func _open_settings_modal() -> void:
 	if not settings_popup:
-		return
-	if AudioManager:
-		AudioManager.play_pop()
+		_setup_settings_modal()
+		if not confirm_reset_popup:
+			_setup_confirm_reset_popup()
 	_update_settings_ui()
-	settings_popup.visible = true
-	var panel = settings_popup.get_node_or_null("Panel")
-	if panel:
-		panel.scale = Vector2(0.7, 0.7)
-		panel.pivot_offset = panel.size / 2.0
-		var tween = create_tween()
-		tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	AudioManager.play_pop()
+	UIEffects.popup(settings_popup, true)
 
 func _close_settings_modal() -> void:
-	if not settings_popup or not settings_popup.visible:
-		return
-	if AudioManager:
-		AudioManager.play_pop()
-	var panel = settings_popup.get_node_or_null("Panel")
-	if panel:
-		var tween = create_tween()
-		tween.tween_property(panel, "scale", Vector2(0.7, 0.7), 0.15).set_ease(Tween.EASE_IN)
-		tween.finished.connect(func():
-			if settings_popup:
-				settings_popup.visible = false
-		)
-	else:
-		settings_popup.visible = false
-
+	if settings_popup:
+		UIEffects.popup(settings_popup, false)
 
 func _setup_confirm_reset_popup() -> void:
 	confirm_reset_popup = Control.new()
@@ -2438,7 +2166,8 @@ func _setup_confirm_reset_popup() -> void:
 	btn_confirm.add_theme_stylebox_override("normal", _create_card_style(Color("#FFD6CE"), Color("#E77B70")))
 	btn_confirm.pressed.connect(func():
 		if gm:
-			gm.reset_game_data()
+			if not gm.reset_game_data():
+				return
 			_update_stat_ui("hunger", gm.hunger, gm.MAX_STAT)
 			_update_stat_ui("protein", gm.protein, gm.MAX_STAT)
 			_update_stat_ui("energy", gm.energy, gm.MAX_STAT)
@@ -2617,46 +2346,26 @@ func _setup_wardrobe_modal() -> void:
 func _open_wardrobe_modal() -> void:
 	if not wardrobe_popup:
 		_setup_wardrobe_modal()
-
-	if AudioManager:
-		AudioManager.play_pop()
-
 	_update_wardrobe_balance()
 	_select_wardrobe_tab(wardrobe_selected_tab)
-
-	wardrobe_popup.visible = true
-
-	# Subir suavemente a Wonky para que quede centrado en la mitad superior visible
+	wardrobe_popup.show()
+	AudioManager.play_pop()
 	var monky := _get_monky_node()
 	if monky:
-		var tween_m = create_tween()
-		tween_m.tween_property(monky, "position:y", 560.0, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-
-	var panel = wardrobe_popup.get_node_or_null("Panel")
-	if panel:
-		panel.position.y = 1920.0
-		var tween = create_tween()
-		tween.tween_property(panel, "position:y", 850.0, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		UIEffects.tween_for(monky, "wardrobe").tween_property(monky, "position:y", 560.0, 0.22)
+	var panel := wardrobe_popup.get_node("Panel") as Control
+	UIEffects.tween_for(panel, "wardrobe").tween_property(panel, "position:y", 850.0, 0.22)
 
 func _close_wardrobe_modal() -> void:
 	if not wardrobe_popup or not wardrobe_popup.visible:
 		return
-
-	if AudioManager:
-		AudioManager.play_pop()
-
-	# Devolver a Wonky a su posición original
 	var monky := _get_monky_node()
 	if monky:
-		var tween_m = create_tween()
-		tween_m.tween_property(monky, "position:y", 1100.0, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-
-	var panel = wardrobe_popup.get_node_or_null("Panel")
-	if panel:
-		var tween = create_tween()
-		tween.tween_property(panel, "position:y", 1920.0, 0.2).set_ease(Tween.EASE_IN)
-		await tween.finished
-	wardrobe_popup.visible = false
+		UIEffects.tween_for(monky, "wardrobe").tween_property(monky, "position:y", 1100.0, 0.22)
+	var panel := wardrobe_popup.get_node("Panel") as Control
+	var tween := UIEffects.tween_for(panel, "wardrobe")
+	tween.tween_property(panel, "position:y", 1920.0, 0.18)
+	tween.tween_callback(wardrobe_popup.hide)
 
 func _update_wardrobe_balance() -> void:
 	if wardrobe_coins_balance and gm:
@@ -2719,6 +2428,7 @@ func _refresh_wardrobe_tab(category: String) -> void:
 		return
 
 	for child in wardrobe_grid.get_children():
+		wardrobe_grid.remove_child(child)
 		child.queue_free()
 
 	var items: Array[Dictionary] = AccessoryCatalog.get_items_by_category(category)
@@ -2734,7 +2444,7 @@ func _refresh_wardrobe_tab(category: String) -> void:
 		var p_diamonds: int = int(item.get("price_diamonds", 0))
 
 		var card := PanelContainer.new()
-		card.custom_minimum_size = Vector2(290, 215)
+		card.custom_minimum_size = Vector2(290, 255)
 		card.add_theme_stylebox_override("panel", _wardrobe_card_style(is_equipped, is_unlocked))
 
 		var card_margin := MarginContainer.new()
@@ -2762,7 +2472,7 @@ func _refresh_wardrobe_tab(category: String) -> void:
 		var name_lbl := Label.new()
 		name_lbl.text = item_name
 		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_lbl.add_theme_font_size_override("font_size", 18)
+		name_lbl.add_theme_font_size_override("font_size", 23)
 		name_lbl.add_theme_color_override("font_color", Color("#4A2E18"))
 		name_lbl.add_theme_color_override("font_outline_color", Color.WHITE)
 		name_lbl.add_theme_constant_override("outline_size", 3)
@@ -2770,14 +2480,18 @@ func _refresh_wardrobe_tab(category: String) -> void:
 
 		# Botón de Acción
 		var action_btn := Button.new()
-		action_btn.custom_minimum_size = Vector2(0, 48)
+		action_btn.custom_minimum_size = Vector2(0, 88)
 		action_btn.focus_mode = Control.FOCUS_NONE
-		action_btn.add_theme_font_size_override("font_size", 18)
+		action_btn.add_theme_font_size_override("font_size", 24)
 
 		var btn_style := StyleBoxFlat.new()
 		btn_style.set_corner_radius_all(15)
 
-		if is_equipped:
+		if not AccessoryCatalog.is_available(item_id):
+			action_btn.text = "Pendiente"
+			action_btn.tooltip_text = str(item.get("unavailable_reason", "No disponible"))
+			action_btn.disabled = true
+		elif is_equipped:
 			action_btn.text = "✓ Equipado"
 			action_btn.disabled = true
 			btn_style.bg_color = Color("#38B865")
@@ -2802,11 +2516,13 @@ func _refresh_wardrobe_tab(category: String) -> void:
 		else:
 			# Requiere compra
 			if p_coins > 0:
-				action_btn.text = "%d 🪙" % p_coins
+				action_btn.text = "%d" % p_coins
+				action_btn.icon = _load_ui_texture(str(UI_ICON["coin"]))
 				btn_style.bg_color = Color("#FFB72B")
 				btn_style.border_color = Color("#C67F00")
 			elif p_diamonds > 0:
-				action_btn.text = "%d 💎" % p_diamonds
+				action_btn.text = "%d" % p_diamonds
+				action_btn.icon = _load_ui_texture(str(UI_ICON["diamond"]))
 				btn_style.bg_color = Color("#3AB4F2")
 				btn_style.border_color = Color("#1074A8")
 			btn_style.set_border_width_all(2)
@@ -2831,5 +2547,69 @@ func _refresh_wardrobe_tab(category: String) -> void:
 						m.play_reaction_bounce(Vector2(1.2, 0.85))
 			)
 
+		action_btn.expand_icon = true
+		action_btn.add_theme_constant_override("icon_max_width", 32)
+		UIEffects.bind_button(action_btn)
 		card_vbox.add_child(action_btn)
 		wardrobe_grid.add_child(card)
+
+func _polish_header() -> void:
+	var top := $TopBar as MarginContainer
+	for side in ["left", "right"]:
+		top.add_theme_constant_override("margin_" + side, 22)
+	for side in ["top", "bottom"]:
+		top.add_theme_constant_override("margin_" + side, 16)
+	var plate := Panel.new()
+	plate.name = "ReadableHeader"
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.16, 0.10, 0.075, 0.91)
+	style.border_color = Color(0.96, 0.74, 0.34, 0.7)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(26)
+	plate.add_theme_stylebox_override("panel", style)
+	top.add_child(plate)
+	top.move_child(plate, 0)
+	$TopBar/VBox.add_theme_constant_override("separation", 18)
+	for label in [coins_label, diamonds_label, level_label]:
+		label.add_theme_font_size_override("font_size", 32)
+	for button in [btn_coins, btn_diamonds, btn_settings]:
+		button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 90)
+		UIEffects.bind_button(button)
+
+func _show_notice(message: String, _position: Vector2, color: Color, icon_path: String = "") -> void:
+	# A single readable notice above modals; no ever-growing label/tween list.
+	if _notice == null:
+		_notice = Label.new()
+		_notice.name = "StatusNotice"
+		_notice.position = Vector2(90, 335)
+		_notice.size = Vector2(900, 130)
+		_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_notice.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_notice.z_index = 200
+		_notice.add_theme_font_size_override("font_size", 30)
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.12, 0.08, 0.06, 0.96)
+		style.set_corner_radius_all(20)
+		style.content_margin_left = 104
+		style.content_margin_right = 20
+		_notice.add_theme_stylebox_override("normal", style)
+		add_child(_notice)
+		_notice_icon = TextureRect.new()
+		_notice_icon.position = Vector2(14, 25)
+		_notice_icon.size = Vector2(80, 80)
+		_notice_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_notice_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_notice_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_notice.add_child(_notice_icon)
+	_notice_icon.texture = _load_ui_texture(icon_path if not icon_path.is_empty() else str(UI_ICON["info"]))
+	_notice.text = message
+	_notice.add_theme_color_override("font_color", color)
+	_notice.modulate.a = 1.0
+	_notice.show()
+	var tween := UIEffects.tween_for(_notice, "notice")
+	tween.tween_interval(3.5)
+	tween.tween_property(_notice, "modulate:a", 0.0, 0.2)
+	tween.tween_callback(_notice.hide)

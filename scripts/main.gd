@@ -22,9 +22,9 @@ func _ready() -> void:
 	if gm:
 		gm.room_changed.connect(_on_room_changed)
 		gm.monky_state_changed.connect(_on_monky_state_changed)
-		gm.show_floating_text.connect(_spawn_floating_text)
 		gm.poop_spawned.connect(_spawn_poop_node)
 		_on_room_changed(gm.current_room)
+		_on_monky_state_changed("sleeping" if gm.is_sleeping else "idle")
 		
 		# Generar popis guardadas pendientes
 		for i in range(gm.poop_count):
@@ -45,7 +45,7 @@ func _on_room_changed(room_name: String) -> void:
 		if ResourceLoader.exists(path):
 			var new_tex: Texture2D = load(path)
 			if new_tex:
-				var tween = create_tween()
+				var tween = UIEffects.tween_for(background, "room")
 				tween.tween_property(background, "modulate:a", 0.4, 0.1)
 				tween.tween_callback(func():
 					_apply_cover_background(new_tex)
@@ -60,25 +60,10 @@ func _apply_cover_background(new_tex: Texture2D) -> void:
 		var scale_factor = maxf(1080.0 / tex_size.x, 1920.0 / tex_size.y)
 		background.scale = Vector2(scale_factor, scale_factor)
 
-func _on_monky_state_changed(state: String) -> void:
+func _on_monky_state_changed(_state: String) -> void:
 	if night_overlay:
-		var tween = create_tween()
-		if state == "sleeping":
+		var tween = UIEffects.tween_for(night_overlay, "night")
+		if gm.is_sleeping:
 			tween.tween_property(night_overlay, "color", Color(0.05, 0.05, 0.2, 0.75), 0.5)
 		else:
 			tween.tween_property(night_overlay, "color", Color(0, 0, 0, 0.0), 0.3)
-
-func _spawn_floating_text(text: String, global_pos: Vector2, color: Color) -> void:
-	var label = Label.new()
-	label.text = text
-	label.modulate = color
-	label.add_theme_font_size_override("font_size", 42)
-	label.global_position = global_pos + Vector2(randf_range(-30, 30), randf_range(-20, 20))
-	label.z_index = 20
-	add_child(label)
-
-	var tween = create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(label, "position:y", label.position.y - 100, 0.8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tween.tween_property(label, "modulate:a", 0.0, 0.8).set_ease(Tween.EASE_IN)
-	tween.finished.connect(label.queue_free)
