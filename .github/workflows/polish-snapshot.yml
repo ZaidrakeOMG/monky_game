@@ -1,0 +1,26 @@
+name: Isolated polish snapshot
+on:
+  push:
+    branches: [polish/professional-2026-10-09]
+    paths: [.github/workflows/polish-snapshot.yml]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Package tracked project files only
+        run: |
+          mkdir -p "$RUNNER_TEMP/snapshot"
+          git archive --format=tar.gz -o "$RUNNER_TEMP/snapshot/monky-source.tar.gz" HEAD
+          curl --fail --location --retry 3 'https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip' -o "$RUNNER_TEMP/snapshot/godot-engine.zip"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: isolated-polish-snapshot
+          path: ${{ runner.temp }}/snapshot/*
+          retention-days: 2
+          compression-level: 0
