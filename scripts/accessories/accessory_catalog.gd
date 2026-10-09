@@ -163,7 +163,9 @@ const ITEMS: Dictionary = {
 		"category": "clothes",
 		"price_coins": 0,
 		"price_diamonds": 0,
-		"texture_path": "res://assets/wonky/trajes/heroe_nocturno/preview.png",
+		"texture_path": "res://imagenes/accesorios/none.png",
+		"available": false,
+		"unavailable_reason": "Animaciones originales pendientes de restaurar",
 		"slot_texture": "",
 		"outfit_id": "heroe_nocturno",
 		"unlocked_default": true
@@ -177,7 +179,7 @@ static func get_item(item_id: String) -> Dictionary:
 
 static func get_outfit_id(item_id: String) -> String:
 	var item: Dictionary = get_item(item_id)
-	return str(item.get("outfit_id", ""))
+	return str(item.get("outfit_id", "")) if is_available(item_id) else ""
 
 static func get_items_by_category(category: String) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
@@ -194,3 +196,7 @@ static func get_default_unlocked_ids() -> Array[String]:
 		if item.get("unlocked_default", false):
 			result.append(item_id)
 	return result
+
+static func is_available(item_id: String) -> bool:
+	var item := get_item(item_id)
+	return not item.is_empty() and bool(item.get("available", true))
