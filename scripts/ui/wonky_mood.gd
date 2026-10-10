@@ -87,7 +87,6 @@ func _ready() -> void:
 	_caption.add_theme_color_override("font_color", Color("#673F2C"))
 	_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_caption)
-	UIEffects.bind_button(self)
 	pressed.connect(func(): action_requested.emit(current_mood))
 
 func setup(manager: Node) -> void:
@@ -116,6 +115,13 @@ func refresh() -> void:
 	_icon.texture = _art_cache[mood]
 	if old_mood != "" and not gm.reduced_effects:
 		pivot_offset = size * 0.5
-		var pop := UIEffects.tween_for(self, "emotion")
+		# Tween local: la clase de emoción no importa UIEffects durante el
+		# arranque de SceneTree, antes de registrar AudioManager.
+		if has_meta("_mood_pop_tween"):
+			var previous: Tween = get_meta("_mood_pop_tween")
+			if previous != null and previous.is_valid():
+				previous.kill()
+		var pop := create_tween()
+		set_meta("_mood_pop_tween", pop)
 		pop.tween_property(self, "scale", Vector2.ONE * 1.05, 0.12).set_trans(Tween.TRANS_BACK)
 		pop.tween_property(self, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_QUAD)

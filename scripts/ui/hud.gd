@@ -626,6 +626,7 @@ func _setup_mood_widget() -> void:
 	mood_widget.z_index = 10
 	add_child(mood_widget)
 	mood_widget.setup(gm)
+	UIEffects.bind_button(mood_widget)
 	mood_widget.action_requested.connect(_on_mood_action)
 
 func _on_mood_action(mood: String) -> void:

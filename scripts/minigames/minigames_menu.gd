@@ -112,7 +112,7 @@ func _set_big_icon(button: Button, path: String, title_text: String, game_id: St
 	button.add_child(title)
 
 	# Récord visible con los dibujos que ya existen; cero texto explicativo.
-	var best := gm.get_record(game_id) if gm else 0
+	var best: int = gm.get_record(game_id) if gm else 0
 	if best > 0:
 		var trophy := TextureRect.new()
 		trophy.name = "TrophyArt"
