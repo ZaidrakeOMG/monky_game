@@ -1,0 +1,72 @@
+name: Publish verified Monky kids update
+
+on:
+  push:
+    branches: [delivery/monky-kids-20261010]
+    paths: ['.github/workflows/publish-kids.yml', '.delivery/**']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-monky-kids-20261010
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    env:
+      TARGET: feature/monky-kids-adventure-20261010
+      BASE: c1c5b115b666da66c87871fee873f50797e41013
+      EXPECTED: 40cc22271cbd2b0e7abdc7d7c77d3d7cc14f9177
+      GODOT_VERSION: '4.7.2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify complete delivery and restore exact tested commits
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote --heads origin "refs/heads/$TARGET" | cut -f1)" = "$BASE"
+          test "$(git ls-remote --heads origin refs/heads/main | cut -f1)" = "$BASE"
+          cat .delivery/chunk-*.bin > "$RUNNER_TEMP/monky-kids.bundle"
+          echo "a68113e06b743ed7f5e71bf68297411228aeaaf18229026dced756e7b5b29313  $RUNNER_TEMP/monky-kids.bundle" | sha256sum --check -
+          git bundle verify "$RUNNER_TEMP/monky-kids.bundle"
+          git fetch "$RUNNER_TEMP/monky-kids.bundle" "refs/heads/$TARGET"
+          test "$(git rev-parse FETCH_HEAD)" = "$EXPECTED"
+          git checkout --detach "$EXPECTED"
+          test "$(git rev-parse HEAD^{tree})" = "143296630baa97ae0a5564e2909666a17c101d4f"
+      - name: Install verified official Godot binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable"
+          archive="Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          mkdir -p "$RUNNER_TEMP/godot" reports
+          curl --fail --location --retry 3 "$base/$archive" -o "$RUNNER_TEMP/godot/$archive"
+          curl --fail --location --retry 3 "$base/SHA512-SUMS.txt" -o "$RUNNER_TEMP/godot/SHA512-SUMS.txt"
+          (cd "$RUNNER_TEMP/godot" && grep " $archive\$" SHA512-SUMS.txt | sha512sum --check -)
+          unzip -q "$RUNNER_TEMP/godot/$archive" -d "$RUNNER_TEMP/godot"
+          chmod +x "$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          ln -s "$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" "$RUNNER_TEMP/godot/godot"
+          echo "$RUNNER_TEMP/godot" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/godot/godot" --version | tee reports/engine.txt
+      - name: Audit assets and PNG integrity
+        run: python3 tools/audit_assets.py
+      - name: Run isolated regression, navigation, adventure and shutdown tests
+        run: python3 tools/run_checks.py --godot godot
+      - name: Fast-forward only the isolated feature branch after successful tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote --heads origin "refs/heads/$TARGET" | cut -f1)" = "$BASE"
+          git push origin "$EXPECTED:refs/heads/$TARGET"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: monky-kids-verification
+          path: reports/
+          retention-days: 14
+          if-no-files-found: error
