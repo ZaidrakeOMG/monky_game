@@ -29,6 +29,7 @@ var gm: Node = null
 var soap_level: float = 0.0
 var bath_animation_time: float = 0.0
 var is_rinsing: bool = false
+var _last_accessory_mode: int = -1
 
 # Sistema de trajes completos: cada traje aporta SpriteFrames de Wonky ya vestido.
 # Las animaciones no incluidas por el traje usan automáticamente las originales.
@@ -514,6 +515,7 @@ func update_accessories() -> void:
 		var equipped_id: String = gm.get_equipped_accessory(cat)
 		_apply_accessory(cat, equipped_id)
 
+	_last_accessory_mode = -1
 	_update_contextual_accessory_visibility()
 
 
@@ -522,6 +524,7 @@ func _on_accessory_equipped(category: String, item_id: String) -> void:
 		_apply_outfit(item_id)
 	else:
 		_apply_accessory(category, item_id)
+	_last_accessory_mode = -1
 	_update_contextual_accessory_visibility()
 
 
@@ -579,6 +582,10 @@ func _update_contextual_accessory_visibility() -> void:
 	var anim_name: String = str(animated_sprite.animation) if animated_sprite else ""
 	var is_in_bath: bool = (anim_name == "bano_jabon") or (bath_animation_time > 0.0) or is_rinsing
 	var is_asleep: bool = (anim_name == "durmiendo") or (anim_name == "dormir_entrada") or gm.is_sleeping
+	var mode := (1 if is_in_bath else 0) + (2 if is_asleep else 0)
+	if mode == _last_accessory_mode:
+		return
+	_last_accessory_mode = mode
 
 	# En el baño se ocultan sombrero/lentes. La animación de baño se mantiene
 	# original (sin traje) hasta que creemos una variante específica.

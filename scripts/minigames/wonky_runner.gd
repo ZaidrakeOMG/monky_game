@@ -112,6 +112,7 @@ var speed_particles: Array[Node2D] = []
 var road_scroll: float = 0.0
 var side_scroll: float = 0.0
 var particle_clock: float = 0.08
+var _hud_clock: float = 0.0
 
 var lane_index: int = 1
 var score: float = 0.0
@@ -568,6 +569,7 @@ func _start_game() -> void:
 	road_scroll = 0.0
 	side_scroll = 0.0
 	particle_clock = 0.45
+	_hud_clock = 0.0
 	_clear_speed_particles()
 	queue_redraw()
 
@@ -642,7 +644,11 @@ func _physics_process(delta: float) -> void:
 	_update_items(delta)
 	_update_enemy(delta)
 	_update_dust(delta)
-	_update_hud()
+	# Las etiquetas del HUD no necesitan recrear texto a 60 Hz.
+	_hud_clock += delta
+	if _hud_clock >= 0.10:
+		_hud_clock = 0.0
+		_update_hud()
 
 func _update_parallax(delta: float) -> void:
 	# V14: el fondo y los laterales permanecen quietos. El suelo usa la MISMA
@@ -790,6 +796,7 @@ func _spawn_item(kind: String, lane: int, start_progress: float) -> void:
 	holder.set_meta("resolved", false)
 
 	var sprite := holder.get_node("Sprite") as Sprite2D
+	holder.set_meta("visual", sprite)
 	sprite.texture = _texture_for(kind)
 	sprite.rotation = 0.0
 	sprite.modulate = Color.WHITE
@@ -883,7 +890,7 @@ func _update_items(delta: float) -> void:
 		var t: float = clampf(p, 0.0, 1.0)
 		var lane: int = int(item.get_meta("lane"))
 		var kind: String = str(item.get_meta("kind"))
-		var spr: Sprite2D = item.get_node_or_null("Sprite") as Sprite2D
+		var spr: Sprite2D = item.get_meta("visual", null) as Sprite2D
 		if spr == null:
 			_remove_item(item)
 			continue
@@ -948,8 +955,11 @@ func _collect_powerup(item: Node2D, kind: String) -> void:
 		"multiplier":
 			multiplier_time = 9.0
 	_remove_item(item)
+	_update_hud()
 
 func _spawn_pickup_fx(pos: Vector2) -> void:
+	if gm and gm.reduced_effects:
+		return
 	var fx: Sprite2D = Sprite2D.new()
 	fx.texture = TEX_SPARKLES
 	fx.position = pos + Vector2(0.0, -65.0)
