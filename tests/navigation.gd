@@ -42,7 +42,16 @@ func _run() -> void:
 	if current_scene != null and current_scene.has_method("_on_video_finished"):
 		current_scene._on_video_finished()
 	require(await wait_for_scene("res://scenes/main.tscn"), "intro skip reaches main via threaded router")
-	for name in ["minigames_menu", "fruit_catcher", "flappy_monky", "monky_jump", "wonky_runner", "minigames_menu"]:
+	var hud := current_scene.get_node("HUD")
+	require(hud.mood_widget != null, "Wonky mood reacts on main screen")
+	hud._on_mood_action("food")
+	require(gm.current_room == "cocina", "food reaction navigates to real kitchen")
+	hud._on_mood_action("play")
+	require(gm.current_room == "sala de juegos", "play reaction navigates to real game room")
+	hud.btn_game.pressed.emit()
+	require(router.busy, "games button starts the guarded asynchronous loader")
+	require(await wait_for_scene("res://scenes/minigames/minigames_menu.tscn"), "actual games button reaches menu")
+	for name in ["fruit_catcher", "flappy_monky", "monky_jump", "wonky_runner", "minigames_menu"]:
 		var path := "res://scenes/minigames/%s.tscn" % name
 		require(router.go(path), "navigation accepted: " + name)
 		require(not router.go("res://scenes/main.tscn"), "concurrent navigation rejected")
