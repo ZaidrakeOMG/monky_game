@@ -40,6 +40,7 @@ const PIPE_TOP_ART := "res://assets/flappy/vine_top.png"
 const PIPE_BOTTOM_ART := "res://assets/flappy/vine_bottom.png"
 const FLIGHT_FRAME_PATTERN := "res://assets/flappy/wonky_fly_%02d.png"
 const TAP_ART := "res://assets/flappy/tap_hand.png"
+const RESULT_ART := "res://assets/flappy/gameover_wonky.png"
 const COIN_ART: Texture2D = preload("res://imagenes/opt/hud/moneda.png")
 
 var velocity_y: float = 0.0
@@ -61,6 +62,7 @@ func _ready() -> void:
 	_setup_background()
 	_setup_game_ui_icons()
 	_setup_flight_frames()
+	_setup_optional_result_art()
 	_build_pipe_pool()
 	tap_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	player.collision_layer = 1
@@ -145,6 +147,29 @@ func _setup_flight_frames() -> void:
 	monky_sprite.sprite_frames = frames
 	monky_sprite.scale = Vector2.ONE * 0.35
 	monky_sprite.play("fly")
+
+func _setup_optional_result_art() -> void:
+	if not ResourceLoader.exists(RESULT_ART):
+		return
+	var art_texture := load(RESULT_ART) as Texture2D
+	if art_texture == null:
+		return
+	var title := game_over_modal.get_node_or_null("Margin/VBox/Title") as Label
+	if title == null:
+		return
+	var art := TextureRect.new()
+	art.name = "ResultWonky"
+	art.texture = art_texture
+	art.anchor_left = 1.0
+	art.anchor_right = 1.0
+	art.offset_left = -165.0
+	art.offset_right = -5.0
+	art.offset_top = -150.0
+	art.offset_bottom = 10.0
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title.add_child(art)
 
 func _setup_signals() -> void:
 	spawn_timer.timeout.connect(_on_spawn_timer_timeout)

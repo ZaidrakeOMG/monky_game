@@ -218,7 +218,8 @@ func _setup_visuals() -> void:
 	_hide_card_text(jump_card)
 
 	_set_big_icon(btn_play_fruit, "res://imagenes/ui_polished/minijuegos/fruit_catcher.png", "FRUTAS", "fruit")
-	_set_big_icon(btn_play_flappy, "res://imagenes/ui_polished/minijuegos/flappy.png", "VOLAR", "flappy")
+	var flappy_cover := "res://assets/flappy/menu_cover.png" if ResourceLoader.exists("res://assets/flappy/menu_cover.png") else "res://imagenes/ui_polished/minijuegos/flappy.png"
+	_set_big_icon(btn_play_flappy, flappy_cover, "VOLAR", "flappy")
 	_set_big_icon(btn_play_jump, "res://imagenes/ui_polished/minijuegos/monky_jump.png", "SALTAR", "jump")
 	_add_runner_button()
 

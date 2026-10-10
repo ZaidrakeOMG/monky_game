@@ -198,6 +198,12 @@ func _test_scenes() -> void:
 			copy.pressed = true
 			instance._input(copy)
 			check(instance.velocity_y == 17.0, "emulated mouse copy cannot double-flap")
+			var exit_touch := InputEventScreenTouch.new()
+			exit_touch.pressed = true
+			exit_touch.position = instance.btn_exit.get_global_rect().get_center()
+			instance.velocity_y = 123.0
+			instance._input(exit_touch)
+			check(instance.velocity_y == 123.0, "tapping Home button cannot accidentally flap")
 			var native_mouse := InputEventMouseButton.new()
 			native_mouse.device = InputEvent.DEVICE_ID_MOUSE
 			native_mouse.position = Vector2(700, 1050)
