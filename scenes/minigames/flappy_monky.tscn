@@ -149,7 +149,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
 theme_override_constants/shadow_offset_x = 3
 theme_override_constants/shadow_offset_y = 3
 theme_override_font_sizes/font_size = 40
-text = "¡Toca la pantalla para aletear!"
+text = "¡TOCA PARA VOLAR!"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -185,14 +185,14 @@ alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(0.4, 0.85, 1, 1)
 theme_override_font_sizes/font_size = 46
-text = "¡VUELO TERMINADO!"
+text = "¡BUEN VUELO!"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="HUD/GameOverModal/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 28
-text = "¡Monky se divirtió al 100%!"
+text = "¡VAMOS OTRA VEZ!"
 horizontal_alignment = 1
 
 [node name="StatsGrid" type="VBoxContainer" parent="HUD/GameOverModal/Margin/VBox"]
@@ -206,7 +206,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 32
-text = "Obstáculos Cruzados:"
+text = "PUNTOS"
 
 [node name="ScoreValue" type="Label" parent="HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxScore"]
 layout_mode = 2
@@ -221,7 +221,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 32
-text = "Monedas Ganadas:"
+text = "MONEDAS"
 
 [node name="CoinsValue" type="Label" parent="HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxCoins"]
 layout_mode = 2
@@ -236,7 +236,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 32
-text = "Mejor Récord:"
+text = "RÉCORD"
 
 [node name="HighScoreValue" type="Label" parent="HUD/GameOverModal/Margin/VBox/StatsGrid/HBoxHigh"]
 layout_mode = 2
@@ -254,11 +254,11 @@ custom_minimum_size = Vector2(360, 90)
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_restart")
-text = "Volver a volar"
+text = "OTRA VEZ"
 
 [node name="BtnHome" type="Button" parent="HUD/GameOverModal/Margin/VBox/Buttons"]
 custom_minimum_size = Vector2(360, 90)
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_home")
-text = " Selector de Juegos"
+text = "JUEGOS"

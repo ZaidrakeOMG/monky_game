@@ -183,8 +183,41 @@ func _test_scenes() -> void:
 			check(instance.combo == 0 and not instance._combo_badge.visible, "streak reset hides visual feedback")
 			instance._trigger_game_over()
 		elif path.ends_with("flappy_monky.tscn"):
-			instance._on_jump()
+			check(instance._free_pipes.size() == instance.PIPE_POOL_SIZE, "Flappy obstacle pool is prepared ahead of gameplay")
+			check(instance.pipes_container.get_child_count() == instance.PIPE_POOL_SIZE, "Flappy does not allocate new obstacles while playing")
+			var tap := InputEventScreenTouch.new()
+			tap.position = Vector2(700, 1050)
+			tap.pressed = true
+			instance._input(tap)
+			check(instance.is_game_started and instance.velocity_y == instance.JUMP_VELOCITY, "real touchscreen press starts an immediate flap")
+			instance.velocity_y = 17.0
+			var copy := InputEventMouseButton.new()
+			copy.device = InputEvent.DEVICE_ID_EMULATION
+			copy.position = Vector2(700, 1050)
+			copy.button_index = MOUSE_BUTTON_LEFT
+			copy.pressed = true
+			instance._input(copy)
+			check(instance.velocity_y == 17.0, "emulated mouse copy cannot double-flap")
+			var native_mouse := InputEventMouseButton.new()
+			native_mouse.device = InputEvent.DEVICE_ID_MOUSE
+			native_mouse.position = Vector2(700, 1050)
+			native_mouse.button_index = MOUSE_BUTTON_LEFT
+			native_mouse.pressed = true
+			instance._input(native_mouse)
+			check(instance.velocity_y == instance.JUMP_VELOCITY, "physical mouse remains responsive for desktop")
+			for _index in range(25):
+				instance._spawn_pipe_obstacle()
+			check(instance._active_pipes.size() == instance.PIPE_POOL_SIZE and instance.pipes_container.get_child_count() == instance.PIPE_POOL_SIZE, "Flappy spawning stays within 5 reusable pairs")
+			var pair: Node2D = instance._active_pipes[0]
+			var coin := pair.get_node("Coin") as Area2D
+			instance._on_player_area_entered(coin)
+			var first_coins: int = instance.coins_earned
+			instance._on_player_area_entered(coin)
+			check(first_coins == instance.coins_earned and not coin.visible, "Flappy coin is collected only once without deleting pooled nodes")
+			instance._recycle_pipe(pair)
+			check(instance._free_pipes.size() == 1, "Flappy recycles old obstacle immediately")
 			instance._spawn_pipe_obstacle()
+			check(instance._active_pipes.size() == instance.PIPE_POOL_SIZE and not (instance._active_pipes[instance._active_pipes.size() - 1].get_node("Coin") as Area2D).get_meta("consumed"), "respawned Flappy obstacle restores its coin")
 			instance.score = 2
 			instance._trigger_game_over()
 			check(instance._reward_saved, "Flappy game over stores reward")
