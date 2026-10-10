@@ -29,6 +29,19 @@ const GRAVITY: float = 1750.0
 const JUMP_VELOCITY: float = -620.0
 const PIPE_SPEED: float = 380.0
 const GAP_SIZE: float = 420.0
+const PIPE_WIDTH: float = 110.0
+const PIPE_POOL_SIZE: int = 5
+const MAX_FLOATING_TEXTS: int = 4
+
+# Estas rutas son OPCIONALES. Cuando lleguen los PNG se usan sin cambiar escenas.
+const SKY_ART := "res://assets/flappy/sky_background.png"
+const CLOUD_ART := "res://assets/flappy/cloud_overlay.png"
+const PIPE_TOP_ART := "res://assets/flappy/vine_top.png"
+const PIPE_BOTTOM_ART := "res://assets/flappy/vine_bottom.png"
+const FLIGHT_FRAME_PATTERN := "res://assets/flappy/wonky_fly_%02d.png"
+const TAP_ART := "res://assets/flappy/tap_hand.png"
+const RESULT_ART := "res://assets/flappy/gameover_wonky.png"
+const COIN_ART: Texture2D = preload("res://imagenes/opt/hud/moneda.png")
 
 var velocity_y: float = 0.0
 var score: int = 0
@@ -38,11 +51,20 @@ var is_game_over: bool = false
 var gm: Node = null
 var _run_token: String = ""
 var _reward_saved: bool = false
+var _free_pipes: Array[Node2D] = []
+var _active_pipes: Array[Node2D] = []
+var _floating_texts: Array[Label] = []
+var _cloud_layer: Sprite2D = null
+var _cloud_clock: float = 0.0
 
 func _ready() -> void:
 	gm = get_tree().root.get_node_or_null("GameManager")
 	_setup_background()
 	_setup_game_ui_icons()
+	_setup_flight_frames()
+	_setup_optional_result_art()
+	_build_pipe_pool()
+	tap_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	player.collision_layer = 1
 	player.collision_mask = 2
 	_setup_signals()
@@ -66,13 +88,88 @@ func _setup_game_ui_icons() -> void:
 		_set_game_button_icon(btn_home, "res://imagenes/opt/navegacion/inicio.png", 42)
 	if btn_restart:
 		_set_game_button_icon(btn_restart, "res://imagenes/opt/configuracion/reiniciar.png", 42)
+	tap_hint.text = "¡TOCA PARA VOLAR!"
+	if ResourceLoader.exists(TAP_ART):
+		var hand := TextureRect.new()
+		hand.name = "TapHandArt"
+		hand.texture = load(TAP_ART) as Texture2D
+		hand.position = Vector2(252, -166)
+		hand.size = Vector2(136, 136)
+		hand.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		hand.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		hand.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tap_hint.add_child(hand)
 
 func _setup_background() -> void:
+	# Un fondo ligero e ilustrado reemplaza al anterior al aparecer el archivo.
+	if ResourceLoader.exists(SKY_ART):
+		var sky := load(SKY_ART) as Texture2D
+		if sky != null:
+			background.texture = sky
+	background.z_index = -20
 	if background and background.texture:
-		var tex_size = background.texture.get_size()
-		if tex_size.x > 0 and tex_size.y > 0:
-			var scale_factor = maxf(1080.0 / tex_size.x, 1920.0 / tex_size.y)
-			background.scale = Vector2(scale_factor, scale_factor)
+		var tex_size := background.texture.get_size()
+		if tex_size.x > 0.0 and tex_size.y > 0.0:
+			var scale_factor := maxf(1080.0 / tex_size.x, 1920.0 / tex_size.y)
+			background.scale = Vector2.ONE * scale_factor
+	if ResourceLoader.exists(CLOUD_ART):
+		var cloud_texture := load(CLOUD_ART) as Texture2D
+		if cloud_texture != null:
+			_cloud_layer = Sprite2D.new()
+			_cloud_layer.texture = cloud_texture
+			_cloud_layer.z_index = -10
+			_cloud_layer.position = Vector2(540, 620)
+			var tex_size := cloud_texture.get_size()
+			if tex_size.x > 0.0 and tex_size.y > 0.0:
+				_cloud_layer.scale = Vector2(1080.0 / tex_size.x, 540.0 / tex_size.y)
+			add_child(_cloud_layer)
+
+func _setup_flight_frames() -> void:
+	# La hoja original de Wonky permanece como fallback hasta recibir SEIS
+	# PNG legibles de 384x384. Nunca importamos un personaje incompleto.
+	var images: Array[Texture2D] = []
+	for index in range(1, 7):
+		var path := FLIGHT_FRAME_PATTERN % index
+		if not ResourceLoader.exists(path):
+			return
+		var image := load(path) as Texture2D
+		if image == null or image.get_size() != Vector2(384, 384):
+			push_warning("El cuadro de vuelo debe ser PNG 384x384: " + path)
+			return
+		images.append(image)
+	var frames := SpriteFrames.new()
+	frames.remove_animation("default")
+	frames.add_animation("fly")
+	frames.set_animation_speed("fly", 10.0)
+	frames.set_animation_loop("fly", true)
+	for image in images:
+		frames.add_frame("fly", image)
+	monky_sprite.sprite_frames = frames
+	monky_sprite.scale = Vector2.ONE * 0.35
+	monky_sprite.play("fly")
+
+func _setup_optional_result_art() -> void:
+	if not ResourceLoader.exists(RESULT_ART):
+		return
+	var art_texture := load(RESULT_ART) as Texture2D
+	if art_texture == null:
+		return
+	var title := game_over_modal.get_node_or_null("Margin/VBox/Title") as Label
+	if title == null:
+		return
+	var art := TextureRect.new()
+	art.name = "ResultWonky"
+	art.texture = art_texture
+	art.anchor_left = 1.0
+	art.anchor_right = 1.0
+	art.offset_left = -165.0
+	art.offset_right = -5.0
+	art.offset_top = -150.0
+	art.offset_bottom = 10.0
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title.add_child(art)
 
 func _setup_signals() -> void:
 	spawn_timer.timeout.connect(_on_spawn_timer_timeout)
@@ -99,25 +196,40 @@ func reset_game() -> void:
 	game_over_modal.visible = false
 	spawn_timer.stop()
 
-	for child in pipes_container.get_children():
-		child.queue_free()
-
+	for pair in _active_pipes.duplicate():
+		_recycle_pipe(pair)
+	for label in _floating_texts:
+		if is_instance_valid(label):
+			label.queue_free()
+	_floating_texts.clear()
+	_cloud_clock = 0.0
 	_update_hud()
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.device == InputEvent.DEVICE_ID_EMULATION:
-		return
+## _input se recibe ANTES de los controles del HUD: la etiqueta de ayuda
+## ya no se come los toques. Se ignoran copias emuladas para no saltar doble.
+func _input(event: InputEvent) -> void:
 	if is_game_over:
 		return
-
-	var is_tap: bool = event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_up")
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		is_tap = true
-	elif event is InputEventScreenTouch and event.pressed:
-		is_tap = true
-
-	if is_tap:
+	var flap: bool = false
+	if event is InputEventScreenTouch:
+		var touch := event as InputEventScreenTouch
+		flap = touch.pressed and touch.device != InputEvent.DEVICE_ID_EMULATION
+		if flap and _is_exit_hit(touch.position):
+			return
+	elif event is InputEventMouseButton:
+		var click := event as InputEventMouseButton
+		flap = click.pressed and click.button_index == MOUSE_BUTTON_LEFT and click.device != InputEvent.DEVICE_ID_EMULATION
+		if flap and _is_exit_hit(click.position):
+			return
+	elif event is InputEventKey:
+		var key := event as InputEventKey
+		flap = key.pressed and not key.echo and (key.is_action_pressed("ui_accept") or key.is_action_pressed("ui_up"))
+	if flap:
 		_on_jump()
+		get_viewport().set_input_as_handled()
+
+func _is_exit_hit(point: Vector2) -> bool:
+	return btn_exit != null and btn_exit.visible and btn_exit.get_global_rect().has_point(point)
 
 func _on_jump() -> void:
 	if not is_game_started:
@@ -134,6 +246,10 @@ func _on_jump() -> void:
 func _physics_process(delta: float) -> void:
 	if not is_game_started or is_game_over:
 		return
+	delta = minf(delta, 0.05)
+	if _cloud_layer != null and not (gm and gm.reduced_effects):
+		_cloud_clock += delta
+		_cloud_layer.position.x = 540.0 + sin(_cloud_clock * 0.32) * 38.0
 
 	# Aplicar gravedad
 	velocity_y += GRAVITY * delta
@@ -153,98 +269,131 @@ func _physics_process(delta: float) -> void:
 		return
 
 	# Mover obstáculos
-	for pipe in pipes_container.get_children():
-		if pipe is Node2D:
-			pipe.position.x -= PIPE_SPEED * delta
-
-			# Comprobar si cruza la posición de Monky para sumar punto
-			if not pipe.get_meta("passed", false) and pipe.position.x < player.position.x:
-				pipe.set_meta("passed", true)
-				score += 1
-				_spawn_floating_text("+1", player.position + Vector2(0, -60), Color(0.3, 1, 0.4))
-				_update_hud()
-
-			if pipe.position.x < -200.0:
-				pipe.queue_free()
+	for index in range(_active_pipes.size() - 1, -1, -1):
+		var pipe := _active_pipes[index]
+		pipe.position.x -= PIPE_SPEED * delta
+		if not pipe.get_meta("passed", false) and pipe.position.x < player.position.x:
+			pipe.set_meta("passed", true)
+			score += 1
+			_spawn_floating_text("+1", player.position + Vector2(0, -60), Color(0.3, 1, 0.4))
+			_update_hud()
+		if pipe.position.x < -200.0:
+			_recycle_pipe(pipe)
 
 func _on_spawn_timer_timeout() -> void:
 	if is_game_over:
 		return
 	_spawn_pipe_obstacle()
 
-func _spawn_pipe_obstacle() -> void:
-	var pipe_pair = Node2D.new()
-	var center_y = randf_range(500.0, 1420.0)
-	pipe_pair.position = Vector2(1180.0, 0.0)
-	pipe_pair.set_meta("passed", false)
+## Cinco parejas preparadas al entrar a la escena: sin crear nodos en cada
+## obstáculo, sin bloquear el toque y sin asignar texturas durante el vuelo.
+func _build_pipe_pool() -> void:
+	for index in range(PIPE_POOL_SIZE):
+		var pair := _create_pipe_pair()
+		pair.name = "ObstaclePair%d" % index
+		pipes_container.add_child(pair)
+		pair.hide()
+		_free_pipes.append(pair)
 
-	# Tubo Superior
-	var top_area = Area2D.new()
-	top_area.collision_layer = 2
-	top_area.collision_mask = 0
-	top_area.monitoring = false
-	top_area.set_meta("obstacle", true)
-	var top_col = CollisionShape2D.new()
-	var top_shape = RectangleShape2D.new()
-	var top_height = center_y - (GAP_SIZE / 2.0)
-	top_shape.size = Vector2(110.0, top_height)
-	top_col.shape = top_shape
-	top_col.position = Vector2(0, top_height / 2.0)
-	top_area.add_child(top_col)
+func _create_pipe_pair() -> Node2D:
+	var pair := Node2D.new()
+	for side in ["Top", "Bottom"]:
+		var area := Area2D.new()
+		area.name = side
+		area.collision_layer = 2
+		area.collision_mask = 0
+		area.monitoring = false
+		area.set_meta("obstacle", true)
+		var collision := CollisionShape2D.new()
+		collision.name = "Collision"
+		var shape := RectangleShape2D.new()
+		shape.size = Vector2(PIPE_WIDTH, 800)
+		collision.shape = shape
+		collision.disabled = true
+		area.add_child(collision)
+		var visual := _make_obstacle_visual(side == "Top")
+		area.add_child(visual)
+		pair.add_child(area)
 
-	var top_rect = ColorRect.new()
-	top_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top_rect.color = Color(0.2, 0.65, 0.25, 0.95)
-	top_rect.size = Vector2(110.0, top_height)
-	top_rect.position = Vector2(-55.0, 0.0)
-	top_area.add_child(top_rect)
-	pipe_pair.add_child(top_area)
-
-	# Tubo Inferior
-	var bot_area = Area2D.new()
-	bot_area.collision_layer = 2
-	bot_area.collision_mask = 0
-	bot_area.monitoring = false
-	bot_area.set_meta("obstacle", true)
-	var bot_col = CollisionShape2D.new()
-	var bot_shape = RectangleShape2D.new()
-	var bot_y_start = center_y + (GAP_SIZE / 2.0)
-	var bot_height = 1920.0 - bot_y_start
-	bot_shape.size = Vector2(110.0, bot_height)
-	bot_col.shape = bot_shape
-	bot_col.position = Vector2(0, bot_y_start + (bot_height / 2.0))
-	bot_area.add_child(bot_col)
-
-	var bot_rect = ColorRect.new()
-	bot_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bot_rect.color = Color(0.2, 0.65, 0.25, 0.95)
-	bot_rect.size = Vector2(110.0, bot_height)
-	bot_rect.position = Vector2(-55.0, bot_y_start)
-	bot_area.add_child(bot_rect)
-	pipe_pair.add_child(bot_area)
-
-	# Moneda en el hueco
-	var coin_area = Area2D.new()
-	coin_area.collision_layer = 2
-	coin_area.collision_mask = 0
-	coin_area.monitoring = false
-	coin_area.position = Vector2(0, center_y)
-	coin_area.set_meta("coin", true)
-	var coin_col = CollisionShape2D.new()
-	var coin_shape = CircleShape2D.new()
+	var coin := Area2D.new()
+	coin.name = "Coin"
+	coin.collision_layer = 2
+	coin.collision_mask = 0
+	coin.monitoring = false
+	coin.set_meta("coin", true)
+	var collision := CollisionShape2D.new()
+	collision.name = "Collision"
+	var coin_shape := CircleShape2D.new()
 	coin_shape.radius = 35.0
-	coin_col.shape = coin_shape
-	coin_area.add_child(coin_col)
+	collision.shape = coin_shape
+	collision.disabled = true
+	coin.add_child(collision)
+	var sprite := Sprite2D.new()
+	sprite.texture = COIN_ART
+	if sprite.texture:
+		var tex_size := sprite.texture.get_size()
+		sprite.scale = Vector2.ONE * (70.0 / maxf(tex_size.x, tex_size.y))
+	coin.add_child(sprite)
+	pair.add_child(coin)
+	return pair
 
-	var coin_sprite = Sprite2D.new()
-	coin_sprite.texture = preload("res://imagenes/opt/hud/moneda.png")
-	if coin_sprite.texture:
-		var size = coin_sprite.texture.get_size()
-		coin_sprite.scale = Vector2.ONE * (70.0 / maxf(size.x, size.y))
-	coin_area.add_child(coin_sprite)
-	pipe_pair.add_child(coin_area)
+func _make_obstacle_visual(top: bool) -> Control:
+	var art_path := PIPE_TOP_ART if top else PIPE_BOTTOM_ART
+	var visual: Control
+	if ResourceLoader.exists(art_path):
+		var tex := load(art_path) as Texture2D
+		if tex != null:
+			var nine := NinePatchRect.new()
+			nine.texture = tex
+			# Capuchón en la boca del hueco; cuerpo estirable verticalmente.
+			nine.patch_margin_bottom = 125 if top else 0
+			nine.patch_margin_top = 0 if top else 125
+			visual = nine
+	if visual == null:
+		var fallback := ColorRect.new()
+		fallback.color = Color(0.2, 0.65, 0.25, 0.95)
+		visual = fallback
+	visual.name = "Visual"
+	visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return visual
 
-	pipes_container.add_child(pipe_pair)
+func _resize_pipe_area(area: Area2D, start_y: float, height: float) -> void:
+	var collision := area.get_node("Collision") as CollisionShape2D
+	var shape := collision.shape as RectangleShape2D
+	shape.size = Vector2(PIPE_WIDTH, height)
+	collision.position = Vector2(0, start_y + height * 0.5)
+	collision.set_deferred("disabled", false)
+	var visual := area.get_node("Visual") as Control
+	visual.position = Vector2(-PIPE_WIDTH * 0.5, start_y)
+	visual.size = Vector2(PIPE_WIDTH, height)
+
+func _spawn_pipe_obstacle() -> void:
+	if _free_pipes.is_empty() or is_game_over:
+		return
+	var pair: Node2D = _free_pipes.pop_back()
+	var center_y := randf_range(500.0, 1420.0)
+	pair.position = Vector2(1180, 0)
+	pair.set_meta("passed", false)
+	_resize_pipe_area(pair.get_node("Top") as Area2D, 0.0, center_y - GAP_SIZE * 0.5)
+	var lower_start := center_y + GAP_SIZE * 0.5
+	_resize_pipe_area(pair.get_node("Bottom") as Area2D, lower_start, 1920.0 - lower_start)
+	var coin := pair.get_node("Coin") as Area2D
+	coin.position = Vector2(0, center_y)
+	coin.set_meta("consumed", false)
+	coin.get_node("Collision").set_deferred("disabled", false)
+	coin.show()
+	pair.show()
+	_active_pipes.append(pair)
+
+func _recycle_pipe(pair: Node2D) -> void:
+	if not pair in _active_pipes:
+		return
+	_active_pipes.erase(pair)
+	pair.hide()
+	for side in ["Top", "Bottom", "Coin"]:
+		var col := pair.get_node("%s/Collision" % side) as CollisionShape2D
+		col.set_deferred("disabled", true)
+	_free_pipes.append(pair)
 
 func _on_player_area_entered(area: Area2D) -> void:
 	if is_game_over or area.get_meta("consumed", false):
@@ -256,7 +405,8 @@ func _on_player_area_entered(area: Area2D) -> void:
 		if AudioManager:
 			AudioManager.play_coins()
 		_spawn_floating_text("+1 moneda", area.global_position, Color(1, 0.85, 0.2))
-		area.queue_free()
+		area.get_node("Collision").set_deferred("disabled", true)
+		area.hide()
 		_update_hud()
 	elif area.has_meta("obstacle"):
 		_trigger_game_over()
@@ -287,7 +437,14 @@ func _trigger_game_over() -> void:
 	tween.tween_property(game_over_modal, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _spawn_floating_text(text: String, pos: Vector2, color: Color) -> void:
-	var label = Label.new()
+	if gm and gm.reduced_effects:
+		return
+	if _floating_texts.size() >= MAX_FLOATING_TEXTS:
+		var oldest: Label = _floating_texts.pop_front()
+		if is_instance_valid(oldest):
+			oldest.queue_free()
+	var label := Label.new()
+	_floating_texts.append(label)
 	label.text = text
 	label.modulate = color
 	label.add_theme_font_size_override("font_size", 42)
@@ -299,11 +456,15 @@ func _spawn_floating_text(text: String, pos: Vector2, color: Color) -> void:
 	tween.set_parallel(true)
 	tween.tween_property(label, "position:y", label.position.y - 70, 0.6).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(label, "modulate:a", 0.0, 0.6).set_ease(Tween.EASE_IN)
-	tween.finished.connect(label.queue_free)
+	tween.finished.connect(func():
+		_floating_texts.erase(label)
+		if is_instance_valid(label):
+			label.queue_free()
+	)
 
 func _update_hud() -> void:
-	score_label.text = "PUNTOS " + str(score)
-	coins_label.text = "MONEDAS +" + str(coins_earned)
+	UIEffects.set_text(score_label, str(score))
+	UIEffects.set_text(coins_label, "+" + str(coins_earned))
 
 func _on_btn_home_pressed() -> void:
 	if not _settle_reward():

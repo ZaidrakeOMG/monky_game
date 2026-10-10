@@ -57,7 +57,7 @@ func _load_texture(path: String) -> Texture2D:
 	return null
 
 
-func _set_big_icon(button: Button, path: String, title_text: String) -> void:
+func _set_big_icon(button: Button, path: String, title_text: String, game_id: String) -> void:
 	if not button:
 		return
 
@@ -110,6 +110,32 @@ func _set_big_icon(button: Button, path: String, title_text: String) -> void:
 	title.add_theme_color_override("font_shadow_color", Color(0,0,0,0.30))
 	title.add_theme_constant_override("shadow_offset_y", 3)
 	button.add_child(title)
+
+	# Récord visible con los dibujos que ya existen; cero texto explicativo.
+	var best: int = gm.get_record(game_id) if gm else 0
+	if best > 0:
+		var trophy := TextureRect.new()
+		trophy.name = "TrophyArt"
+		trophy.texture = _load_texture("res://assets/ui/jump/trophy.png")
+		trophy.position = Vector2(655, 40)
+		trophy.size = Vector2(70, 70)
+		trophy.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		trophy.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		trophy.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.add_child(trophy)
+		var best_badge := Label.new()
+		best_badge.name = "BestBadge"
+		best_badge.text = str(best)
+		best_badge.position = Vector2(715, 40)
+		best_badge.size = Vector2(135, 65)
+		best_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		best_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		best_badge.add_theme_font_size_override("font_size", 28)
+		best_badge.add_theme_color_override("font_color", Color("#FFE783"))
+		best_badge.add_theme_color_override("font_outline_color", Color("#34200F"))
+		best_badge.add_theme_constant_override("outline_size", 6)
+		best_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.add_child(best_badge)
 
 	_bind_tap_feedback(button)
 
@@ -191,9 +217,10 @@ func _setup_visuals() -> void:
 	_hide_card_text(flappy_card)
 	_hide_card_text(jump_card)
 
-	_set_big_icon(btn_play_fruit, "res://imagenes/ui_polished/minijuegos/fruit_catcher.png", "ATRAPA LA FRUTA")
-	_set_big_icon(btn_play_flappy, "res://imagenes/ui_polished/minijuegos/flappy.png", "FLAPPY MONKY")
-	_set_big_icon(btn_play_jump, "res://imagenes/ui_polished/minijuegos/monky_jump.png", "MONKY JUMP")
+	_set_big_icon(btn_play_fruit, "res://imagenes/ui_polished/minijuegos/fruit_catcher.png", "FRUTAS", "fruit")
+	var flappy_cover := "res://assets/flappy/menu_cover.png" if ResourceLoader.exists("res://assets/flappy/menu_cover.png") else "res://imagenes/ui_polished/minijuegos/flappy.png"
+	_set_big_icon(btn_play_flappy, flappy_cover, "VOLAR", "flappy")
+	_set_big_icon(btn_play_jump, "res://imagenes/ui_polished/minijuegos/monky_jump.png", "SALTAR", "jump")
 	_add_runner_button()
 
 	btn_play_fruit.tooltip_text = "Atrapa la Fruta"
@@ -209,7 +236,7 @@ func _add_runner_button() -> void:
 	btn_play_runner.name = "BtnPlayRunner"
 	games_vbox.add_child(btn_play_runner)
 	games_vbox.move_child(btn_play_runner, 0)
-	_set_big_icon(btn_play_runner, "res://imagenes/runner/cover.png", "WONKY RUN")
+	_set_big_icon(btn_play_runner, "res://imagenes/runner/cover.png", "CORRER", "runner")
 
 func _open_scene(path: String) -> void:
 	SceneRouter.go(path)

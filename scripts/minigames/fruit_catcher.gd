@@ -53,6 +53,12 @@ var _fruit_textures: Dictionary = {}
 var _touch_x: float = 540.0
 var _touch_active: bool = false
 
+# Bonos por destreza: progreso real de la partida.
+const COMBO_WINDOW: float = 2.8
+var combo: int = 0
+var combo_time_left: float = 0.0
+var _combo_badge: Label = null
+
 # Screen bounds
 const MIN_X: float = 120.0
 const MAX_X: float = 960.0
@@ -65,6 +71,7 @@ func _ready() -> void:
 	_setup_basket_visual()
 	_setup_signals()
 	_setup_item_pool()
+	_build_combo_badge()
 	start_game()
 
 
@@ -123,6 +130,7 @@ func start_game() -> void:
 	is_game_over = false
 	score = 0
 	coins_earned = 0
+	_reset_combo()
 	lives = max_lives
 	fall_speed = 550.0
 	background.position = Vector2(540, 960)
@@ -145,6 +153,10 @@ func start_game() -> void:
 func _physics_process(delta: float) -> void:
 	if is_game_over:
 		return
+	if combo_time_left > 0.0:
+		combo_time_left = maxf(0.0, combo_time_left - delta)
+		if combo_time_left <= 0.0:
+			_reset_combo()
 
 	# Seguir posición táctil / ratón suavemente
 	var target_x := clampf(_touch_x if _touch_active else get_global_mouse_position().x, MIN_X, MAX_X)
@@ -169,6 +181,10 @@ func _physics_process(delta: float) -> void:
 			# Rotación suave del item cayendo
 			item.rotation += item.get_meta("rot_speed", 1.0) * delta
 			if item.position.y > 1950.0:
+				# Perder una fruta rompe la racha; bombas y monedas no cuentan.
+				var missed: Dictionary = item.get_meta("data", {})
+				if not missed.is_empty() and not bool(missed.get("is_bomb", false)) and not bool(missed.get("is_coin", false)):
+					_reset_combo()
 				_release_item(item)
 
 func _on_spawn_timer_timeout() -> void:
@@ -231,10 +247,65 @@ func _on_basket_area_entered(area: Area2D) -> void:
 func _on_fruit_caught(pos: Vector2, pts: int) -> void:
 	if AudioManager:
 		AudioManager.play_fruit_catch()
-	score += pts
-	_spawn_floating_popup("+" + str(pts), pos, Color(0.3, 1.0, 0.4))
+	combo = combo + 1 if combo_time_left > 0.0 else 1
+	combo_time_left = COMBO_WINDOW
+	var bonus := combo_bonus(combo)
+	score += pts + bonus
+	_spawn_floating_popup("+" + str(pts + bonus), pos, Color(0.3, 1.0, 0.4))
+	if bonus > 0 and AudioManager:
+		AudioManager.play_level_up()
+	_update_combo_badge()
 	_bounce_basket(Vector2(1.15, 0.85))
 	_update_hud()
+
+static func combo_bonus(streak: int) -> int:
+	if streak < 5 or streak % 5 != 0:
+		return 0
+	return mini(50, int(streak / 5) * 10)
+
+func _build_combo_badge() -> void:
+	_combo_badge = Label.new()
+	_combo_badge.name = "ComboBadge"
+	_combo_badge.position = Vector2(393, 240)
+	_combo_badge.size = Vector2(330, 95)
+	_combo_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_combo_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_combo_badge.add_theme_font_size_override("font_size", 47)
+	_combo_badge.add_theme_color_override("font_color", Color("#FFE37A"))
+	_combo_badge.add_theme_color_override("font_outline_color", Color("#61341F"))
+	_combo_badge.add_theme_constant_override("outline_size", 6)
+	_combo_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_combo_badge.hide()
+	get_node("HUD").add_child(_combo_badge)
+	var sparkle := TextureRect.new()
+	sparkle.name = "SparkleArt"
+	sparkle.texture = load("res://imagenes/ui_polished/reacciones/brillo.png") as Texture2D
+	sparkle.position = Vector2(-62, 11)
+	sparkle.size = Vector2(80, 70)
+	sparkle.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sparkle.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sparkle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_combo_badge.add_child(sparkle)
+
+func _update_combo_badge() -> void:
+	if _combo_badge == null:
+		return
+	_combo_badge.visible = combo >= 3
+	if combo >= 3:
+		UIEffects.set_text(_combo_badge, "x%d" % combo)
+		if gm and not gm.reduced_effects:
+			var pop := UIEffects.tween_for(_combo_badge, "combo")
+			_combo_badge.pivot_offset = _combo_badge.size * 0.5
+			pop.tween_property(_combo_badge, "scale", Vector2.ONE * 1.12, 0.08)
+			pop.tween_property(_combo_badge, "scale", Vector2.ONE, 0.15)
+
+func _reset_combo() -> void:
+	combo = 0
+	combo_time_left = 0.0
+	if _combo_badge != null:
+		UIEffects.cancel(_combo_badge, "combo")
+		_combo_badge.scale = Vector2.ONE
+		_combo_badge.hide()
 
 func _on_coin_caught(pos: Vector2, pts: int) -> void:
 	if AudioManager:
@@ -246,6 +317,7 @@ func _on_coin_caught(pos: Vector2, pts: int) -> void:
 	_update_hud()
 
 func _on_bomb_caught(pos: Vector2) -> void:
+	_reset_combo()
 	lives -= 1
 	_spawn_floating_popup("¡BOOM!", pos, Color(1.0, 0.2, 0.2))
 	_screen_shake()
@@ -271,6 +343,8 @@ func _screen_shake() -> void:
 	tween.tween_property(self, "position", Vector2.ZERO, 0.05)
 
 func _spawn_floating_popup(text: String, pos: Vector2, color: Color) -> void:
+	if gm and gm.reduced_effects:
+		return
 	var label = Label.new()
 	label.text = text
 	label.modulate = color

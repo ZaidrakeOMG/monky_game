@@ -44,6 +44,8 @@ var _market_quantities: Dictionary = {}
 var _notice: Label
 var _notice_icon: TextureRect
 var _effects_toggle: Button
+var mood_widget: WonkyMood = null
+const MOOD_WIDGET := preload("res://scripts/ui/wonky_mood.gd")
 
 # Modal de Mercado de Comidas
 @onready var food_market_popup: Control = $FoodMarketPopup
@@ -229,6 +231,7 @@ func _ready() -> void:
 
 	_setup_dock_buttons()
 	_setup_action_drawers()
+	_setup_mood_widget()
 	_setup_scroll_support()
 	_update_room_view(gm.current_room if gm else "dormitorio")
 	_polish_header()
@@ -612,6 +615,34 @@ func _select_room(r_name: String) -> void:
 		gm.change_room(r_name)
 
 
+## La emoción muestra la próxima acción real, sin una pantalla de instrucciones.
+func _setup_mood_widget() -> void:
+	if not gm:
+		return
+	mood_widget = MOOD_WIDGET.new() as WonkyMood
+	mood_widget.name = "WonkyMood"
+	mood_widget.position = Vector2(750, 660)
+	mood_widget.size = Vector2(292, 155)
+	mood_widget.z_index = 10
+	add_child(mood_widget)
+	mood_widget.setup(gm)
+	UIEffects.bind_button(mood_widget)
+	mood_widget.action_requested.connect(_on_mood_action)
+
+func _on_mood_action(mood: String) -> void:
+	match mood:
+		"food": _select_room("cocina")
+		"rest": _select_room("dormitorio")
+		"bath": _select_room("baño")
+		"play": _select_room("sala de juegos")
+		"sleeping":
+			if gm:
+				gm.toggle_sleep()
+		"happy":
+			var pet := _get_monky_node()
+			if pet:
+				pet.on_tapped()
+
 func _setup_action_drawers() -> void:
 	# Organización invisible: los controles se ven como ilustraciones con su nombre debajo.
 	var empty_panel := StyleBoxEmpty.new()
@@ -670,13 +701,9 @@ func _setup_action_drawers() -> void:
 		btn_close_level.pressed.connect(func(): level_popup.visible = false)
 
 func _open_minigames_menu() -> void:
-	var menu_path := "res://scenes/minigames/minigames_menu.tscn"
-	if not ResourceLoader.exists(menu_path):
-		push_error("No se encontró el menú de minijuegos: " + menu_path)
-		return
-	var err := get_tree().change_scene_to_file(menu_path)
-	if err != OK:
-		push_error("No se pudo abrir el menú de minijuegos. Error: " + str(err))
+	# Misma ruta segura que el resto del juego. Bloquea dobles toques y
+	# muestra el progreso REAL de carga, sin congelar el hilo principal.
+	SceneRouter.go("res://scenes/minigames/minigames_menu.tscn")
 
 
 func _refresh_kitchen_inventory() -> void:
@@ -1421,9 +1448,9 @@ func _setup_shop_modal() -> void:
 	content.add_theme_constant_override("separation", 16)
 	scroll.add_child(content)
 	var sections := [
-		["CANJEA TUS DIAMANTES", [btn_exch_250, btn_exch_1000, btn_exch_3500]],
+		["MONEDAS", [btn_exch_250, btn_exch_1000, btn_exch_3500]],
 		["POCIONES", [btn_pot_energy, btn_pot_hygiene, btn_pot_mega]],
-		["RECOMPENSAS", [btn_pack_daily, btn_pack_ad]]]
+		["REGALOS", [btn_pack_daily, btn_pack_ad]]]
 	for section in sections:
 		var heading := Label.new()
 		heading.text = section[0]
@@ -1431,7 +1458,7 @@ func _setup_shop_modal() -> void:
 		heading.add_theme_color_override("font_color", Color("#785033"))
 		content.add_child(heading)
 		var grid := GridContainer.new()
-		grid.columns = section[1].size()
+		grid.columns = 1 if section[0] == "REGALOS" else section[1].size()
 		grid.add_theme_constant_override("h_separation", 14)
 		grid.add_theme_constant_override("v_separation", 14)
 		content.add_child(grid)
@@ -1446,7 +1473,7 @@ func _setup_shop_modal() -> void:
 	_decorate_shop_slot(btn_pack_daily, str(UI_ICON["daily"]), "Regalo diario", "+20 monedas +1 diamante")
 	_decorate_shop_slot(btn_pack_ad, str(UI_ICON["ad"]), "Anuncios", "No disponibles")
 	var note := Label.new()
-	note.text = "Las pociones usan monedas primero; diamantes solo si no alcanzan.\nLas compras con dinero real y los anuncios no están disponibles."
+	note.text = "Primero usamos monedas. Si no alcanzan, usamos diamantes.\nSin anuncios ni compras con dinero real."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.add_theme_font_size_override("font_size", 23)
 	note.add_theme_color_override("font_color", Color("#785033"))
@@ -1526,6 +1553,7 @@ func _configure_unavailable_services() -> void:
 		button.hide()
 		button.tooltip_text = "Compras con dinero real no disponibles"
 	btn_pack_ad.disabled = true
+	btn_pack_ad.hide()
 	btn_pack_ad.tooltip_text = "No hay proveedor de anuncios conectado"
 
 
@@ -1681,7 +1709,7 @@ func _on_xp_changed(cur_xp: float, max_xp: float, lvl: int) -> void:
 		tween.tween_property(custom_xp_bar, "value", cur_xp, 0.22)
 
 func _on_level_up(new_level: int) -> void:
-	level_popup_label.text = "¡Monky ha alcanzado el Nivel " + str(new_level) + "!\nHas ganado " + str(new_level * 5) + " monedas y 1 diamante de bonificación."
+	level_popup_label.text = "¡NIVEL %d!\n+%d monedas   +1 diamante" % [new_level, new_level * 5]
 	level_popup.visible = true
 	var tween = create_tween()
 	level_popup.scale = Vector2(0.5, 0.5)

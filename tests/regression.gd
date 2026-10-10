@@ -35,6 +35,12 @@ func _run() -> void:
 	gm.records = {}
 	gm.level = 1
 	gm.xp = 0.0
+	# Emociones calculadas sin gráficos, independientes de la tasa de cuadros.
+	check(WonkyMood.choose_mood({}, false) == "happy", "healthy Wonky is happy")
+	check(WonkyMood.choose_mood({"hunger": 25.0, "fun": 70.0}, false) == "food", "hunger routes to kitchen")
+	check(WonkyMood.choose_mood({"energy": 20.0, "hunger": 30.0}, false) == "rest", "most urgent need wins")
+	check(WonkyMood.choose_mood({"poop": true}, false) == "bath", "cleaning hint reuses dirty reaction art")
+	check(WonkyMood.choose_mood({"hunger": 0.0}, true) == "sleeping", "sleep mode supersedes urgent needs")
 	check(gm.save_game(), "save candidate is written and validated")
 	check(gm.buy_food("apple", 2), "valid food purchase")
 	check(gm.coins == 484 and gm.get_food_quantity("apple") == 5, "food and wallet committed together")
@@ -134,10 +140,12 @@ func _test_scenes() -> void:
 		await physics_frame
 		if path.ends_with("main.tscn"):
 			var hud := instance.get_node("HUD")
+			check(hud.mood_widget != null and hud.mood_widget.current_mood != "", "illustrated mood guide is live")
+			check(hud.mood_widget.get_node_or_null("EmotionArt") != null, "real reaction asset is displayed")
 			check(hud.settings_popup == null and not hud._shop_ready, "expensive modal setup is deferred")
 			hud.btn_coins.pressed.emit()
 			check(hud._shop_ready and hud.shop_popup.visible, "wallet button opens lazy shop on first use")
-			check(hud.btn_iap_50.disabled and hud.btn_pack_ad.disabled, "no simulated IAP or advertisement grants")
+			check(hud.btn_iap_50.disabled and hud.btn_pack_ad.disabled and not hud.btn_pack_ad.visible, "fake ad and IAP actions stay hidden and disabled")
 			hud._close_shop()
 			hud._open_shop()
 			await create_timer(0.25).timeout
@@ -165,10 +173,57 @@ func _test_scenes() -> void:
 			var first_lives: int = instance.lives
 			instance._on_basket_area_entered(fruit)
 			check(instance.score == first_score and instance.lives == first_lives, "same fruit collision only resolves once")
+			check(instance.combo_bonus(4) == 0 and instance.combo_bonus(5) == 10 and instance.combo_bonus(10) == 20, "combo bonus only every five fruits")
+			instance._reset_combo()
+			var score_before_combo: int = instance.score
+			for _index in range(5):
+				instance._on_fruit_caught(Vector2(540, 900), 10)
+			check(instance.combo == 5 and instance.score == score_before_combo + 60, "real five-fruit combo grants 10 bonus points")
+			instance._reset_combo()
+			check(instance.combo == 0 and not instance._combo_badge.visible, "streak reset hides visual feedback")
 			instance._trigger_game_over()
 		elif path.ends_with("flappy_monky.tscn"):
-			instance._on_jump()
+			check(instance._free_pipes.size() == instance.PIPE_POOL_SIZE, "Flappy obstacle pool is prepared ahead of gameplay")
+			check(instance.pipes_container.get_child_count() == instance.PIPE_POOL_SIZE, "Flappy does not allocate new obstacles while playing")
+			var tap := InputEventScreenTouch.new()
+			tap.position = Vector2(700, 1050)
+			tap.pressed = true
+			instance._input(tap)
+			check(instance.is_game_started and instance.velocity_y == instance.JUMP_VELOCITY, "real touchscreen press starts an immediate flap")
+			instance.velocity_y = 17.0
+			var copy := InputEventMouseButton.new()
+			copy.device = InputEvent.DEVICE_ID_EMULATION
+			copy.position = Vector2(700, 1050)
+			copy.button_index = MOUSE_BUTTON_LEFT
+			copy.pressed = true
+			instance._input(copy)
+			check(instance.velocity_y == 17.0, "emulated mouse copy cannot double-flap")
+			var exit_touch := InputEventScreenTouch.new()
+			exit_touch.pressed = true
+			exit_touch.position = instance.btn_exit.get_global_rect().get_center()
+			instance.velocity_y = 123.0
+			instance._input(exit_touch)
+			check(instance.velocity_y == 123.0, "tapping Home button cannot accidentally flap")
+			var native_mouse := InputEventMouseButton.new()
+			native_mouse.device = InputEvent.DEVICE_ID_MOUSE
+			native_mouse.position = Vector2(700, 1050)
+			native_mouse.button_index = MOUSE_BUTTON_LEFT
+			native_mouse.pressed = true
+			instance._input(native_mouse)
+			check(instance.velocity_y == instance.JUMP_VELOCITY, "physical mouse remains responsive for desktop")
+			for _index in range(25):
+				instance._spawn_pipe_obstacle()
+			check(instance._active_pipes.size() == instance.PIPE_POOL_SIZE and instance.pipes_container.get_child_count() == instance.PIPE_POOL_SIZE, "Flappy spawning stays within 5 reusable pairs")
+			var pair: Node2D = instance._active_pipes[0]
+			var coin := pair.get_node("Coin") as Area2D
+			instance._on_player_area_entered(coin)
+			var first_coins: int = instance.coins_earned
+			instance._on_player_area_entered(coin)
+			check(first_coins == instance.coins_earned and not coin.visible, "Flappy coin is collected only once without deleting pooled nodes")
+			instance._recycle_pipe(pair)
+			check(instance._free_pipes.size() == 1, "Flappy recycles old obstacle immediately")
 			instance._spawn_pipe_obstacle()
+			check(instance._active_pipes.size() == instance.PIPE_POOL_SIZE and not (instance._active_pipes[instance._active_pipes.size() - 1].get_node("Coin") as Area2D).get_meta("consumed"), "respawned Flappy obstacle restores its coin")
 			instance.score = 2
 			instance._trigger_game_over()
 			check(instance._reward_saved, "Flappy game over stores reward")
