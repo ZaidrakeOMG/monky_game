@@ -1,0 +1,54 @@
+name: Monky isolated workbench
+on:
+  push:
+    branches: [improvement/monky-kids-polish-20261010]
+    paths: [.github/workflows/monky-workbench.yml]
+permissions:
+  contents: read
+concurrency:
+  group: monky-workbench-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  baseline:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch verified matching Godot engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/workbench/engine" reports
+          cd "$RUNNER_TEMP/workbench/engine"
+          base=https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable
+          archive=Godot_v4.7.2-stable_linux.x86_64.zip
+          curl -fL --retry 3 "$base/$archive" -o "$archive"
+          curl -fL --retry 3 "$base/SHA512-SUMS.txt" -o SHA512-SUMS.txt
+          grep " $archive\$" SHA512-SUMS.txt | sha512sum --check -
+          unzip -q "$archive"
+          chmod +x Godot_v4.7.2-stable_linux.x86_64
+          rm "$archive"
+          echo "$RUNNER_TEMP/workbench/engine" >> "$GITHUB_PATH"
+      - name: Baseline asset audit
+        run: python3 tools/audit_assets.py
+      - name: Baseline isolated tests
+        run: python3 tools/run_checks.py --godot Godot_v4.7.2-stable_linux.x86_64
+      - name: Package tracked source and reports without credentials or player data
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/workbench/project" "$RUNNER_TEMP/workbench/baseline-reports"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/workbench/project"
+          cp -r reports/. "$RUNNER_TEMP/workbench/baseline-reports/"
+          git rev-parse HEAD > "$RUNNER_TEMP/workbench/base-commit.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: monky-isolated-workbench
+          path: ${{ runner.temp }}/workbench/
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
