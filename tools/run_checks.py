@@ -53,7 +53,7 @@ def main() -> int:
             ("navigation", ["--script", "tests/navigation.gd"], 120, r"MONKY_NAVIGATION: 9 transitions, 0 failures", False),
             ("visual", ["--script", "tests/wonder_ui.gd"], 120, r"WONKY_VISUAL: 0 failures", False)])
         if args.screenshots:
-            commands.append(("screenshots", ["--rendering-method", "gl_compatibility", "--audio-driver", "Dummy", "--script", "tests/wonder_review.gd"], 180, r"WONKY_RENDER: 14 captures, 0 failures", True))
+            commands.append(("screenshots", ["--rendering-method", "gl_compatibility", "--audio-driver", "Dummy", "--script", "tests/wonder_review.gd"], 180, r"WONKY_RENDER: 15 captures, 0 failures", True))
         for name, options, timeout, marker, render in commands:
             isolated = str(Path(temporary) / name)
             env = dict(base_env, XDG_DATA_HOME=isolated, APPDATA=isolated)
