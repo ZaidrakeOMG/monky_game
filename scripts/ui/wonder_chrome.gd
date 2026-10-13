@@ -38,6 +38,10 @@ func _flush() -> void:
 			continue
 		control.set_meta("wonder_styled", true)
 		var path: String = str(scene.get_path_to(control))
+		# Los cajones de acciones usan ilustraciones sin fondo. El tema global
+		# no debe convertirlos en una franja azul ni reestilizar sus botones.
+		if "/ActionDrawers/" in path:
+			continue
 		if control is Label:
 			_paint_label(control, path)
 		elif control is Button:
@@ -56,7 +60,7 @@ func _flush() -> void:
 					control.pressed.connect(_settings_changed.bind(weakref(settings)), CONNECT_DEFERRED)
 		elif control is PanelContainer:
 			# Do not paint a dark background underneath unreviewed cream/art-backed modals.
-			if not ("/ShopPopup/" in path or "/TopBar/" in path or "/ActionDrawers/" in path):
+			if not ("/ShopPopup/" in path or "/TopBar/" in path):
 				continue
 			var old_panel: StyleBox = control.get_theme_stylebox("panel")
 			var replacement: StyleBoxFlat = UI.panel(UI.INK, Color("536b85"), 28, 0)
