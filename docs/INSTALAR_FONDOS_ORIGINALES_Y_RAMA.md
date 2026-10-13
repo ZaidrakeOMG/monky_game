@@ -37,14 +37,19 @@ Se recuperaron los originales del chat:
 * Huerto vertical de frutas (Fruit Catcher).
 * Lámina de tubos verdes; los tubos nuevos ya forman parte de esta rama en `assets/ui/wonder/pipe_green.png`.
 
-Los dos fondos **no se subieron a GitHub en este commit de documentación**: sus archivos binarios se entregaron en el ZIP `WONKY_INSTALADOR_FONDOS_GIT.zip` del chat. El instalador del ZIP se ejecuta desde fuera del repositorio, guarda cambios locales en `git stash`, cambia a esta rama, copia los PNG al sitio esperado, crea commit de esos dos PNG y ejecuta `git push` desde el equipo del propietario con su autenticación local.
+**Ya están subidos a esta misma rama de GitHub** y se descargan con `git pull` sin descargar ZIP adicional. Se guardaron en WebP de calidad alta para reducir peso y mantener la resolución:
 
-Rutas consumidas por el proyecto:
+* `assets/backgrounds/wonder_flappy.webp`: adaptación vertical 1080 × 1920 del arte horizontal suministrado.
+* `assets/backgrounds/wonder_fruit.webp`: huerto original en sus proporciones 941 × 1672, convertido a WebP de calidad alta.
 
-* `assets/backgrounds/wonder_flappy.png`: montaje vertical a partir del paisaje original, sin distorsión; el ZIP también contiene la imagen horizontal intacta.
-* `assets/backgrounds/wonder_fruit.png`: huerto original intacto.
+El ZIP `WONKY_INSTALADOR_FONDOS_GIT.zip` del chat es **opcional**: incluye PNG y referencias originales sin comprimir, además de un instalador que respalda cambios locales, cambia de rama y puede publicar PNG en GitHub. Para la mayoría de los usuarios, los WebP incluidos en Git son suficientes.
 
-`scripts/ui/wonder_assets.gd` ya detecta ambas rutas, con fallback cuando todavía no se copiaron. Reiniciar Godot para importar recursos después de la copia.
+Rutas opcionales en PNG si se usa el instalador:
+
+* `assets/backgrounds/wonder_flappy.png`
+* `assets/backgrounds/wonder_fruit.png`
+
+`scripts/ui/wonder_assets.gd` ya detecta PNG, JPG y WebP automáticamente, con fallback si faltara alguno. Reiniciar Godot para importar recursos después de la copia.
 
 ## Comprobación
 Confirmar que los archivos existen y no están vacíos, abrir Flappy y Frutas, y verificar que los tubos con brillo y boca verde se dibujan. Las pruebas automatizadas existentes validaron la lógica y el renderizado **antes** de añadir los fondos externos. Aún hace falta validación en un Android físico.
