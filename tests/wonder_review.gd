@@ -119,6 +119,18 @@ func _run() -> void:
 	if main != null:
 		await capture("12-mascota")
 		var hud := main.get_node("HUD")
+		# Sala de juegos: comprobar el estado real después de aplicar WonderChrome.
+		hud.btn_play.pressed.emit()
+		await process_frame
+		await process_frame
+		require(hud.play_drawer.visible, "game room keeps the minigames action available")
+		require(hud.play_drawer.get_theme_stylebox("panel") is StyleBoxEmpty, "game drawer has no blue panel")
+		require(hud.btn_game.get_theme_stylebox("normal") is StyleBoxEmpty, "minigames control has no blue button background")
+		require(hud.btn_game.custom_minimum_size.x <= 340.0, "minigames artwork is compact")
+		require(hud.btn_game.pressed.get_connections().size() > 0, "minigames button remains connected")
+		await capture("13-sala-juegos-limpia")
+		hud.btn_bed.pressed.emit()
+		await process_frame
 		hud.btn_coins.pressed.emit()
 		await process_frame
 		await process_frame
@@ -127,7 +139,7 @@ func _run() -> void:
 		var slot := hud.shop_popup.find_child("V8SlotTitle", true, false) as Label
 		require(slot != null and slot.get_theme_color("font_color").get_luminance() < 0.4, "cream product cards retain dark labels")
 		require(hud.btn_iap_50.disabled and hud.btn_pack_ad.disabled, "unavailable purchases and ads remain disabled")
-		await capture("13-tienda")
+		await capture("14-tienda")
 		hud._close_shop()
 		await create_timer(0.4).timeout
 		hud.btn_settings.pressed.emit()
@@ -135,10 +147,10 @@ func _run() -> void:
 		await process_frame
 		for label in hud.settings_popup.find_children("ButtonLabel", "Label", true, false):
 			require(label.get_theme_color("font_color").is_equal_approx(Color("15233e")), "settings icon label is dark on the cream artwork")
-		await capture("14-ajustes")
+		await capture("15-ajustes")
 		await dispose(main)
 	root.get_node("AudioManager").stop_all()
-	if pictures != 14:
+	if pictures != 15:
 		failures += 1
 	print("WONKY_RENDER: %d captures, %d failures" % [pictures, failures])
 	quit(0 if failures == 0 else 1)
