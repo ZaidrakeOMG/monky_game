@@ -63,6 +63,11 @@ func _flush() -> void:
 			for side in range(4):
 				replacement.set_content_margin(side, old_panel.get_content_margin(side))
 			control.add_theme_stylebox_override("panel", replacement)
+			if "/ShopPopup/" in path:
+				# Lazy shop setup reuses wallet labels and overwrites their old colors.
+				# Refresh that rebuilt panel once, including already-styled retained labels.
+				for label in control.find_children("*", "Label", true, false):
+					_paint_label(label as Label, str(scene.get_path_to(label)))
 
 func _paint_label(label: Label, path: String) -> void:
 	if "/SettingsPopup/" in path:
