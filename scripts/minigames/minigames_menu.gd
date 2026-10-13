@@ -11,7 +11,6 @@ const GAMES := [
 ]
 var gm: Node
 var coins_label: Label
-var _opening: bool = false
 
 func _ready() -> void:
 	gm = get_tree().root.get_node_or_null("GameManager")
@@ -25,7 +24,7 @@ func _build() -> void:
 	var backdrop := TextureRect.new()
 	backdrop.texture = Art.background("flappy")
 	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVER
+	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	UI.full_rect(backdrop, self)
 	var veil := TextureRect.new()
 	veil.texture = UI.gradient(Color(0.035, 0.08, 0.17, 0.65), Color(0.035, 0.075, 0.15, 0.98))
@@ -107,7 +106,7 @@ func _card(data: Dictionary, featured: bool) -> Button:
 	var picture := TextureRect.new()
 	picture.texture = Art.background(str(data.id))
 	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVER
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	UI.full_rect(picture, card)
 	picture.offset_left = 10
 	picture.offset_right = -10
@@ -175,12 +174,11 @@ func _update_coins() -> void:
 	coins_label.text = str(gm.coins) if gm != null else "0"
 
 func _open(path: String) -> void:
-	if _opening:
-		return
-	_opening = SceneRouter.go(path)
+	if not SceneRouter.busy:
+		SceneRouter.go(path)
 
 func _back() -> void:
-	if _opening:
+	if SceneRouter.busy:
 		return
 	if gm != null:
 		gm.change_room("sala de juegos")
