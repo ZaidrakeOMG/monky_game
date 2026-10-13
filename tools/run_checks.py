@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import + executable regression/navigation tests in disposable save directories.
+"""Import + executable regression/navigation/visual tests in disposable save directories.
 Usage: python tools/run_checks.py --godot /path/to/godot
 Runs headless (not an Android/GPU performance benchmark). Python stdlib only.
 """
@@ -48,7 +48,8 @@ def main() -> int:
             commands.append(("import", ["--editor", "--import"], 240, ""))
         commands.extend([
             ("regression", ["--script", "tests/regression.gd"], 120, r"MONKY_REGRESSION: (?:11[4-9]|1[2-9]\d|[2-9]\d{2,}) checks, 0 failures"),
-            ("navigation", ["--script", "tests/navigation.gd"], 120, r"MONKY_NAVIGATION: 9 transitions, 0 failures")])
+            ("navigation", ["--script", "tests/navigation.gd"], 120, r"MONKY_NAVIGATION: 9 transitions, 0 failures"),
+            ("visual", ["--script", "tests/wonder_ui.gd"], 120, r"WONKY_VISUAL: 0 failures")])
         for name, options, timeout, marker in commands:
             isolated = str(Path(temporary)/name)
             env = dict(base_env, XDG_DATA_HOME=isolated, APPDATA=isolated)
@@ -68,7 +69,7 @@ def main() -> int:
                 print(text[-8000:])
                 break
     (reports/"checks.json").write_text(json.dumps(results, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
-    return 0 if all(result["passed"] for result in results) and len(results) >= (2 if args.skip_import else 3) else 1
+    return 0 if all(result["passed"] for result in results) and len(results) == (3 if args.skip_import else 4) else 1
 
 if __name__ == "__main__":
     raise SystemExit(main())

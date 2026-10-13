@@ -1,239 +1,192 @@
 extends Control
+## Portrait arcade hub. Native Containers keep every game reachable on small phones.
 
-const STICKER_SHADER: Shader = preload("res://resources/ui_sticker.gdshader")
-
-## Menú visual de minijuegos para Android.
-## Usa botones grandes con imágenes y casi nada de texto.
-
-@onready var background: Sprite2D = $Background
-@onready var btn_back: Button = $HUD/TopBar/BtnBack
-@onready var coins_label: Label = $HUD/TopBar/CoinsBox/CoinsLabel
-@onready var title_box: Control = $HUD/TopBar/TitleBox
-
-@onready var fruit_card: Control = $HUD/Scroll/VBox/CardFruit
-@onready var flappy_card: Control = $HUD/Scroll/VBox/CardFlappy
-@onready var jump_card: Control = $HUD/Scroll/VBox/CardJump
-@onready var games_vbox: VBoxContainer = $HUD/Scroll/VBox
-
-@onready var btn_play_fruit: Button = $HUD/Scroll/VBox/CardFruit/Margin/HBox/BtnPlayFruit
-@onready var btn_play_flappy: Button = $HUD/Scroll/VBox/CardFlappy/Margin/HBox/BtnPlayFlappy
-@onready var btn_play_jump: Button = $HUD/Scroll/VBox/CardJump/Margin/HBox/BtnPlayJump
-var btn_play_runner: Button = null
-
-var gm: Node = null
+const UI := preload("res://scripts/ui/wonder_ui.gd")
+const Art := preload("res://scripts/ui/wonder_assets.gd")
+const GAMES := [
+	{"id": "flappy", "title": "FLAPPY", "subtitle": "Entre tubos y cielos mágicos", "scene": "flappy_monky", "icon": "res://imagenes/ui_polished/minijuegos/flappy.png", "color": Color("8bf0bc")},
+	{"id": "fruit", "title": "ATRAPA LA FRUTA", "subtitle": "Mueve la canasta. Evita las bombas.", "scene": "fruit_catcher", "icon": "res://imagenes/ui_polished/minijuegos/fruit_catcher.png", "color": Color("ffd36b")},
+	{"id": "jump", "title": "WONKY JUMP", "subtitle": "Un salto más alto, un nuevo récord.", "scene": "monky_jump", "icon": "res://imagenes/ui_polished/minijuegos/monky_jump.png", "color": Color("b7b4ff")},
+	{"id": "runner", "title": "WONKY RUN", "subtitle": "Corre, esquiva y reúne monedas.", "scene": "wonky_runner", "icon": "res://imagenes/runner/cover.png", "color": Color("ffb89c")}
+]
+var gm: Node
+var coins_label: Label
+var _opening: bool = false
 
 func _ready() -> void:
 	gm = get_tree().root.get_node_or_null("GameManager")
-	_setup_background()
-	_setup_visuals()
-	_setup_buttons()
+	set_meta("wonder_custom", true)
+	_build()
 	_update_coins()
-	if gm:
-		gm.coins_changed.connect(func(_value): _update_coins())
+	if gm != null:
+		gm.coins_changed.connect(_coins_changed)
 
-func _setup_background() -> void:
-	if background and background.texture:
-		var tex_size := background.texture.get_size()
-		if tex_size.x > 0.0 and tex_size.y > 0.0:
-			var scale_factor := maxf(1080.0 / tex_size.x, 1920.0 / tex_size.y)
-			background.scale = Vector2(scale_factor, scale_factor)
+func _build() -> void:
+	var backdrop := TextureRect.new()
+	backdrop.texture = Art.background("flappy")
+	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVER
+	UI.full_rect(backdrop, self)
+	var veil := TextureRect.new()
+	veil.texture = UI.gradient(Color(0.035, 0.08, 0.17, 0.65), Color(0.035, 0.075, 0.15, 0.98))
+	UI.full_rect(veil, self)
+	var margin := MarginContainer.new()
+	add_child(margin)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side in ["margin_left", "margin_right"]:
+		margin.add_theme_constant_override(side, 48)
+	margin.add_theme_constant_override("margin_top", 80)
+	margin.add_theme_constant_override("margin_bottom", 48)
+	var layout := VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 24)
+	margin.add_child(layout)
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 24)
+	layout.add_child(header)
+	var back := Button.new()
+	back.name = "BtnBack"
+	back.text = "‹"
+	back.tooltip_text = "Volver con Wonky"
+	back.custom_minimum_size = Vector2(112, 112)
+	back.add_theme_font_size_override("font_size", 72)
+	UI.button(back)
+	header.add_child(back)
+	back.pressed.connect(_back)
+	var wordmark := VBoxContainer.new()
+	wordmark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wordmark.add_theme_constant_override("separation", -8)
+	header.add_child(wordmark)
+	wordmark.add_child(UI.text("WONKY", 68))
+	wordmark.add_child(UI.text("A R C A D E", 26, UI.MINT))
+	var wallet := PanelContainer.new()
+	wallet.custom_minimum_size.x = 220
+	wallet.add_theme_stylebox_override("panel", UI.panel(UI.INK, Color("a48b55"), 28, 20))
+	header.add_child(wallet)
+	var wallet_row := HBoxContainer.new()
+	wallet_row.add_theme_constant_override("separation", 12)
+	wallet.add_child(wallet_row)
+	var coin := TextureRect.new()
+	coin.texture = UI.texture("res://imagenes/opt/hud/moneda.png")
+	coin.custom_minimum_size = Vector2(50, 50)
+	coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	wallet_row.add_child(coin)
+	coins_label = UI.text("0", 38, UI.GOLD)
+	coins_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wallet_row.add_child(coins_label)
+	layout.add_child(UI.text("Tu próxima aventura empieza aquí.", 36, UI.MUTED))
+	var scroll := ScrollContainer.new()
+	scroll.name = "GamesScroll"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	layout.add_child(scroll)
+	var cards := VBoxContainer.new()
+	cards.name = "Games"
+	cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cards.add_theme_constant_override("separation", 24)
+	scroll.add_child(cards)
+	for index in range(GAMES.size()):
+		cards.add_child(_card(GAMES[index], index == 0))
+	var note := UI.text("4 aventuras · tus monedas y récords, en un solo lugar", 27, UI.MUTED)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	layout.add_child(note)
+	back.grab_focus()
+
+func _card(data: Dictionary, featured: bool) -> Button:
+	var card := Button.new()
+	card.name = "Game_" + str(data.id)
+	card.custom_minimum_size.y = 430 if featured else 300
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.clip_contents = true
+	card.tooltip_text = str(data.title) + " · " + str(data.subtitle)
+	UI.button(card)
+	card.add_theme_stylebox_override("normal", UI.panel(Color("243f54"), data.color, 32, 0))
+	card.pressed.connect(_open.bind("res://scenes/minigames/" + str(data.scene) + ".tscn"))
+	var picture := TextureRect.new()
+	picture.texture = Art.background(str(data.id))
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVER
+	UI.full_rect(picture, card)
+	picture.offset_left = 10
+	picture.offset_right = -10
+	picture.offset_top = 10
+	picture.offset_bottom = -10
+	var wash := TextureRect.new()
+	wash.texture = UI.gradient(Color(0.04, 0.10, 0.19, 0.96), Color(0.04, 0.10, 0.19, 0.40), true)
+	UI.full_rect(wash, card)
+	wash.offset_left = 10
+	wash.offset_right = -10
+	wash.offset_top = 10
+	wash.offset_bottom = -10
+	var icon := TextureRect.new()
+	icon.texture = UI.texture(str(data.icon))
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	card.add_child(icon)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.anchor_left = 0.73
+	icon.anchor_right = 1.0
+	icon.anchor_bottom = 1.0
+	icon.offset_top = 24
+	icon.offset_right = -20
+	icon.offset_bottom = -24
+	var eyebrow := UI.text("CIELOS MÁGICOS" if featured else "AVENTURA", 25, data.color)
+	card.add_child(eyebrow)
+	eyebrow.position = Vector2(32, 26)
+	var heading := UI.text(str(data.title), 92 if featured else 48)
+	card.add_child(heading)
+	heading.position = Vector2(30, 65)
+	heading.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.35))
+	heading.add_theme_constant_override("shadow_offset_y", 4)
+	var description := UI.text(str(data.subtitle), 30, UI.MUTED)
+	card.add_child(description)
+	description.position = Vector2(34, 187 if featured else 128)
+	description.size = Vector2(660, 72)
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var record_value: int = int(gm.get_record(str(data.id))) if gm != null else 0
+	var record := UI.text("RÉCORD  " + str(record_value), 29, data.color)
+	card.add_child(record)
+	record.anchor_top = 1.0
+	record.anchor_bottom = 1.0
+	record.offset_left = 34
+	record.offset_top = -77
+	record.offset_bottom = -34
+	var cta := PanelContainer.new()
+	card.add_child(cta)
+	cta.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cta.anchor_top = 1.0
+	cta.anchor_bottom = 1.0
+	cta.offset_left = 380
+	cta.offset_right = 650
+	cta.offset_top = -98
+	cta.offset_bottom = -26
+	cta.add_theme_stylebox_override("panel", UI.panel(data.color, data.color, 24, 12))
+	var cta_label := UI.text("JUGAR  ›", 32, UI.INK)
+	cta_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cta.add_child(cta_label)
+	return card
+
+func _coins_changed(_value: int) -> void:
+	_update_coins()
 
 func _update_coins() -> void:
-	if coins_label:
-		coins_label.text = str(gm.coins) if gm else "0"
+	coins_label.text = str(gm.coins) if gm != null else "0"
 
-func _sticker_material(outline_px: float = 8.0, shadow_y: float = 5.0) -> ShaderMaterial:
-	var material := ShaderMaterial.new()
-	material.shader = STICKER_SHADER
-	material.set_shader_parameter("outline_color", Color("#1D140F"))
-	material.set_shader_parameter("outline_size", outline_px)
-	material.set_shader_parameter("shadow_offset", Vector2(0.0, shadow_y))
-	material.set_shader_parameter("shadow_color", Color(0.03, 0.02, 0.02, 0.30))
-	return material
-
-func _load_texture(path: String) -> Texture2D:
-	if path != "" and ResourceLoader.exists(path):
-		return load(path) as Texture2D
-	return null
-
-
-func _set_big_icon(button: Button, path: String, title_text: String) -> void:
-	if not button:
+func _open(path: String) -> void:
+	if _opening:
 		return
+	_opening = SceneRouter.go(path)
 
-	button.text = ""
-	button.icon = null
-	button.custom_minimum_size = Vector2(860, 300)
-	button.focus_mode = Control.FOCUS_NONE
-	button.flat = true
-	button.clip_contents = false
-
-	var empty := StyleBoxEmpty.new()
-	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-		button.add_theme_stylebox_override(state, empty)
-
-	var art := TextureRect.new()
-	art.name = "GameArt"
-	art.texture = _load_texture(path)
-	art.material = null
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	art.anchor_left = 0.5
-	art.anchor_right = 0.5
-	art.anchor_top = 0.0
-	art.anchor_bottom = 0.0
-	art.offset_left = -170.0
-	art.offset_right = 170.0
-	art.offset_top = -10.0
-	art.offset_bottom = 330.0
-	button.add_child(art)
-
-	var title := Label.new()
-	title.name = "GameTitle"
-	title.text = title_text
-	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title.anchor_left = 0.0
-	title.anchor_right = 1.0
-	title.anchor_top = 1.0
-	title.anchor_bottom = 1.0
-	title.offset_left = 10.0
-	title.offset_right = -10.0
-	title.offset_top = -56.0
-	title.offset_bottom = -4.0
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 33)
-	title.add_theme_color_override("font_color", Color.WHITE)
-	title.add_theme_color_override("font_outline_color", Color("#17100C"))
-	title.add_theme_constant_override("outline_size", 8)
-	title.add_theme_color_override("font_shadow_color", Color(0,0,0,0.30))
-	title.add_theme_constant_override("shadow_offset_y", 3)
-	button.add_child(title)
-
-	_bind_tap_feedback(button)
-
-func _bind_tap_feedback(button: Button) -> void:
-	UIEffects.bind_button(button)
-
-func _hide_card_text(card: Control) -> void:
-	if not card:
+func _back() -> void:
+	if _opening:
 		return
-	if card is PanelContainer:
-		(card as PanelContainer).add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	card.custom_minimum_size = Vector2(0, 325)
+	if gm != null:
+		gm.change_room("sala de juegos")
+	_open("res://scenes/main.tscn")
 
-	var margin := card.get_node_or_null("Margin") as MarginContainer
-	if margin:
-		for side in ["margin_left", "margin_top", "margin_right", "margin_bottom"]:
-			margin.add_theme_constant_override(side, 0)
-
-	var hbox := card.get_node_or_null("Margin/HBox")
-	if not hbox:
-		return
-	var icon_label := hbox.get_node_or_null("IconLabel") as Control
-	var info_box := hbox.get_node_or_null("InfoVBox") as Control
-	if icon_label:
-		icon_label.visible = false
-	if info_box:
-		info_box.visible = false
-	if hbox is BoxContainer:
-		hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-
-
-func _setup_visuals() -> void:
-	# Se conserva el título; sólo los botones de juego quedan sin tarjeta.
-	if title_box:
-		title_box.visible = true
-		if title_box is PanelContainer:
-			(title_box as PanelContainer).add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-		var title_label := title_box.get_node_or_null("TitleLabel") as Label
-		if title_label:
-			title_label.text = "MINIJUEGOS"
-			title_label.add_theme_font_size_override("font_size", 36)
-			title_label.add_theme_color_override("font_color", Color("#FFD654"))
-			title_label.add_theme_color_override("font_outline_color", Color("#17100C"))
-			title_label.add_theme_constant_override("outline_size", 8)
-
-	# Volver: flecha tipo sticker, sin tarjeta.
-	btn_back.text = ""
-	btn_back.icon = null
-	btn_back.custom_minimum_size = Vector2(112, 92)
-	btn_back.focus_mode = Control.FOCUS_NONE
-	btn_back.flat = true
-	var empty := StyleBoxEmpty.new()
-	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-		btn_back.add_theme_stylebox_override(state, empty)
-	var back_art := TextureRect.new()
-	back_art.texture = _load_texture("res://imagenes/ui_polished/navegacion/atras.png")
-	back_art.material = null
-	back_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	back_art.set_anchors_preset(Control.PRESET_FULL_RECT)
-	back_art.offset_left = 8
-	back_art.offset_top = 2
-	back_art.offset_right = -8
-	back_art.offset_bottom = -2
-	back_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	back_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	btn_back.add_child(back_art)
-	_bind_tap_feedback(btn_back)
-
-
-	var coins_box := coins_label.get_parent() as PanelContainer if coins_label else null
-	if coins_box:
-		coins_box.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-
-	if coins_label:
-		coins_label.add_theme_color_override("font_outline_color", Color("#17100C"))
-		coins_label.add_theme_constant_override("outline_size", 6)
-
-	_hide_card_text(fruit_card)
-	_hide_card_text(flappy_card)
-	_hide_card_text(jump_card)
-
-	_set_big_icon(btn_play_fruit, "res://imagenes/ui_polished/minijuegos/fruit_catcher.png", "ATRAPA LA FRUTA")
-	_set_big_icon(btn_play_flappy, "res://imagenes/ui_polished/minijuegos/flappy.png", "FLAPPY MONKY")
-	_set_big_icon(btn_play_jump, "res://imagenes/ui_polished/minijuegos/monky_jump.png", "MONKY JUMP")
-	_add_runner_button()
-
-	btn_play_fruit.tooltip_text = "Atrapa la Fruta"
-	btn_play_flappy.tooltip_text = "Flappy Monky"
-	btn_play_jump.tooltip_text = "Monky Jump"
-	if btn_play_runner:
-		btn_play_runner.tooltip_text = "Wonky Run"
-
-func _add_runner_button() -> void:
-	if not games_vbox or btn_play_runner:
-		return
-	btn_play_runner = Button.new()
-	btn_play_runner.name = "BtnPlayRunner"
-	games_vbox.add_child(btn_play_runner)
-	games_vbox.move_child(btn_play_runner, 0)
-	_set_big_icon(btn_play_runner, "res://imagenes/runner/cover.png", "WONKY RUN")
-
-func _open_scene(path: String) -> void:
-	SceneRouter.go(path)
-
-func _setup_buttons() -> void:
-	btn_back.pressed.connect(func():
-		if gm:
-			gm.change_room("sala de juegos")
-		_open_scene("res://scenes/main.tscn")
-	)
-
-	btn_play_fruit.pressed.connect(func():
-		_open_scene("res://scenes/minigames/fruit_catcher.tscn")
-	)
-
-	btn_play_flappy.pressed.connect(func():
-		_open_scene("res://scenes/minigames/flappy_monky.tscn")
-	)
-
-	btn_play_jump.pressed.connect(func():
-		_open_scene("res://scenes/minigames/monky_jump.tscn")
-	)
-
-	if btn_play_runner:
-		btn_play_runner.pressed.connect(func():
-			_open_scene("res://scenes/minigames/wonky_runner.tscn")
-		)
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		_back()
+		get_viewport().set_input_as_handled()
