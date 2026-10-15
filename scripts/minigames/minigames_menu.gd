@@ -14,8 +14,9 @@ const GAMES := [
 
 const SCHOOL_GAMES := [
 	{"id": "animal_sounds", "title": "ANIMALES", "subtitle": "¿Quién hace este sonido? Escucha, aprende y diviértete.", "scene": "school/animal_sounds", "icon": "res://imagenes/escuela/animales/perro.png", "color": Color("#FFB26B"), "eyebrow": "SONIDOS Y DIBUJOS"},
-	{"id": "colors", "title": "COLORES", "subtitle": "¿De qué color es cada dibujo? Taller de pintura.", "scene": "school/animal_sounds", "icon": "res://imagenes/escuela/animales/pato.png", "color": Color("#6BCB77"), "eyebrow": "ARTE INFANTIL", "locked": true},
-	{"id": "counting", "title": "CONTAR", "subtitle": "Cuenta frutas y objetos con Wonky.", "scene": "school/animal_sounds", "icon": "res://imagenes/opt/hud/manzana.png", "color": Color("#4D96FF"), "eyebrow": "NÚMEROS", "locked": true}
+	{"id": "colors", "title": "COLORES", "subtitle": "¿De qué color es cada pintura? Taller de arte.", "scene": "school/school_colors", "icon": "res://imagenes/escuela/animales/pato.png", "color": Color("#6BCB77"), "eyebrow": "ARTE INFANTIL"},
+	{"id": "counting", "title": "CONTAR", "subtitle": "Cuenta frutas del 1 al 5 con Wonky.", "scene": "school/school_counting", "icon": "res://imagenes/ui_polished/alimentos/manzana.png", "color": Color("#4D96FF"), "eyebrow": "NÚMEROS Y CANTIDADES"},
+	{"id": "shapes", "title": "FORMAS", "subtitle": "Círculo, cuadrado, triángulo, estrella y corazón.", "scene": "school/school_shapes", "icon": "res://imagenes/escuela/formas/estrella.png", "color": Color("#FFD93D"), "eyebrow": "FIGURAS GEOMÉTRICAS"}
 ]
 
 var gm: Node = null
@@ -204,7 +205,7 @@ func _switch_tab(tab_name: String) -> void:
 		_sub_wordmark.text = "L A   E S C U E L I T A"
 		_sub_wordmark.add_theme_color_override("font_color", Color("#FFD36B"))
 		_tagline.text = "Aprende jugando con Wonky · Sonidos, colores y dibujos."
-		_note.text = "Aprende con dibujos y sonidos · ¡Gana monedas y estrellas para Wonky!"
+		_note.text = "4 aventuras didácticas · ¡Gana monedas y estrellas para Wonky!"
 		for index in range(SCHOOL_GAMES.size()):
 			_cards_container.add_child(_card(SCHOOL_GAMES[index], index == 0))
 
