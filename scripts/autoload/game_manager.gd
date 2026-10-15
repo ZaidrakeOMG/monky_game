@@ -26,6 +26,7 @@ const POTIONS := {"energy": [80, 4], "hygiene": [60, 3], "mega": [200, 10]}
 const EXCHANGES := {10: 250, 30: 1000, 80: 3500}
 var records: Dictionary = {}
 var reduced_effects: bool = false
+var hud_style: String = "pou_circles"
 var save_path: String = SAVE_PATH
 var _save_template := ConfigFile.new()
 var _save_read_only: bool = false
@@ -590,6 +591,7 @@ func _build_save_config() -> ConfigFile:
 	config.set_value("meta", "schema_version", 2)
 	config.set_value("records", "best", records)
 	config.set_value("settings", "reduced_effects", reduced_effects)
+	config.set_value("settings", "hud_style", hud_style)
 	return config
 
 func save_game() -> bool:
@@ -624,6 +626,7 @@ func load_game() -> void:
 		push_warning("Partida recuperada desde respaldo válido.")
 	records = config.get_value("records", "best", {}).duplicate(true)
 	reduced_effects = config.get_value("settings", "reduced_effects", false)
+	hud_style = config.get_value("settings", "hud_style", "pou_circles")
 
 	sfx_enabled = config.get_value("settings", "sfx", true)
 	music_enabled = config.get_value("settings", "music", true)
@@ -785,7 +788,8 @@ func _commit_transaction(updates: Dictionary) -> bool:
 		"unlocked_accessories": ["customization", "unlocked_accessories"],
 		"equipped_accessories": ["customization", "equipped_accessories"],
 		"last_daily_reward_time": ["game", "last_daily_reward_time"],
-		"records": ["records", "best"], "reduced_effects": ["settings", "reduced_effects"]}
+		"records": ["records", "best"], "reduced_effects": ["settings", "reduced_effects"],
+		"hud_style": ["settings", "hud_style"]}
 	for stat in ["hunger", "protein", "energy", "fun", "hygiene"]:
 		fields[stat] = ["stats", stat]
 	var config := _build_save_config()
@@ -814,7 +818,7 @@ func _commit_transaction(updates: Dictionary) -> bool:
 			"diamonds": diamonds_changed.emit(diamonds)
 			"food_inventory": food_inventory_changed.emit()
 			"hunger", "protein", "energy", "fun", "hygiene": stat_changed.emit(key, get(key), MAX_STAT)
-			"reduced_effects": settings_changed.emit()
+			"reduced_effects", "hud_style": settings_changed.emit()
 	if updates.has("xp") or updates.has("level"):
 		xp_changed.emit(xp, get_xp_needed(), level)
 	if level > old_level:
@@ -934,6 +938,9 @@ func _validate_save(config: ConfigFile) -> bool:
 					return false
 			elif key in ["sfx", "music", "vibration", "is_sleeping", "reduced_effects"]:
 				if not value is bool:
+					return false
+			elif key == "hud_style":
+				if not value is String or not value in ["classic", "pou_circles", "pou_capsules"]:
 					return false
 			elif key in ["foods", "best"]:
 				if not value is Dictionary:

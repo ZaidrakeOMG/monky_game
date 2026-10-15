@@ -83,6 +83,13 @@ var btn_toggle_music: Button = null
 var btn_toggle_vib: Button = null
 var confirm_reset_popup: Control = null
 
+# Diseños alternativos del HUD
+var _pou_circles_row: HBoxContainer = null
+var _pou_capsules_row: HBoxContainer = null
+var _pou_circle_badges: Dictionary = {}
+var _pou_capsule_badges: Dictionary = {}
+var _hud_style_buttons: Dictionary = {}
+
 # Dock de navegación
 @onready var btn_bed: Button = $BottomBar/VBox/DockContainer/BtnBed
 @onready var btn_kitchen: Button = $BottomBar/VBox/DockContainer/BtnKitchen
@@ -240,6 +247,12 @@ func _ready() -> void:
 	if gm:
 		gm.show_floating_text.connect(_show_notice)
 		gm.monky_state_changed.connect(func(_state): _update_sleep_button())
+		if gm.has_signal("settings_changed"):
+			gm.settings_changed.connect(func():
+				_apply_hud_style(gm.hud_style)
+				if settings_popup and settings_popup.visible:
+					_update_settings_hud_buttons()
+			)
 		if gm._save_read_only:
 			_show_notice("No se pudo recuperar tu partida. Se conservaron los archivos dañados.", Vector2.ZERO, Color(1, 0.7, 0.5))
 
@@ -272,16 +285,45 @@ func _update_sleep_button() -> void:
 func _setup_protein_ui() -> void:
 	# Cinco medidores claros y respirados. El icono manda; el texto sólo acompaña.
 	if stats_grid:
-		stats_grid.add_theme_constant_override("separation", 18)
+		stats_grid.add_theme_constant_override("separation", 16)
 
-	for bar in [hunger_bar, protein_bar, energy_bar, fun_bar, hygiene_bar]:
-		if bar:
-			bar.custom_minimum_size = Vector2(150, 24)
-			bar.show_percentage = false
+	var classic_meta := [
+		{"bar": hunger_bar, "col": Color("#FF725E"), "room": "cocina"},
+		{"bar": protein_bar, "col": Color("#E84A3B"), "room": "cocina"},
+		{"bar": energy_bar, "col": Color("#7B68EE"), "room": "dormitorio"},
+		{"bar": fun_bar, "col": Color("#FFC72F"), "room": "sala de juegos"},
+		{"bar": hygiene_bar, "col": Color("#40C8D8"), "room": "baño"}
+	]
+
+	for item in classic_meta:
+		var bar: ProgressBar = item.bar
+		if not bar:
+			continue
+		bar.custom_minimum_size = Vector2(154, 22)
+		bar.show_percentage = false
+		var bg := StyleBoxFlat.new()
+		bg.bg_color = Color("#170F0A", 0.92)
+		bg.set_corner_radius_all(9)
+		var fill := StyleBoxFlat.new()
+		fill.bg_color = item.col
+		fill.set_corner_radius_all(8)
+		bar.add_theme_stylebox_override("background", bg)
+		bar.add_theme_stylebox_override("fill", fill)
+
+		var parent_c := bar.get_parent() as Control
+		if parent_c:
+			parent_c.mouse_filter = Control.MOUSE_FILTER_STOP
+			var target_room: String = item.room
+			parent_c.gui_input.connect(func(ev: InputEvent):
+				if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+					if AudioManager:
+						AudioManager.play_pop()
+					_select_room(target_room)
+			)
 
 	for label in [hunger_label, protein_label, energy_label, fun_label, hygiene_label]:
 		if label:
-			label.add_theme_font_size_override("font_size", 26)
+			label.add_theme_font_size_override("font_size", 24)
 			label.add_theme_color_override("font_color", Color("#FFF9EA"))
 			label.add_theme_color_override("font_outline_color", Color("#26160F"))
 			label.add_theme_constant_override("outline_size", 4)
@@ -1858,6 +1900,30 @@ func _update_stat_ui(stat_name: String, value: float, max_val: float) -> void:
 		UIEffects.set_text(target_label, "%s\n%d%%" % [names.get(stat_name, stat_name), int(value)])
 		target_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
+	# Actualizar widget circular de Pou
+	if _pou_circle_badges.has(stat_name):
+		var data: Dictionary = _pou_circle_badges[stat_name]
+		var circ = data.get("circle", null)
+		var lbl = data.get("label", null)
+		if is_instance_valid(circ):
+			circ.max_value = max_val
+			var tw_c := create_tween()
+			tw_c.tween_property(circ, "value", value, 0.22)
+		if is_instance_valid(lbl):
+			lbl.text = str(int(value)) + "%"
+
+	# Actualizar widget de cápsula flotante
+	if _pou_capsule_badges.has(stat_name):
+		var cdata: Dictionary = _pou_capsule_badges[stat_name]
+		var pbar = cdata.get("pbar", null)
+		var clbl = cdata.get("label", null)
+		if is_instance_valid(pbar):
+			pbar.max_value = max_val
+			var tw_p := create_tween()
+			tw_p.tween_property(pbar, "value", value, 0.22)
+		if is_instance_valid(clbl):
+			clbl.text = str(int(value)) + "%"
+
 func _on_coins_changed(new_coins: int) -> void:
 	if coins_label:
 		coins_label.text = str(new_coins)
@@ -2108,12 +2174,13 @@ func _setup_settings_modal() -> void:
 	)
 	settings_popup.add_child(backdrop)
 
-	# Marco ilustrado centrado. Usamos Control para posicionado libre y confiable.
+	# Marco ilustrado centrado.
 	var panel := Control.new()
 	panel.name = "Panel"
-	panel.custom_minimum_size = Vector2(860, 1040)
-	panel.size = Vector2(860, 1040)
-	panel.position = Vector2(110, 440)
+	panel.set_meta("wonder_custom", true)
+	panel.custom_minimum_size = Vector2(880, 1260)
+	panel.size = Vector2(880, 1260)
+	panel.position = Vector2(100, 310)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	settings_popup.add_child(panel)
 
@@ -2142,23 +2209,23 @@ func _setup_settings_modal() -> void:
 	panel.add_child(title)
 
 	var content := VBoxContainer.new()
-	content.position = Vector2(82, 178)
-	content.size = Vector2(696, 760)
+	content.position = Vector2(80, 140)
+	content.size = Vector2(720, 1070)
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
-	content.add_theme_constant_override("separation", 12)
+	content.add_theme_constant_override("separation", 10)
 	panel.add_child(content)
 
 	var intro := Label.new()
 	intro.text = "SONIDO Y RESPUESTA"
 	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	intro.add_theme_font_size_override("font_size", 23)
+	intro.add_theme_font_size_override("font_size", 21)
 	intro.add_theme_color_override("font_color", Color("#6B3E29"))
 	content.add_child(intro)
 
 	var toggles := HBoxContainer.new()
 	toggles.alignment = BoxContainer.ALIGNMENT_CENTER
-	toggles.add_theme_constant_override("separation", 12)
-	toggles.custom_minimum_size.y = 220
+	toggles.add_theme_constant_override("separation", 14)
+	toggles.custom_minimum_size.y = 180
 	content.add_child(toggles)
 
 	btn_toggle_sfx = _add_settings_icon_toggle(toggles, "Sonido", str(UI_ICON["sound_on"]), str(UI_ICON["sound_off"]), Color("#52BDEB"), func():
@@ -2181,14 +2248,19 @@ func _setup_settings_modal() -> void:
 	)
 
 	_effects_toggle = Button.new()
+	_effects_toggle.set_meta("wonder_custom", true)
 	_effects_toggle.toggle_mode = true
 	_effects_toggle.text = "Efectos reducidos: " + ("ACTIVOS" if gm.reduced_effects else "DESACTIVADOS")
-	_effects_toggle.custom_minimum_size = Vector2(650, 84)
-	_effects_toggle.add_theme_font_size_override("font_size", 28)
+	_effects_toggle.custom_minimum_size = Vector2(650, 68)
+	_effects_toggle.add_theme_font_size_override("font_size", 24)
 	var effects_style := StyleBoxFlat.new()
 	effects_style.bg_color = Color("#F2DDB0")
+	effects_style.border_color = Color("#C99F72")
+	effects_style.set_border_width_all(2)
 	effects_style.set_corner_radius_all(16)
 	_effects_toggle.add_theme_stylebox_override("normal", effects_style)
+	_effects_toggle.add_theme_stylebox_override("hover", effects_style)
+	_effects_toggle.add_theme_stylebox_override("pressed", effects_style)
 	UIEffects.bind_button(_effects_toggle)
 	_effects_toggle.add_theme_color_override("font_color", Color("#553421"))
 	_effects_toggle.button_pressed = gm.reduced_effects
@@ -2200,34 +2272,76 @@ func _setup_settings_modal() -> void:
 	)
 	content.add_child(_effects_toggle)
 
-	var divider := Label.new()
-	divider.text = "★   •   ★   •   ★"
-	divider.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	divider.add_theme_font_size_override("font_size", 22)
-	divider.add_theme_color_override("font_color", Color("#E4AA2F"))
-	content.add_child(divider)
+	var divider1 := Label.new()
+	divider1.text = "★   •   ★   •   ★"
+	divider1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	divider1.add_theme_font_size_override("font_size", 20)
+	divider1.add_theme_color_override("font_color", Color("#E4AA2F"))
+	content.add_child(divider1)
+
+	# Selector de diseño de HUD
+	var hud_title := Label.new()
+	hud_title.text = "DISEÑO DE INTERFAZ"
+	hud_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hud_title.add_theme_font_size_override("font_size", 21)
+	hud_title.add_theme_color_override("font_color", Color("#6B3E29"))
+	content.add_child(hud_title)
+
+	var hud_buttons_row := HBoxContainer.new()
+	hud_buttons_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	hud_buttons_row.add_theme_constant_override("separation", 14)
+	hud_buttons_row.custom_minimum_size.y = 66
+	content.add_child(hud_buttons_row)
+
+	var style_options := [
+		{"id": "classic", "label": "Clásico"},
+		{"id": "pou_circles", "label": "Círculos Pou"},
+		{"id": "pou_capsules", "label": "Cápsulas"}
+	]
+
+	for opt in style_options:
+		var style_id: String = opt.id
+		var s_btn := Button.new()
+		s_btn.set_meta("wonder_custom", true)
+		s_btn.text = opt.label
+		s_btn.custom_minimum_size = Vector2(214, 62)
+		s_btn.add_theme_font_size_override("font_size", 22)
+		s_btn.focus_mode = Control.FOCUS_NONE
+		UIEffects.bind_button(s_btn)
+		s_btn.pressed.connect(func():
+			_select_hud_style(style_id)
+		)
+		hud_buttons_row.add_child(s_btn)
+		_hud_style_buttons[style_id] = s_btn
+
+	var divider2 := Label.new()
+	divider2.text = "★   •   ★   •   ★"
+	divider2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	divider2.add_theme_font_size_override("font_size", 20)
+	divider2.add_theme_color_override("font_color", Color("#E4AA2F"))
+	content.add_child(divider2)
 
 	var game_title := Label.new()
 	game_title.text = "MI PARTIDA"
 	game_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game_title.add_theme_font_size_override("font_size", 23)
+	game_title.add_theme_font_size_override("font_size", 21)
 	game_title.add_theme_color_override("font_color", Color("#6B3E29"))
 	content.add_child(game_title)
 
 	var actions := HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", 70)
-	actions.custom_minimum_size.y = 220
+	actions.custom_minimum_size.y = 180
 	content.add_child(actions)
 
 	var btn_reset := Button.new()
-	_set_image_button(btn_reset, str(UI_ICON["reset"]), 118, Vector2(245, 205), "Reiniciar", 24)
+	_set_image_button(btn_reset, str(UI_ICON["reset"]), 105, Vector2(240, 180), "Reiniciar", 22)
 	btn_reset.tooltip_text = "Empezar una partida nueva"
 	btn_reset.pressed.connect(_open_confirm_reset)
 	actions.add_child(btn_reset)
 
 	var btn_quit := Button.new()
-	_set_image_button(btn_quit, str(UI_ICON["quit"]), 118, Vector2(245, 205), "Salir", 24)
+	_set_image_button(btn_quit, str(UI_ICON["quit"]), 105, Vector2(240, 180), "Salir", 22)
 	btn_quit.tooltip_text = "Salir del juego"
 	btn_quit.pressed.connect(func():
 		if gm and not gm.save_game():
@@ -2237,16 +2351,16 @@ func _setup_settings_modal() -> void:
 	actions.add_child(btn_quit)
 
 	var hint := Label.new()
-	hint.text = "Toca un icono para cambiar su estado"
+	hint.text = "Toca una opción para cambiar su configuración"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 23)
+	hint.add_theme_font_size_override("font_size", 21)
 	hint.add_theme_color_override("font_color", Color("#8B6956"))
 	content.add_child(hint)
 
 	# Botón Cerrar (X) colocado al final para quedar siempre arriba en el orden visual y de input
 	var btn_close := Button.new()
 	btn_close.name = "BtnCloseSettings"
-	btn_close.position = Vector2(748, 38)
+	btn_close.position = Vector2(765, 36)
 	btn_close.size = Vector2(76, 76)
 	btn_close.custom_minimum_size = Vector2(76, 76)
 	btn_close.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -2257,12 +2371,51 @@ func _setup_settings_modal() -> void:
 
 	_update_settings_ui()
 
+func _select_hud_style(style_id: String) -> void:
+	if AudioManager:
+		AudioManager.play_pop()
+	if gm:
+		gm._commit_transaction({"hud_style": style_id})
+		gm.save_game()
+	_apply_hud_style(style_id)
+	_update_settings_hud_buttons()
+
+func _update_settings_hud_buttons() -> void:
+	var active_style: String = gm.hud_style if gm else "pou_circles"
+	for sid in _hud_style_buttons:
+		var btn: Button = _hud_style_buttons[sid]
+		if not is_instance_valid(btn):
+			continue
+		var is_selected: bool = (str(sid) == active_style)
+		var sb := StyleBoxFlat.new()
+		sb.set_corner_radius_all(16)
+		if is_selected:
+			sb.bg_color = Color("#5A3018")
+			sb.border_color = Color("#F5B942")
+			sb.set_border_width_all(3)
+			sb.shadow_color = Color(0.96, 0.72, 0.26, 0.40)
+			sb.shadow_size = 6
+			btn.add_theme_color_override("font_color", Color("#FFE29A"))
+			btn.add_theme_color_override("font_outline_color", Color("#2D1408"))
+			btn.add_theme_constant_override("outline_size", 4)
+		else:
+			sb.bg_color = Color("#EEDBB8")
+			sb.border_color = Color("#C4A57B")
+			sb.set_border_width_all(2)
+			btn.add_theme_color_override("font_color", Color("#553421"))
+			btn.add_theme_color_override("font_outline_color", Color.TRANSPARENT)
+			btn.add_theme_constant_override("outline_size", 0)
+		btn.add_theme_stylebox_override("normal", sb)
+		btn.add_theme_stylebox_override("hover", sb)
+		btn.add_theme_stylebox_override("pressed", sb)
+
 func _update_settings_ui() -> void:
 	if not gm:
 		return
 	_style_settings_toggle(btn_toggle_sfx, gm.sfx_enabled)
 	_style_settings_toggle(btn_toggle_music, gm.music_enabled)
 	_style_settings_toggle(btn_toggle_vib, gm.vibration_enabled)
+	_update_settings_hud_buttons()
 
 func _open_settings_modal() -> void:
 	if not settings_popup:
@@ -2757,23 +2910,264 @@ func _polish_header() -> void:
 		top.add_theme_constant_override("margin_" + side, 22)
 	for side in ["top", "bottom"]:
 		top.add_theme_constant_override("margin_" + side, 16)
-	var plate := Panel.new()
-	plate.name = "ReadableHeader"
-	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var plate := top.get_node_or_null("ReadableHeader") as Panel
+	if not plate:
+		plate = Panel.new()
+		plate.name = "ReadableHeader"
+		plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		top.add_child(plate)
+		top.move_child(plate, 0)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.16, 0.10, 0.075, 0.91)
-	style.border_color = Color(0.96, 0.74, 0.34, 0.7)
-	style.set_border_width_all(2)
+	style.bg_color = Color("#261710", 0.92)
+	style.border_color = Color("#E6C280", 0.85)
+	style.set_border_width_all(3)
 	style.set_corner_radius_all(26)
+	style.shadow_color = Color(0, 0, 0, 0.35)
+	style.shadow_size = 8
 	plate.add_theme_stylebox_override("panel", style)
-	top.add_child(plate)
-	top.move_child(plate, 0)
+
 	$TopBar/VBox.add_theme_constant_override("separation", 18)
+
 	for label in [coins_label, diamonds_label, level_label]:
-		label.add_theme_font_size_override("font_size", 32)
-	for button in [btn_coins, btn_diamonds, btn_settings]:
-		button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 90)
-		UIEffects.bind_button(button)
+		label.add_theme_font_size_override("font_size", 26)
+
+	# Estilos cálidos para la economía superior
+	if btn_coins:
+		var coin_st := StyleBoxFlat.new()
+		coin_st.bg_color = Color("#321C12", 0.92)
+		coin_st.border_color = Color("#F5B942", 0.90)
+		coin_st.set_border_width_all(2)
+		coin_st.set_corner_radius_all(20)
+		btn_coins.add_theme_stylebox_override("normal", coin_st)
+		btn_coins.add_theme_stylebox_override("hover", coin_st)
+		btn_coins.add_theme_stylebox_override("pressed", coin_st)
+		btn_coins.custom_minimum_size.y = maxf(btn_coins.custom_minimum_size.y, 80)
+		UIEffects.bind_button(btn_coins)
+
+	if btn_diamonds:
+		var diam_st := StyleBoxFlat.new()
+		diam_st.bg_color = Color("#172635", 0.92)
+		diam_st.border_color = Color("#52C8F2", 0.90)
+		diam_st.set_border_width_all(2)
+		diam_st.set_corner_radius_all(20)
+		btn_diamonds.add_theme_stylebox_override("normal", diam_st)
+		btn_diamonds.add_theme_stylebox_override("hover", diam_st)
+		btn_diamonds.add_theme_stylebox_override("pressed", diam_st)
+		btn_diamonds.custom_minimum_size.y = maxf(btn_diamonds.custom_minimum_size.y, 80)
+		UIEffects.bind_button(btn_diamonds)
+
+	if btn_settings:
+		var sett_st := StyleBoxFlat.new()
+		sett_st.bg_color = Color("#321C12", 0.92)
+		sett_st.border_color = Color("#E6C280", 0.90)
+		sett_st.set_border_width_all(2)
+		sett_st.set_corner_radius_all(22)
+		btn_settings.add_theme_stylebox_override("normal", sett_st)
+		btn_settings.add_theme_stylebox_override("hover", sett_st)
+		btn_settings.add_theme_stylebox_override("pressed", sett_st)
+		btn_settings.custom_minimum_size.y = maxf(btn_settings.custom_minimum_size.y, 80)
+		UIEffects.bind_button(btn_settings)
+
+	_setup_hud_styles()
+	_apply_hud_style(gm.hud_style if gm else "pou_circles")
+
+func _setup_hud_styles() -> void:
+	var vbox := $TopBar/VBox as VBoxContainer
+	if not vbox:
+		return
+
+	var stats_meta := [
+		{"key": "hunger", "icon": str(UI_ICON["hunger"]), "col": Color("#FF725E"), "room": "cocina"},
+		{"key": "protein", "icon": str(UI_ICON["protein"]), "col": Color("#E84A3B"), "room": "cocina"},
+		{"key": "energy", "icon": str(UI_ICON["energy"]), "col": Color("#7B68EE"), "room": "dormitorio"},
+		{"key": "fun", "icon": str(UI_ICON["fun"]), "col": Color("#FFC72F"), "room": "sala de juegos"},
+		{"key": "hygiene", "icon": str(UI_ICON["hygiene"]), "col": Color("#40C8D8"), "room": "baño"}
+	]
+
+	# 1. Row para Círculos Pou
+	if not _pou_circles_row:
+		_pou_circles_row = HBoxContainer.new()
+		_pou_circles_row.name = "PouCirclesRow"
+		_pou_circles_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		_pou_circles_row.add_theme_constant_override("separation", 14)
+		_pou_circles_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		vbox.add_child(_pou_circles_row)
+
+		for item in stats_meta:
+			var btn := Button.new()
+			btn.custom_minimum_size = Vector2(180, 126)
+			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			btn.flat = true
+			btn.focus_mode = Control.FOCUS_NONE
+			for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+				btn.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+			
+			var room_target: String = item.room
+			btn.pressed.connect(func():
+				if AudioManager:
+					AudioManager.play_pop()
+				_select_room(room_target)
+			)
+			UIEffects.bind_button(btn)
+
+			# Widget Circular
+			var circle := CircleProgress.new()
+			circle.custom_minimum_size = Vector2(92, 92)
+			circle.size = Vector2(92, 92)
+			circle.radius = 42.0
+			circle.ring_width = 6.0
+			circle.ring_color = item.col
+			circle.bg_color = Color("#261710", 0.90)
+			circle.border_color = Color("#E6C280", 0.85)
+			circle.border_width = 2.5
+			circle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			circle.position = Vector2(44, 4)
+			btn.add_child(circle)
+
+			# Icono centrado
+			var icon := TextureRect.new()
+			icon.texture = _load_ui_texture(item.icon)
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon.custom_minimum_size = Vector2(48, 48)
+			icon.size = Vector2(48, 48)
+			icon.position = Vector2(22, 22)
+			icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			circle.add_child(icon)
+
+			# Píldora inferior de porcentaje
+			var pct_badge := PanelContainer.new()
+			pct_badge.custom_minimum_size = Vector2(72, 28)
+			pct_badge.size = Vector2(72, 28)
+			pct_badge.position = Vector2(54, 86)
+			pct_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var badge_st := StyleBoxFlat.new()
+			badge_st.bg_color = Color("#1D100A", 0.95)
+			badge_st.border_color = Color("#E6C280", 0.85)
+			badge_st.set_border_width_all(2)
+			badge_st.set_corner_radius_all(10)
+			pct_badge.add_theme_stylebox_override("panel", badge_st)
+
+			var pct_lbl := Label.new()
+			pct_lbl.text = "100%"
+			pct_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			pct_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			pct_lbl.add_theme_font_size_override("font_size", 16)
+			pct_lbl.add_theme_color_override("font_color", Color.WHITE)
+			pct_lbl.add_theme_color_override("font_outline_color", Color("#1F0E06"))
+			pct_lbl.add_theme_constant_override("outline_size", 3)
+			pct_badge.add_child(pct_lbl)
+			btn.add_child(pct_badge)
+
+			_pou_circles_row.add_child(btn)
+			_pou_circle_badges[item.key] = {"circle": circle, "label": pct_lbl}
+
+	# 2. Row para Cápsulas Flotantes
+	if not _pou_capsules_row:
+		_pou_capsules_row = HBoxContainer.new()
+		_pou_capsules_row.name = "PouCapsulesRow"
+		_pou_capsules_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		_pou_capsules_row.add_theme_constant_override("separation", 14)
+		_pou_capsules_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		vbox.add_child(_pou_capsules_row)
+
+		for item in stats_meta:
+			var card_btn := Button.new()
+			card_btn.custom_minimum_size = Vector2(180, 126)
+			card_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			card_btn.focus_mode = Control.FOCUS_NONE
+			
+			var card_st := StyleBoxFlat.new()
+			card_st.bg_color = Color("#261710", 0.90)
+			card_st.border_color = Color("#E6C280", 0.85)
+			card_st.set_border_width_all(2)
+			card_st.set_corner_radius_all(18)
+			card_btn.add_theme_stylebox_override("normal", card_st)
+			card_btn.add_theme_stylebox_override("hover", card_st)
+			card_btn.add_theme_stylebox_override("pressed", card_st)
+
+			var room_target: String = item.room
+			card_btn.pressed.connect(func():
+				if AudioManager:
+					AudioManager.play_pop()
+				_select_room(room_target)
+			)
+			UIEffects.bind_button(card_btn)
+
+			var ic := TextureRect.new()
+			ic.texture = _load_ui_texture(item.icon)
+			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			ic.custom_minimum_size = Vector2(50, 50)
+			ic.size = Vector2(50, 50)
+			ic.position = Vector2(65, 12)
+			ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			card_btn.add_child(ic)
+
+			var pbar := ProgressBar.new()
+			pbar.custom_minimum_size = Vector2(146, 26)
+			pbar.size = Vector2(146, 26)
+			pbar.position = Vector2(17, 78)
+			pbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			pbar.show_percentage = false
+			pbar.value = 100.0
+
+			var p_track := StyleBoxFlat.new()
+			p_track.bg_color = Color("#170F0A", 0.92)
+			p_track.set_corner_radius_all(10)
+			var p_fill := StyleBoxFlat.new()
+			p_fill.bg_color = item.col
+			p_fill.set_corner_radius_all(9)
+			pbar.add_theme_stylebox_override("background", p_track)
+			pbar.add_theme_stylebox_override("fill", p_fill)
+			card_btn.add_child(pbar)
+
+			var lbl := Label.new()
+			lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+			lbl.text = "100%"
+			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			lbl.add_theme_font_size_override("font_size", 16)
+			lbl.add_theme_color_override("font_color", Color.WHITE)
+			lbl.add_theme_color_override("font_outline_color", Color("#1F0E06"))
+			lbl.add_theme_constant_override("outline_size", 3)
+			pbar.add_child(lbl)
+
+			_pou_capsules_row.add_child(card_btn)
+			_pou_capsule_badges[item.key] = {"pbar": pbar, "label": lbl}
+
+func _apply_hud_style(style_key: String) -> void:
+	if not _pou_circles_row or not _pou_capsules_row:
+		_setup_hud_styles()
+
+	var plate := $TopBar.get_node_or_null("ReadableHeader") as Panel
+	var s_grid := $TopBar/VBox/StatsGrid as HBoxContainer
+
+	match style_key:
+		"classic":
+			if plate: plate.visible = true
+			if s_grid: s_grid.visible = true
+			if _pou_circles_row: _pou_circles_row.visible = false
+			if _pou_capsules_row: _pou_capsules_row.visible = false
+		"pou_capsules":
+			if plate: plate.visible = false
+			if s_grid: s_grid.visible = false
+			if _pou_circles_row: _pou_circles_row.visible = false
+			if _pou_capsules_row: _pou_capsules_row.visible = true
+		_: # "pou_circles" por defecto
+			if plate: plate.visible = false
+			if s_grid: s_grid.visible = false
+			if _pou_circles_row: _pou_circles_row.visible = true
+			if _pou_capsules_row: _pou_capsules_row.visible = false
+
+	# Re-actualizar valores a las insignias activas
+	if gm:
+		_update_stat_ui("hunger", gm.hunger, gm.MAX_STAT)
+		_update_stat_ui("protein", gm.protein, gm.MAX_STAT)
+		_update_stat_ui("energy", gm.energy, gm.MAX_STAT)
+		_update_stat_ui("fun", gm.fun, gm.MAX_STAT)
+		_update_stat_ui("hygiene", gm.hygiene, gm.MAX_STAT)
 
 func _show_notice(message: String, _position: Vector2, color: Color, icon_path: String = "") -> void:
 	# A single readable notice above modals; no ever-growing label/tween list.
