@@ -190,6 +190,8 @@ func _switch_tab(tab_name: String) -> void:
 		child.queue_free()
 
 	if _active_tab == "arcade":
+		if AudioManager:
+			AudioManager.set_music_volume_db(AudioManager.DEFAULT_MUSIC_DB, 0.4)
 		_sub_wordmark.text = "A R C A D E"
 		_sub_wordmark.add_theme_color_override("font_color", UI.MINT)
 		_tagline.text = "Tu próxima aventura empieza aquí."
@@ -197,6 +199,8 @@ func _switch_tab(tab_name: String) -> void:
 		for index in range(GAMES.size()):
 			_cards_container.add_child(_card(GAMES[index], index == 0))
 	else:
+		if AudioManager:
+			AudioManager.set_music_volume_db(-14.0, 0.4)
 		_sub_wordmark.text = "L A   E S C U E L I T A"
 		_sub_wordmark.add_theme_color_override("font_color", Color("#FFD36B"))
 		_tagline.text = "Aprende jugando con Wonky · Sonidos, colores y dibujos."
@@ -324,6 +328,10 @@ func _back() -> void:
 	if gm != null:
 		gm.change_room("sala de juegos")
 	_open("res://scenes/main.tscn")
+
+func _exit_tree() -> void:
+	if AudioManager:
+		AudioManager.set_music_volume_db(AudioManager.DEFAULT_MUSIC_DB, 0.4)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):

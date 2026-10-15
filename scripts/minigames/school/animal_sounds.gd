@@ -68,13 +68,21 @@ var card_buttons: Array[Button] = []
 func _ready() -> void:
 	gm = get_tree().root.get_node_or_null("GameManager")
 	set_meta("wonder_custom", true)
+	if AudioManager:
+		AudioManager.set_music_volume_db(-18.0, 0.4)
 	_preload_audio()
 	_build_ui()
 	_start_new_round()
 
+func _exit_tree() -> void:
+	if AudioManager:
+		AudioManager.set_music_volume_db(AudioManager.DEFAULT_MUSIC_DB, 0.4)
+
 func _preload_audio() -> void:
 	audio_player = AudioStreamPlayer.new()
 	audio_player.bus = "Master"
+	audio_player.volume_db = 2.0
+	audio_player.finished.connect(_on_animal_sound_finished)
 	add_child(audio_player)
 
 	sfx_feedback_player = AudioStreamPlayer.new()
@@ -381,6 +389,9 @@ func _start_new_round() -> void:
 
 func _play_target_sound() -> void:
 	if not current_target.is_empty() and audio_cache.has(current_target):
+		if AudioManager:
+			# Atenuar aún más la música mientras suena el animal (ducking para máxima claridad)
+			AudioManager.set_music_volume_db(-26.0, 0.15)
 		audio_player.stream = audio_cache[current_target]
 		audio_player.play()
 
@@ -388,6 +399,11 @@ func _play_target_sound() -> void:
 		var tw := create_tween()
 		tw.tween_property(speaker_button, "scale", Vector2(1.15, 1.15), 0.12).set_trans(Tween.TRANS_QUAD)
 		tw.tween_property(speaker_button, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BOUNCE)
+
+func _on_animal_sound_finished() -> void:
+	if is_inside_tree() and AudioManager:
+		# Restaurar al volumen suave de la escuelita (-18.0 dB)
+		AudioManager.set_music_volume_db(-18.0, 0.35)
 
 func _on_card_selected(card: Button) -> void:
 	if is_round_transition:
@@ -465,6 +481,8 @@ func _handle_incorrect(card: Button) -> void:
 func _on_back_pressed() -> void:
 	if audio_player and audio_player.playing:
 		audio_player.stop()
+	if AudioManager:
+		AudioManager.set_music_volume_db(AudioManager.DEFAULT_MUSIC_DB, 0.4)
 	if not SceneRouter.busy:
 		SceneRouter.go("res://scenes/minigames/minigames_menu.tscn")
 
