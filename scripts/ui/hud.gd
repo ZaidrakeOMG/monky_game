@@ -891,45 +891,80 @@ func _setup_food_market() -> void:
 		if old_text: old_text.queue_free()
 		var old_shelf := panel.get_node_or_null("V7FoodShelf")
 		if old_shelf: old_shelf.queue_free()
+		var old_v8 := panel.get_node_or_null("V8MarketTitle")
+		if old_v8: old_v8.queue_free()
 
-	if panel and not panel.has_node("V8MarketTitle"):
+	# Capa de overlay para posicionar elementos exactos en la marquesina superior sin que PanelContainer los fuerce
+	if panel and not panel.has_node("MarketOverlay"):
+		var overlay := Control.new()
+		overlay.name = "MarketOverlay"
+		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+		panel.add_child(overlay)
+
 		var board_title := Label.new()
 		board_title.name = "V8MarketTitle"
-		board_title.position = Vector2(170, 34)
-		board_title.size = Vector2(620, 90)
+		board_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		board_title.position = Vector2(160, 68)
+		board_title.size = Vector2(640, 78)
 		board_title.text = "MERCADITO DE WONKY"
 		board_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		board_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_style_caption(board_title, 31, Color("#FFF2CC"))
+		_style_caption(board_title, 34, Color("#FFF9E6"))
 		board_title.add_theme_color_override("font_outline_color", Color("#4A2417"))
-		panel.add_child(board_title)
+		board_title.add_theme_constant_override("outline_size", 8)
+		overlay.add_child(board_title)
 
 	var margin := food_market_popup.get_node_or_null("Panel/Margin") as MarginContainer
 	if margin:
-		margin.add_theme_constant_override("margin_left", 64)
-		margin.add_theme_constant_override("margin_right", 64)
-		margin.add_theme_constant_override("margin_top", 176)
-		margin.add_theme_constant_override("margin_bottom", 64)
+		margin.add_theme_constant_override("margin_left", 72)
+		margin.add_theme_constant_override("margin_right", 72)
+		margin.add_theme_constant_override("margin_top", 172)
+		margin.add_theme_constant_override("margin_bottom", 110)
 
 	var header := food_market_popup.get_node_or_null("Panel/Margin/VBox/HeaderRow") as HBoxContainer
 	if header:
-		header.custom_minimum_size.y = 96
+		header.custom_minimum_size.y = 60
 		header.add_theme_constant_override("separation", 10)
 
 	if title:
 		title.visible = false
 
 	if market_balance_label:
-		market_balance_label.add_theme_font_size_override("font_size", 20)
-		market_balance_label.add_theme_color_override("font_color", Color("#6A3A22"))
+		var bal_style := StyleBoxFlat.new()
+		bal_style.bg_color = Color("#FFF6E5", 0.94)
+		bal_style.border_color = Color("#9C6036")
+		bal_style.set_border_width_all(2)
+		bal_style.set_corner_radius_all(16)
+		bal_style.content_margin_left = 18
+		bal_style.content_margin_right = 18
+		bal_style.content_margin_top = 6
+		bal_style.content_margin_bottom = 6
+		market_balance_label.add_theme_stylebox_override("normal", bal_style)
+		market_balance_label.add_theme_font_size_override("font_size", 22)
+		market_balance_label.add_theme_color_override("font_color", Color("#5B351E"))
+		market_balance_label.add_theme_color_override("font_outline_color", Color("#FFF0D4"))
+		market_balance_label.add_theme_constant_override("outline_size", 2)
+
+	if header and not header.has_node("HeaderSpacer"):
+		var spacer := Control.new()
+		spacer.name = "HeaderSpacer"
+		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		header.add_child(spacer)
+		if market_balance_label: header.move_child(market_balance_label, 0)
+		header.move_child(spacer, 1)
+		if btn_close_market: header.move_child(btn_close_market, 2)
+
 	if btn_close_market:
-		_set_image_button(btn_close_market, str(UI_ICON["close"]), 48, Vector2(62, 62))
-		btn_close_market.pressed.connect(_close_food_market)
+		_set_image_button(btn_close_market, str(UI_ICON["close"]), 48, Vector2(60, 60))
+		if not btn_close_market.pressed.is_connected(_close_food_market):
+			btn_close_market.pressed.connect(_close_food_market)
 
 	if market_grid:
 		market_grid.columns = 2
 		market_grid.add_theme_constant_override("h_separation", 18)
-		market_grid.add_theme_constant_override("v_separation", 22)
+		market_grid.add_theme_constant_override("v_separation", 24)
 
 func _open_food_market() -> void:
 	if not _market_ready:
@@ -945,7 +980,7 @@ func _close_food_market() -> void:
 
 func _update_market_balance() -> void:
 	if gm and market_balance_label:
-		market_balance_label.text = "MONEDAS  " + str(gm.coins)
+		market_balance_label.text = "🪙 " + str(gm.coins)
 
 
 func _populate_market_grid() -> void:
@@ -961,48 +996,41 @@ func _populate_market_grid() -> void:
 	var catalog = gm.FOOD_CATALOG if gm else []
 	for food in catalog:
 		var item := Control.new()
-		item.custom_minimum_size = Vector2(390, 300)
+		item.custom_minimum_size = Vector2(390, 310)
 		item.mouse_filter = Control.MOUSE_FILTER_PASS
 
 		var crate := TextureRect.new()
-		crate.texture = _load_ui_texture(str(V7_ART["food_crate"]))
-		crate.set_anchors_preset(Control.PRESET_FULL_RECT)
 		crate.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		crate.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		crate.custom_minimum_size = Vector2(300, 300)
+		crate.size = Vector2(300, 300)
+		crate.position = Vector2(45, 0)
+		crate.texture = _load_ui_texture(str(V7_ART["food_crate"]))
 		crate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		item.add_child(crate)
 
 		var food_tex := TextureRect.new()
-		food_tex.texture = _load_ui_texture(str(food.get("image", "")))
-		food_tex.position = Vector2(112, 25)
-		food_tex.size = Vector2(166, 166)
 		food_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		food_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		food_tex.custom_minimum_size = Vector2(136, 136)
+		food_tex.size = Vector2(136, 136)
+		food_tex.position = Vector2(127, 20)
+		food_tex.texture = _load_ui_texture(str(food.get("image", "")))
 		food_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		item.add_child(food_tex)
 
-		var name_lbl := Label.new()
-		name_lbl.position = Vector2(48, 188)
-		name_lbl.size = Vector2(294, 40)
-		name_lbl.text = str(food.name).to_upper()
-		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		name_lbl.add_theme_font_size_override("font_size", 22)
-		name_lbl.add_theme_color_override("font_color", Color("#FFF6DC"))
-		name_lbl.add_theme_color_override("font_outline_color", Color("#4B281A"))
-		name_lbl.add_theme_constant_override("outline_size", 5)
-		item.add_child(name_lbl)
-
+		# Placa frontal con precio y moneda perfectamente centrado
 		var price_row := HBoxContainer.new()
-		price_row.position = Vector2(139, 232)
-		price_row.size = Vector2(120, 38)
+		price_row.position = Vector2(125, 171)
+		price_row.size = Vector2(120, 36)
 		price_row.alignment = BoxContainer.ALIGNMENT_CENTER
-		price_row.add_theme_constant_override("separation", 6)
+		price_row.add_theme_constant_override("separation", 5)
+		price_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		item.add_child(price_row)
 
 		var coin := TextureRect.new()
 		coin.texture = _load_ui_texture(str(UI_ICON["coin"]))
-		coin.custom_minimum_size = Vector2(31, 31)
+		coin.custom_minimum_size = Vector2(28, 28)
 		coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1010,25 +1038,63 @@ func _populate_market_grid() -> void:
 
 		var price_lbl := Label.new()
 		price_lbl.text = str(food.price)
-		price_lbl.add_theme_font_size_override("font_size", 22)
-		price_lbl.add_theme_color_override("font_color", Color("#6A3318"))
-		price_lbl.add_theme_color_override("font_outline_color", Color("#FFF1C9"))
-		price_lbl.add_theme_constant_override("outline_size", 3)
+		price_lbl.add_theme_font_size_override("font_size", 23)
+		price_lbl.add_theme_color_override("font_color", Color("#3D1C0E"))
+		price_lbl.add_theme_color_override("font_outline_color", Color("#FFF0D0"))
+		price_lbl.add_theme_constant_override("outline_size", 2)
+		price_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		price_row.add_child(price_lbl)
 
+		# Cartel inferior con nombre del alimento, estilo madera caoba y texto dorado
+		var name_banner := PanelContainer.new()
+		name_banner.position = Vector2(50, 252)
+		name_banner.size = Vector2(290, 44)
+		name_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var banner_style := StyleBoxFlat.new()
+		banner_style.bg_color = Color("#4A2818", 0.96)
+		banner_style.border_color = Color("#E6C280")
+		banner_style.set_border_width_all(2)
+		banner_style.set_corner_radius_all(14)
+		name_banner.add_theme_stylebox_override("panel", banner_style)
+
+		var name_lbl := Label.new()
+		name_lbl.text = str(food.name).to_upper()
+		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		name_lbl.add_theme_font_size_override("font_size", 21)
+		name_lbl.add_theme_color_override("font_color", Color("#FFF8E7"))
+		name_lbl.add_theme_color_override("font_outline_color", Color("#1F0E06"))
+		name_lbl.add_theme_constant_override("outline_size", 5)
+		name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		name_banner.add_child(name_lbl)
+		item.add_child(name_banner)
+
+		# Insignia de cantidad (stock) en esquina superior derecha
 		var qty: int = gm.get_food_quantity(food.id) if gm else 0
+		var qty_badge := PanelContainer.new()
+		qty_badge.position = Vector2(282, 18)
+		qty_badge.size = Vector2(56, 32)
+		qty_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var badge_style := StyleBoxFlat.new()
+		badge_style.bg_color = Color("#542B18", 0.96)
+		badge_style.border_color = Color("#E6C280")
+		badge_style.set_border_width_all(2)
+		badge_style.set_corner_radius_all(16)
+		qty_badge.add_theme_stylebox_override("panel", badge_style)
+
 		var qty_lbl := Label.new()
-		qty_lbl.position = Vector2(290, 30)
-		qty_lbl.size = Vector2(70, 34)
 		qty_lbl.text = "x" + str(qty)
 		qty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		qty_lbl.add_theme_font_size_override("font_size", 19)
+		qty_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		qty_lbl.add_theme_font_size_override("font_size", 18)
 		qty_lbl.add_theme_color_override("font_color", Color.WHITE)
-		qty_lbl.add_theme_color_override("font_outline_color", Color("#3C2117"))
-		qty_lbl.add_theme_constant_override("outline_size", 5)
-		item.add_child(qty_lbl)
+		qty_lbl.add_theme_color_override("font_outline_color", Color("#261108"))
+		qty_lbl.add_theme_constant_override("outline_size", 4)
+		qty_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		qty_badge.add_child(qty_lbl)
+		item.add_child(qty_badge)
 
-		# El cajón entero compra; la "i" abre la ficha sin comprar.
+		# Botón completo para comprar al tocar el cajón
 		var buy_hit := Button.new()
 		buy_hit.set_anchors_preset(Control.PRESET_FULL_RECT)
 		buy_hit.flat = true
@@ -1059,10 +1125,11 @@ func _populate_market_grid() -> void:
 		item.add_child(buy_hit)
 		_bind_image_button_feedback(buy_hit)
 
+		# Botón "i" para abrir ficha técnica sin comprar (en esquina superior izquierda, sobre el botón de compra)
 		var info_btn := Button.new()
-		info_btn.position = Vector2(30, 28)
-		info_btn.size = Vector2(58, 58)
-		_set_image_button(info_btn, str(UI_ICON["info"]), 36, Vector2(58, 58))
+		info_btn.position = Vector2(50, 14)
+		info_btn.size = Vector2(48, 48)
+		_set_image_button(info_btn, str(UI_ICON["info"]), 38, Vector2(48, 48))
 		info_btn.tooltip_text = "Información"
 		info_btn.pressed.connect(func(): _open_food_details(food))
 		item.add_child(info_btn)
@@ -1086,7 +1153,7 @@ func _animate_food_purchase(item_container: Control, food_tex: TextureRect, qty_
 	# 2. Animación de la comida: brinco elástico hacia arriba con rotación sutil
 	if is_instance_valid(food_tex):
 		food_tex.pivot_offset = food_tex.size * 0.5
-		var base_y: float = 25.0
+		var base_y: float = 20.0
 		var tween_food := UIEffects.tween_for(food_tex, "purchase_food")
 		
 		# Ángulo aleatorio juguetón (-7 a +7 grados)
@@ -1121,7 +1188,7 @@ func _animate_food_purchase(item_container: Control, food_tex: TextureRect, qty_
 	float_lbl.add_theme_constant_override("outline_size", 6)
 	float_lbl.pivot_offset = Vector2(25, 18)
 	
-	var spawn_pos := Vector2(175.0, 35.0)
+	var spawn_pos := Vector2(item_container.size.x * 0.5 - 20.0, 30.0)
 	float_lbl.position = spawn_pos
 	float_lbl.scale = Vector2(0.5, 0.5)
 	item_container.add_child(float_lbl)
