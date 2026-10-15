@@ -613,6 +613,8 @@ func _select_room(r_name: String) -> void:
 
 
 func _setup_action_drawers() -> void:
+	# Protege estos cajones del tema global: no debe reaparecer la barra azul.
+	action_drawers.set_meta("wonder_custom", true)
 	# Organización invisible: los controles se ven como ilustraciones con su nombre debajo.
 	var empty_panel := StyleBoxEmpty.new()
 	kitchen_drawer.add_theme_stylebox_override("panel", empty_panel)
@@ -651,18 +653,26 @@ func _setup_action_drawers() -> void:
 		btn_wardrobe.tooltip_text = "Armario de Ropa"
 		btn_wardrobe.pressed.connect(_open_wardrobe_modal)
 
-	# Sala de juegos: se elimina la pelota por completo. Minijuegos queda como acción principal.
+	# Sala de juegos: acceso compacto y transparente en el lado derecho,
+	# lejos del personaje. El botón sigue siendo táctil y conserva su señal.
+	play_drawer.mouse_filter = Control.MOUSE_FILTER_PASS
+	var play_margin := play_drawer.get_node_or_null("Margin") as MarginContainer
+	if play_margin:
+		for side in ["margin_left", "margin_top", "margin_bottom"]:
+			play_margin.add_theme_constant_override(side, 0)
+		play_margin.add_theme_constant_override("margin_right", 38)
+	# Se elimina la pelota de este cajón; Minijuegos es la acción principal.
 	if btn_ball:
 		btn_ball.visible = false
 		btn_ball.custom_minimum_size = Vector2.ZERO
 
 	var play_hbox := play_drawer.get_node_or_null("Margin/HBox") as HBoxContainer
 	if play_hbox:
-		play_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		play_hbox.alignment = BoxContainer.ALIGNMENT_END
 		play_hbox.add_theme_constant_override("separation", 0)
 
 	if btn_game:
-		_set_image_button(btn_game, str(UI_ICON["minigames"]), 230, Vector2(480, 290), "MINIJUEGOS", 32)
+		_set_image_button(btn_game, str(UI_ICON["minigames"]), 152, Vector2(320, 218), "Minijuegos", 27)
 		btn_game.tooltip_text = "Abrir minijuegos"
 		btn_game.pressed.connect(_open_minigames_menu)
 
