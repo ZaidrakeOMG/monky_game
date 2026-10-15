@@ -1036,10 +1036,25 @@ func _populate_market_grid() -> void:
 		buy_hit.tooltip_text = "Comprar " + str(food.name)
 		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
 			buy_hit.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+		buy_hit.button_down.connect(func():
+			if not (gm and gm.reduced_effects):
+				item.pivot_offset = item.size * 0.5
+				var tw := UIEffects.tween_for(item, "press_card")
+				tw.tween_property(item, "scale", Vector2(0.96, 0.96), 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		)
+		var restore_card := func():
+			if not (gm and gm.reduced_effects):
+				item.pivot_offset = item.size * 0.5
+				var tw := UIEffects.tween_for(item, "press_card")
+				tw.tween_property(item, "scale", Vector2.ONE, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		buy_hit.button_up.connect(restore_card)
+		buy_hit.mouse_exited.connect(restore_card)
 		buy_hit.pressed.connect(func():
 			if gm and gm.buy_food(food.id, 1):
 				_update_market_balance()
 				qty_lbl.text = "x" + str(gm.get_food_quantity(food.id))
+				_market_quantities[food.id] = gm.get_food_quantity(food.id)
+				_animate_food_purchase(item, food_tex, qty_lbl)
 		)
 		item.add_child(buy_hit)
 		_bind_image_button_feedback(buy_hit)
@@ -1053,6 +1068,69 @@ func _populate_market_grid() -> void:
 		item.add_child(info_btn)
 
 		market_grid.add_child(item)
+
+func _animate_food_purchase(item_container: Control, food_tex: TextureRect, qty_lbl: Label = null) -> void:
+	if not is_instance_valid(item_container) or not item_container.is_inside_tree():
+		return
+
+	if gm and gm.reduced_effects:
+		return
+
+	# 1. Animación del cajón / contenedor general: compresión elástica y rebote alegre
+	item_container.pivot_offset = item_container.size * 0.5
+	var tween_box := UIEffects.tween_for(item_container, "purchase_box")
+	item_container.scale = Vector2(0.94, 0.94)
+	tween_box.tween_property(item_container, "scale", Vector2(1.05, 1.05), 0.10).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween_box.tween_property(item_container, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+	# 2. Animación de la comida: brinco elástico hacia arriba con rotación sutil
+	if is_instance_valid(food_tex):
+		food_tex.pivot_offset = food_tex.size * 0.5
+		var base_y: float = 25.0
+		var tween_food := UIEffects.tween_for(food_tex, "purchase_food")
+		
+		# Ángulo aleatorio juguetón (-7 a +7 grados)
+		var angle := deg_to_rad(randf_range(-7.0, 7.0))
+		food_tex.rotation = angle
+		
+		# Salto hacia arriba con aumento de escala (pop)
+		tween_food.parallel().tween_property(food_tex, "position:y", base_y - 20.0, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween_food.parallel().tween_property(food_tex, "scale", Vector2(1.28, 1.28), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		
+		# Caída y estabilización elástica
+		tween_food.tween_property(food_tex, "position:y", base_y, 0.20).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		tween_food.parallel().tween_property(food_tex, "scale", Vector2.ONE, 0.20).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+		tween_food.parallel().tween_property(food_tex, "rotation", 0.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+	# 3. Animación de la etiqueta de cantidad (xN): punch y destello de color
+	if is_instance_valid(qty_lbl):
+		qty_lbl.pivot_offset = qty_lbl.size * 0.5
+		var tween_qty := UIEffects.tween_for(qty_lbl, "purchase_qty")
+		qty_lbl.scale = Vector2(1.5, 1.5)
+		qty_lbl.add_theme_color_override("font_color", Color("#FFE259"))
+		tween_qty.tween_property(qty_lbl, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween_qty.parallel().tween_method(func(c: Color): qty_lbl.add_theme_color_override("font_color", c), Color("#FFE259"), Color.WHITE, 0.26)
+
+	# 4. Flotante "+1" en color verde menta alegre sobre el producto
+	var float_lbl := Label.new()
+	float_lbl.text = "+1"
+	float_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	float_lbl.add_theme_font_size_override("font_size", 28)
+	float_lbl.add_theme_color_override("font_color", Color("#7DFFB2"))
+	float_lbl.add_theme_color_override("font_outline_color", Color("#123D24"))
+	float_lbl.add_theme_constant_override("outline_size", 6)
+	float_lbl.pivot_offset = Vector2(25, 18)
+	
+	var spawn_pos := Vector2(175.0, 35.0)
+	float_lbl.position = spawn_pos
+	float_lbl.scale = Vector2(0.5, 0.5)
+	item_container.add_child(float_lbl)
+	
+	var tween_float := item_container.create_tween()
+	tween_float.parallel().tween_property(float_lbl, "scale", Vector2(1.25, 1.25), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween_float.parallel().tween_property(float_lbl, "position:y", spawn_pos.y - 50.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween_float.tween_property(float_lbl, "modulate:a", 0.0, 0.18)
+	tween_float.tween_callback(float_lbl.queue_free)
 
 func _setup_food_details_popup() -> void:
 	food_details_popup = Control.new()
@@ -1189,9 +1267,52 @@ func _setup_food_details_popup() -> void:
 		if gm and not current_inspected_food.is_empty():
 			if gm.buy_food(current_inspected_food.id, 1):
 				_update_food_details_view()
+				_animate_food_details_purchase()
 	)
 	vbox.add_child(details_buy_btn)
 	food_details_popup.visible = false
+
+func _animate_food_details_purchase() -> void:
+	if not food_details_popup or not food_details_popup.visible:
+		return
+	if gm and gm.reduced_effects:
+		return
+
+	if is_instance_valid(details_icon_texture):
+		details_icon_texture.pivot_offset = details_icon_texture.size * 0.5
+		var tween_icon := UIEffects.tween_for(details_icon_texture, "details_purchase")
+		var angle := deg_to_rad(randf_range(-6.0, 6.0))
+		details_icon_texture.rotation = angle
+		tween_icon.parallel().tween_property(details_icon_texture, "scale", Vector2(1.26, 1.26), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween_icon.tween_property(details_icon_texture, "scale", Vector2.ONE, 0.20).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+		tween_icon.parallel().tween_property(details_icon_texture, "rotation", 0.0, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+		# Flotante "+1" sobre el icono de detalles
+		var float_lbl := Label.new()
+		float_lbl.text = "+1"
+		float_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		float_lbl.add_theme_font_size_override("font_size", 30)
+		float_lbl.add_theme_color_override("font_color", Color("#7DFFB2"))
+		float_lbl.add_theme_color_override("font_outline_color", Color("#123D24"))
+		float_lbl.add_theme_constant_override("outline_size", 6)
+		float_lbl.pivot_offset = Vector2(25, 20)
+		float_lbl.position = details_icon_texture.position + Vector2(details_icon_texture.size.x * 0.5 - 20.0, 5.0)
+		float_lbl.scale = Vector2(0.5, 0.5)
+		var parent = details_icon_texture.get_parent()
+		if parent:
+			parent.add_child(float_lbl)
+			var tween_float := parent.create_tween()
+			tween_float.parallel().tween_property(float_lbl, "scale", Vector2(1.3, 1.3), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tween_float.parallel().tween_property(float_lbl, "position:y", float_lbl.position.y - 50.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			tween_float.tween_property(float_lbl, "modulate:a", 0.0, 0.18)
+			tween_float.tween_callback(float_lbl.queue_free)
+
+	if is_instance_valid(details_buy_btn):
+		details_buy_btn.pivot_offset = details_buy_btn.size * 0.5
+		var tween_btn := UIEffects.tween_for(details_buy_btn, "details_btn_punch")
+		details_buy_btn.scale = Vector2(0.94, 0.94)
+		tween_btn.tween_property(details_buy_btn, "scale", Vector2(1.05, 1.05), 0.10).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween_btn.tween_property(details_buy_btn, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func _navigate_food_details(dir: int) -> void:
 	if not gm or gm.FOOD_CATALOG.is_empty():
