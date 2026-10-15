@@ -83,6 +83,13 @@ var btn_toggle_music: Button = null
 var btn_toggle_vib: Button = null
 var confirm_reset_popup: Control = null
 
+# Diseños alternativos del HUD
+var _pou_circles_row: HBoxContainer = null
+var _pou_capsules_row: HBoxContainer = null
+var _pou_circle_badges: Dictionary = {}
+var _pou_capsule_badges: Dictionary = {}
+var _hud_style_buttons: Dictionary = {}
+
 # Dock de navegación
 @onready var btn_bed: Button = $BottomBar/VBox/DockContainer/BtnBed
 @onready var btn_kitchen: Button = $BottomBar/VBox/DockContainer/BtnKitchen
@@ -240,6 +247,12 @@ func _ready() -> void:
 	if gm:
 		gm.show_floating_text.connect(_show_notice)
 		gm.monky_state_changed.connect(func(_state): _update_sleep_button())
+		if gm.has_signal("settings_changed"):
+			gm.settings_changed.connect(func():
+				_apply_hud_style(gm.hud_style)
+				if settings_popup and settings_popup.visible:
+					_update_settings_hud_buttons()
+			)
 		if gm._save_read_only:
 			_show_notice("No se pudo recuperar tu partida. Se conservaron los archivos dañados.", Vector2.ZERO, Color(1, 0.7, 0.5))
 
@@ -272,16 +285,45 @@ func _update_sleep_button() -> void:
 func _setup_protein_ui() -> void:
 	# Cinco medidores claros y respirados. El icono manda; el texto sólo acompaña.
 	if stats_grid:
-		stats_grid.add_theme_constant_override("separation", 18)
+		stats_grid.add_theme_constant_override("separation", 16)
 
-	for bar in [hunger_bar, protein_bar, energy_bar, fun_bar, hygiene_bar]:
-		if bar:
-			bar.custom_minimum_size = Vector2(150, 24)
-			bar.show_percentage = false
+	var classic_meta := [
+		{"bar": hunger_bar, "col": Color("#FF725E"), "room": "cocina"},
+		{"bar": protein_bar, "col": Color("#E84A3B"), "room": "cocina"},
+		{"bar": energy_bar, "col": Color("#7B68EE"), "room": "dormitorio"},
+		{"bar": fun_bar, "col": Color("#FFC72F"), "room": "sala de juegos"},
+		{"bar": hygiene_bar, "col": Color("#40C8D8"), "room": "baño"}
+	]
+
+	for item in classic_meta:
+		var bar: ProgressBar = item.bar
+		if not bar:
+			continue
+		bar.custom_minimum_size = Vector2(154, 22)
+		bar.show_percentage = false
+		var bg := StyleBoxFlat.new()
+		bg.bg_color = Color("#170F0A", 0.92)
+		bg.set_corner_radius_all(9)
+		var fill := StyleBoxFlat.new()
+		fill.bg_color = item.col
+		fill.set_corner_radius_all(8)
+		bar.add_theme_stylebox_override("background", bg)
+		bar.add_theme_stylebox_override("fill", fill)
+
+		var parent_c := bar.get_parent() as Control
+		if parent_c:
+			parent_c.mouse_filter = Control.MOUSE_FILTER_STOP
+			var target_room: String = item.room
+			parent_c.gui_input.connect(func(ev: InputEvent):
+				if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+					if AudioManager:
+						AudioManager.play_pop()
+					_select_room(target_room)
+			)
 
 	for label in [hunger_label, protein_label, energy_label, fun_label, hygiene_label]:
 		if label:
-			label.add_theme_font_size_override("font_size", 26)
+			label.add_theme_font_size_override("font_size", 24)
 			label.add_theme_color_override("font_color", Color("#FFF9EA"))
 			label.add_theme_color_override("font_outline_color", Color("#26160F"))
 			label.add_theme_constant_override("outline_size", 4)
@@ -891,45 +933,80 @@ func _setup_food_market() -> void:
 		if old_text: old_text.queue_free()
 		var old_shelf := panel.get_node_or_null("V7FoodShelf")
 		if old_shelf: old_shelf.queue_free()
+		var old_v8 := panel.get_node_or_null("V8MarketTitle")
+		if old_v8: old_v8.queue_free()
 
-	if panel and not panel.has_node("V8MarketTitle"):
+	# Capa de overlay para posicionar elementos exactos en la marquesina superior sin que PanelContainer los fuerce
+	if panel and not panel.has_node("MarketOverlay"):
+		var overlay := Control.new()
+		overlay.name = "MarketOverlay"
+		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+		panel.add_child(overlay)
+
 		var board_title := Label.new()
 		board_title.name = "V8MarketTitle"
-		board_title.position = Vector2(170, 34)
-		board_title.size = Vector2(620, 90)
+		board_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		board_title.position = Vector2(160, 68)
+		board_title.size = Vector2(640, 78)
 		board_title.text = "MERCADITO DE WONKY"
 		board_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		board_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_style_caption(board_title, 31, Color("#FFF2CC"))
+		_style_caption(board_title, 34, Color("#FFF9E6"))
 		board_title.add_theme_color_override("font_outline_color", Color("#4A2417"))
-		panel.add_child(board_title)
+		board_title.add_theme_constant_override("outline_size", 8)
+		overlay.add_child(board_title)
 
 	var margin := food_market_popup.get_node_or_null("Panel/Margin") as MarginContainer
 	if margin:
-		margin.add_theme_constant_override("margin_left", 64)
-		margin.add_theme_constant_override("margin_right", 64)
-		margin.add_theme_constant_override("margin_top", 176)
-		margin.add_theme_constant_override("margin_bottom", 64)
+		margin.add_theme_constant_override("margin_left", 72)
+		margin.add_theme_constant_override("margin_right", 72)
+		margin.add_theme_constant_override("margin_top", 172)
+		margin.add_theme_constant_override("margin_bottom", 110)
 
 	var header := food_market_popup.get_node_or_null("Panel/Margin/VBox/HeaderRow") as HBoxContainer
 	if header:
-		header.custom_minimum_size.y = 96
+		header.custom_minimum_size.y = 60
 		header.add_theme_constant_override("separation", 10)
 
 	if title:
 		title.visible = false
 
 	if market_balance_label:
-		market_balance_label.add_theme_font_size_override("font_size", 20)
-		market_balance_label.add_theme_color_override("font_color", Color("#6A3A22"))
+		var bal_style := StyleBoxFlat.new()
+		bal_style.bg_color = Color("#FFF6E5", 0.94)
+		bal_style.border_color = Color("#9C6036")
+		bal_style.set_border_width_all(2)
+		bal_style.set_corner_radius_all(16)
+		bal_style.content_margin_left = 18
+		bal_style.content_margin_right = 18
+		bal_style.content_margin_top = 6
+		bal_style.content_margin_bottom = 6
+		market_balance_label.add_theme_stylebox_override("normal", bal_style)
+		market_balance_label.add_theme_font_size_override("font_size", 22)
+		market_balance_label.add_theme_color_override("font_color", Color("#5B351E"))
+		market_balance_label.add_theme_color_override("font_outline_color", Color("#FFF0D4"))
+		market_balance_label.add_theme_constant_override("outline_size", 2)
+
+	if header and not header.has_node("HeaderSpacer"):
+		var spacer := Control.new()
+		spacer.name = "HeaderSpacer"
+		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		header.add_child(spacer)
+		if market_balance_label: header.move_child(market_balance_label, 0)
+		header.move_child(spacer, 1)
+		if btn_close_market: header.move_child(btn_close_market, 2)
+
 	if btn_close_market:
-		_set_image_button(btn_close_market, str(UI_ICON["close"]), 48, Vector2(62, 62))
-		btn_close_market.pressed.connect(_close_food_market)
+		_set_image_button(btn_close_market, str(UI_ICON["close"]), 48, Vector2(60, 60))
+		if not btn_close_market.pressed.is_connected(_close_food_market):
+			btn_close_market.pressed.connect(_close_food_market)
 
 	if market_grid:
 		market_grid.columns = 2
 		market_grid.add_theme_constant_override("h_separation", 18)
-		market_grid.add_theme_constant_override("v_separation", 22)
+		market_grid.add_theme_constant_override("v_separation", 24)
 
 func _open_food_market() -> void:
 	if not _market_ready:
@@ -945,7 +1022,7 @@ func _close_food_market() -> void:
 
 func _update_market_balance() -> void:
 	if gm and market_balance_label:
-		market_balance_label.text = "MONEDAS  " + str(gm.coins)
+		market_balance_label.text = "🪙 " + str(gm.coins)
 
 
 func _populate_market_grid() -> void:
@@ -961,48 +1038,41 @@ func _populate_market_grid() -> void:
 	var catalog = gm.FOOD_CATALOG if gm else []
 	for food in catalog:
 		var item := Control.new()
-		item.custom_minimum_size = Vector2(390, 300)
+		item.custom_minimum_size = Vector2(390, 310)
 		item.mouse_filter = Control.MOUSE_FILTER_PASS
 
 		var crate := TextureRect.new()
-		crate.texture = _load_ui_texture(str(V7_ART["food_crate"]))
-		crate.set_anchors_preset(Control.PRESET_FULL_RECT)
 		crate.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		crate.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		crate.custom_minimum_size = Vector2(300, 300)
+		crate.size = Vector2(300, 300)
+		crate.position = Vector2(45, 0)
+		crate.texture = _load_ui_texture(str(V7_ART["food_crate"]))
 		crate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		item.add_child(crate)
 
 		var food_tex := TextureRect.new()
-		food_tex.texture = _load_ui_texture(str(food.get("image", "")))
-		food_tex.position = Vector2(112, 25)
-		food_tex.size = Vector2(166, 166)
 		food_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		food_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		food_tex.custom_minimum_size = Vector2(136, 136)
+		food_tex.size = Vector2(136, 136)
+		food_tex.position = Vector2(127, 20)
+		food_tex.texture = _load_ui_texture(str(food.get("image", "")))
 		food_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		item.add_child(food_tex)
 
-		var name_lbl := Label.new()
-		name_lbl.position = Vector2(48, 188)
-		name_lbl.size = Vector2(294, 40)
-		name_lbl.text = str(food.name).to_upper()
-		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		name_lbl.add_theme_font_size_override("font_size", 22)
-		name_lbl.add_theme_color_override("font_color", Color("#FFF6DC"))
-		name_lbl.add_theme_color_override("font_outline_color", Color("#4B281A"))
-		name_lbl.add_theme_constant_override("outline_size", 5)
-		item.add_child(name_lbl)
-
+		# Placa frontal con precio y moneda perfectamente centrado
 		var price_row := HBoxContainer.new()
-		price_row.position = Vector2(139, 232)
-		price_row.size = Vector2(120, 38)
+		price_row.position = Vector2(125, 171)
+		price_row.size = Vector2(120, 36)
 		price_row.alignment = BoxContainer.ALIGNMENT_CENTER
-		price_row.add_theme_constant_override("separation", 6)
+		price_row.add_theme_constant_override("separation", 5)
+		price_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		item.add_child(price_row)
 
 		var coin := TextureRect.new()
 		coin.texture = _load_ui_texture(str(UI_ICON["coin"]))
-		coin.custom_minimum_size = Vector2(31, 31)
+		coin.custom_minimum_size = Vector2(28, 28)
 		coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1010,25 +1080,63 @@ func _populate_market_grid() -> void:
 
 		var price_lbl := Label.new()
 		price_lbl.text = str(food.price)
-		price_lbl.add_theme_font_size_override("font_size", 22)
-		price_lbl.add_theme_color_override("font_color", Color("#6A3318"))
-		price_lbl.add_theme_color_override("font_outline_color", Color("#FFF1C9"))
-		price_lbl.add_theme_constant_override("outline_size", 3)
+		price_lbl.add_theme_font_size_override("font_size", 23)
+		price_lbl.add_theme_color_override("font_color", Color("#3D1C0E"))
+		price_lbl.add_theme_color_override("font_outline_color", Color("#FFF0D0"))
+		price_lbl.add_theme_constant_override("outline_size", 2)
+		price_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		price_row.add_child(price_lbl)
 
+		# Cartel inferior con nombre del alimento, estilo madera caoba y texto dorado
+		var name_banner := PanelContainer.new()
+		name_banner.position = Vector2(50, 252)
+		name_banner.size = Vector2(290, 44)
+		name_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var banner_style := StyleBoxFlat.new()
+		banner_style.bg_color = Color("#4A2818", 0.96)
+		banner_style.border_color = Color("#E6C280")
+		banner_style.set_border_width_all(2)
+		banner_style.set_corner_radius_all(14)
+		name_banner.add_theme_stylebox_override("panel", banner_style)
+
+		var name_lbl := Label.new()
+		name_lbl.text = str(food.name).to_upper()
+		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		name_lbl.add_theme_font_size_override("font_size", 21)
+		name_lbl.add_theme_color_override("font_color", Color("#FFF8E7"))
+		name_lbl.add_theme_color_override("font_outline_color", Color("#1F0E06"))
+		name_lbl.add_theme_constant_override("outline_size", 5)
+		name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		name_banner.add_child(name_lbl)
+		item.add_child(name_banner)
+
+		# Insignia de cantidad (stock) en esquina superior derecha
 		var qty: int = gm.get_food_quantity(food.id) if gm else 0
+		var qty_badge := PanelContainer.new()
+		qty_badge.position = Vector2(282, 18)
+		qty_badge.size = Vector2(56, 32)
+		qty_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var badge_style := StyleBoxFlat.new()
+		badge_style.bg_color = Color("#542B18", 0.96)
+		badge_style.border_color = Color("#E6C280")
+		badge_style.set_border_width_all(2)
+		badge_style.set_corner_radius_all(16)
+		qty_badge.add_theme_stylebox_override("panel", badge_style)
+
 		var qty_lbl := Label.new()
-		qty_lbl.position = Vector2(290, 30)
-		qty_lbl.size = Vector2(70, 34)
 		qty_lbl.text = "x" + str(qty)
 		qty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		qty_lbl.add_theme_font_size_override("font_size", 19)
+		qty_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		qty_lbl.add_theme_font_size_override("font_size", 18)
 		qty_lbl.add_theme_color_override("font_color", Color.WHITE)
-		qty_lbl.add_theme_color_override("font_outline_color", Color("#3C2117"))
-		qty_lbl.add_theme_constant_override("outline_size", 5)
-		item.add_child(qty_lbl)
+		qty_lbl.add_theme_color_override("font_outline_color", Color("#261108"))
+		qty_lbl.add_theme_constant_override("outline_size", 4)
+		qty_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		qty_badge.add_child(qty_lbl)
+		item.add_child(qty_badge)
 
-		# El cajón entero compra; la "i" abre la ficha sin comprar.
+		# Botón completo para comprar al tocar el cajón
 		var buy_hit := Button.new()
 		buy_hit.set_anchors_preset(Control.PRESET_FULL_RECT)
 		buy_hit.flat = true
@@ -1036,23 +1144,102 @@ func _populate_market_grid() -> void:
 		buy_hit.tooltip_text = "Comprar " + str(food.name)
 		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
 			buy_hit.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+		buy_hit.button_down.connect(func():
+			if not (gm and gm.reduced_effects):
+				item.pivot_offset = item.size * 0.5
+				var tw := UIEffects.tween_for(item, "press_card")
+				tw.tween_property(item, "scale", Vector2(0.96, 0.96), 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		)
+		var restore_card := func():
+			if not (gm and gm.reduced_effects):
+				item.pivot_offset = item.size * 0.5
+				var tw := UIEffects.tween_for(item, "press_card")
+				tw.tween_property(item, "scale", Vector2.ONE, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		buy_hit.button_up.connect(restore_card)
+		buy_hit.mouse_exited.connect(restore_card)
 		buy_hit.pressed.connect(func():
 			if gm and gm.buy_food(food.id, 1):
 				_update_market_balance()
 				qty_lbl.text = "x" + str(gm.get_food_quantity(food.id))
+				_market_quantities[food.id] = gm.get_food_quantity(food.id)
+				_animate_food_purchase(item, food_tex, qty_lbl)
 		)
 		item.add_child(buy_hit)
 		_bind_image_button_feedback(buy_hit)
 
+		# Botón "i" para abrir ficha técnica sin comprar (en esquina superior izquierda, sobre el botón de compra)
 		var info_btn := Button.new()
-		info_btn.position = Vector2(30, 28)
-		info_btn.size = Vector2(58, 58)
-		_set_image_button(info_btn, str(UI_ICON["info"]), 36, Vector2(58, 58))
+		info_btn.position = Vector2(50, 14)
+		info_btn.size = Vector2(48, 48)
+		_set_image_button(info_btn, str(UI_ICON["info"]), 38, Vector2(48, 48))
 		info_btn.tooltip_text = "Información"
 		info_btn.pressed.connect(func(): _open_food_details(food))
 		item.add_child(info_btn)
 
 		market_grid.add_child(item)
+
+func _animate_food_purchase(item_container: Control, food_tex: TextureRect, qty_lbl: Label = null) -> void:
+	if not is_instance_valid(item_container) or not item_container.is_inside_tree():
+		return
+
+	if gm and gm.reduced_effects:
+		return
+
+	# 1. Animación del cajón / contenedor general: compresión elástica y rebote alegre
+	item_container.pivot_offset = item_container.size * 0.5
+	var tween_box := UIEffects.tween_for(item_container, "purchase_box")
+	item_container.scale = Vector2(0.94, 0.94)
+	tween_box.tween_property(item_container, "scale", Vector2(1.05, 1.05), 0.10).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween_box.tween_property(item_container, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+	# 2. Animación de la comida: brinco elástico hacia arriba con rotación sutil
+	if is_instance_valid(food_tex):
+		food_tex.pivot_offset = food_tex.size * 0.5
+		var base_y: float = 20.0
+		var tween_food := UIEffects.tween_for(food_tex, "purchase_food")
+		
+		# Ángulo aleatorio juguetón (-7 a +7 grados)
+		var angle := deg_to_rad(randf_range(-7.0, 7.0))
+		food_tex.rotation = angle
+		
+		# Salto hacia arriba con aumento de escala (pop)
+		tween_food.parallel().tween_property(food_tex, "position:y", base_y - 20.0, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween_food.parallel().tween_property(food_tex, "scale", Vector2(1.28, 1.28), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		
+		# Caída y estabilización elástica
+		tween_food.tween_property(food_tex, "position:y", base_y, 0.20).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		tween_food.parallel().tween_property(food_tex, "scale", Vector2.ONE, 0.20).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+		tween_food.parallel().tween_property(food_tex, "rotation", 0.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+	# 3. Animación de la etiqueta de cantidad (xN): punch y destello de color
+	if is_instance_valid(qty_lbl):
+		qty_lbl.pivot_offset = qty_lbl.size * 0.5
+		var tween_qty := UIEffects.tween_for(qty_lbl, "purchase_qty")
+		qty_lbl.scale = Vector2(1.5, 1.5)
+		qty_lbl.add_theme_color_override("font_color", Color("#FFE259"))
+		tween_qty.tween_property(qty_lbl, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween_qty.parallel().tween_method(func(c: Color): qty_lbl.add_theme_color_override("font_color", c), Color("#FFE259"), Color.WHITE, 0.26)
+
+	# 4. Flotante "+1" en color verde menta alegre sobre el producto
+	var float_lbl := Label.new()
+	float_lbl.text = "+1"
+	float_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	float_lbl.add_theme_font_size_override("font_size", 28)
+	float_lbl.add_theme_color_override("font_color", Color("#7DFFB2"))
+	float_lbl.add_theme_color_override("font_outline_color", Color("#123D24"))
+	float_lbl.add_theme_constant_override("outline_size", 6)
+	float_lbl.pivot_offset = Vector2(25, 18)
+	
+	var spawn_pos := Vector2(item_container.size.x * 0.5 - 20.0, 30.0)
+	float_lbl.position = spawn_pos
+	float_lbl.scale = Vector2(0.5, 0.5)
+	item_container.add_child(float_lbl)
+	
+	var tween_float := item_container.create_tween()
+	tween_float.parallel().tween_property(float_lbl, "scale", Vector2(1.25, 1.25), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween_float.parallel().tween_property(float_lbl, "position:y", spawn_pos.y - 50.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween_float.tween_property(float_lbl, "modulate:a", 0.0, 0.18)
+	tween_float.tween_callback(float_lbl.queue_free)
 
 func _setup_food_details_popup() -> void:
 	food_details_popup = Control.new()
@@ -1189,9 +1376,52 @@ func _setup_food_details_popup() -> void:
 		if gm and not current_inspected_food.is_empty():
 			if gm.buy_food(current_inspected_food.id, 1):
 				_update_food_details_view()
+				_animate_food_details_purchase()
 	)
 	vbox.add_child(details_buy_btn)
 	food_details_popup.visible = false
+
+func _animate_food_details_purchase() -> void:
+	if not food_details_popup or not food_details_popup.visible:
+		return
+	if gm and gm.reduced_effects:
+		return
+
+	if is_instance_valid(details_icon_texture):
+		details_icon_texture.pivot_offset = details_icon_texture.size * 0.5
+		var tween_icon := UIEffects.tween_for(details_icon_texture, "details_purchase")
+		var angle := deg_to_rad(randf_range(-6.0, 6.0))
+		details_icon_texture.rotation = angle
+		tween_icon.parallel().tween_property(details_icon_texture, "scale", Vector2(1.26, 1.26), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween_icon.tween_property(details_icon_texture, "scale", Vector2.ONE, 0.20).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+		tween_icon.parallel().tween_property(details_icon_texture, "rotation", 0.0, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+		# Flotante "+1" sobre el icono de detalles
+		var float_lbl := Label.new()
+		float_lbl.text = "+1"
+		float_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		float_lbl.add_theme_font_size_override("font_size", 30)
+		float_lbl.add_theme_color_override("font_color", Color("#7DFFB2"))
+		float_lbl.add_theme_color_override("font_outline_color", Color("#123D24"))
+		float_lbl.add_theme_constant_override("outline_size", 6)
+		float_lbl.pivot_offset = Vector2(25, 20)
+		float_lbl.position = details_icon_texture.position + Vector2(details_icon_texture.size.x * 0.5 - 20.0, 5.0)
+		float_lbl.scale = Vector2(0.5, 0.5)
+		var parent = details_icon_texture.get_parent()
+		if parent:
+			parent.add_child(float_lbl)
+			var tween_float := parent.create_tween()
+			tween_float.parallel().tween_property(float_lbl, "scale", Vector2(1.3, 1.3), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tween_float.parallel().tween_property(float_lbl, "position:y", float_lbl.position.y - 50.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			tween_float.tween_property(float_lbl, "modulate:a", 0.0, 0.18)
+			tween_float.tween_callback(float_lbl.queue_free)
+
+	if is_instance_valid(details_buy_btn):
+		details_buy_btn.pivot_offset = details_buy_btn.size * 0.5
+		var tween_btn := UIEffects.tween_for(details_buy_btn, "details_btn_punch")
+		details_buy_btn.scale = Vector2(0.94, 0.94)
+		tween_btn.tween_property(details_buy_btn, "scale", Vector2(1.05, 1.05), 0.10).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween_btn.tween_property(details_buy_btn, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func _navigate_food_details(dir: int) -> void:
 	if not gm or gm.FOOD_CATALOG.is_empty():
@@ -1670,6 +1900,30 @@ func _update_stat_ui(stat_name: String, value: float, max_val: float) -> void:
 		UIEffects.set_text(target_label, "%s\n%d%%" % [names.get(stat_name, stat_name), int(value)])
 		target_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
+	# Actualizar widget circular de Pou
+	if _pou_circle_badges.has(stat_name):
+		var data: Dictionary = _pou_circle_badges[stat_name]
+		var circ = data.get("circle", null)
+		var lbl = data.get("label", null)
+		if is_instance_valid(circ):
+			circ.max_value = max_val
+			var tw_c := create_tween()
+			tw_c.tween_property(circ, "value", value, 0.22)
+		if is_instance_valid(lbl):
+			lbl.text = str(int(value)) + "%"
+
+	# Actualizar widget de cápsula flotante
+	if _pou_capsule_badges.has(stat_name):
+		var cdata: Dictionary = _pou_capsule_badges[stat_name]
+		var pbar = cdata.get("pbar", null)
+		var clbl = cdata.get("label", null)
+		if is_instance_valid(pbar):
+			pbar.max_value = max_val
+			var tw_p := create_tween()
+			tw_p.tween_property(pbar, "value", value, 0.22)
+		if is_instance_valid(clbl):
+			clbl.text = str(int(value)) + "%"
+
 func _on_coins_changed(new_coins: int) -> void:
 	if coins_label:
 		coins_label.text = str(new_coins)
@@ -1920,12 +2174,13 @@ func _setup_settings_modal() -> void:
 	)
 	settings_popup.add_child(backdrop)
 
-	# Marco ilustrado centrado. Usamos Control para posicionado libre y confiable.
+	# Marco ilustrado centrado.
 	var panel := Control.new()
 	panel.name = "Panel"
-	panel.custom_minimum_size = Vector2(860, 1040)
-	panel.size = Vector2(860, 1040)
-	panel.position = Vector2(110, 440)
+	panel.set_meta("wonder_custom", true)
+	panel.custom_minimum_size = Vector2(880, 1260)
+	panel.size = Vector2(880, 1260)
+	panel.position = Vector2(100, 310)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	settings_popup.add_child(panel)
 
@@ -1954,23 +2209,23 @@ func _setup_settings_modal() -> void:
 	panel.add_child(title)
 
 	var content := VBoxContainer.new()
-	content.position = Vector2(82, 178)
-	content.size = Vector2(696, 760)
+	content.position = Vector2(80, 140)
+	content.size = Vector2(720, 1070)
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
-	content.add_theme_constant_override("separation", 12)
+	content.add_theme_constant_override("separation", 10)
 	panel.add_child(content)
 
 	var intro := Label.new()
 	intro.text = "SONIDO Y RESPUESTA"
 	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	intro.add_theme_font_size_override("font_size", 23)
+	intro.add_theme_font_size_override("font_size", 21)
 	intro.add_theme_color_override("font_color", Color("#6B3E29"))
 	content.add_child(intro)
 
 	var toggles := HBoxContainer.new()
 	toggles.alignment = BoxContainer.ALIGNMENT_CENTER
-	toggles.add_theme_constant_override("separation", 12)
-	toggles.custom_minimum_size.y = 220
+	toggles.add_theme_constant_override("separation", 14)
+	toggles.custom_minimum_size.y = 180
 	content.add_child(toggles)
 
 	btn_toggle_sfx = _add_settings_icon_toggle(toggles, "Sonido", str(UI_ICON["sound_on"]), str(UI_ICON["sound_off"]), Color("#52BDEB"), func():
@@ -1993,14 +2248,19 @@ func _setup_settings_modal() -> void:
 	)
 
 	_effects_toggle = Button.new()
+	_effects_toggle.set_meta("wonder_custom", true)
 	_effects_toggle.toggle_mode = true
 	_effects_toggle.text = "Efectos reducidos: " + ("ACTIVOS" if gm.reduced_effects else "DESACTIVADOS")
-	_effects_toggle.custom_minimum_size = Vector2(650, 84)
-	_effects_toggle.add_theme_font_size_override("font_size", 28)
+	_effects_toggle.custom_minimum_size = Vector2(650, 68)
+	_effects_toggle.add_theme_font_size_override("font_size", 24)
 	var effects_style := StyleBoxFlat.new()
 	effects_style.bg_color = Color("#F2DDB0")
+	effects_style.border_color = Color("#C99F72")
+	effects_style.set_border_width_all(2)
 	effects_style.set_corner_radius_all(16)
 	_effects_toggle.add_theme_stylebox_override("normal", effects_style)
+	_effects_toggle.add_theme_stylebox_override("hover", effects_style)
+	_effects_toggle.add_theme_stylebox_override("pressed", effects_style)
 	UIEffects.bind_button(_effects_toggle)
 	_effects_toggle.add_theme_color_override("font_color", Color("#553421"))
 	_effects_toggle.button_pressed = gm.reduced_effects
@@ -2012,34 +2272,76 @@ func _setup_settings_modal() -> void:
 	)
 	content.add_child(_effects_toggle)
 
-	var divider := Label.new()
-	divider.text = "★   •   ★   •   ★"
-	divider.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	divider.add_theme_font_size_override("font_size", 22)
-	divider.add_theme_color_override("font_color", Color("#E4AA2F"))
-	content.add_child(divider)
+	var divider1 := Label.new()
+	divider1.text = "★   •   ★   •   ★"
+	divider1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	divider1.add_theme_font_size_override("font_size", 20)
+	divider1.add_theme_color_override("font_color", Color("#E4AA2F"))
+	content.add_child(divider1)
+
+	# Selector de diseño de HUD
+	var hud_title := Label.new()
+	hud_title.text = "DISEÑO DE INTERFAZ"
+	hud_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hud_title.add_theme_font_size_override("font_size", 21)
+	hud_title.add_theme_color_override("font_color", Color("#6B3E29"))
+	content.add_child(hud_title)
+
+	var hud_buttons_row := HBoxContainer.new()
+	hud_buttons_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	hud_buttons_row.add_theme_constant_override("separation", 14)
+	hud_buttons_row.custom_minimum_size.y = 66
+	content.add_child(hud_buttons_row)
+
+	var style_options := [
+		{"id": "classic", "label": "Clásico"},
+		{"id": "pou_circles", "label": "Círculos"},
+		{"id": "pou_capsules", "label": "Cápsulas"}
+	]
+
+	for opt in style_options:
+		var style_id: String = opt.id
+		var s_btn := Button.new()
+		s_btn.set_meta("wonder_custom", true)
+		s_btn.text = opt.label
+		s_btn.custom_minimum_size = Vector2(214, 62)
+		s_btn.add_theme_font_size_override("font_size", 22)
+		s_btn.focus_mode = Control.FOCUS_NONE
+		UIEffects.bind_button(s_btn)
+		s_btn.pressed.connect(func():
+			_select_hud_style(style_id)
+		)
+		hud_buttons_row.add_child(s_btn)
+		_hud_style_buttons[style_id] = s_btn
+
+	var divider2 := Label.new()
+	divider2.text = "★   •   ★   •   ★"
+	divider2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	divider2.add_theme_font_size_override("font_size", 20)
+	divider2.add_theme_color_override("font_color", Color("#E4AA2F"))
+	content.add_child(divider2)
 
 	var game_title := Label.new()
 	game_title.text = "MI PARTIDA"
 	game_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game_title.add_theme_font_size_override("font_size", 23)
+	game_title.add_theme_font_size_override("font_size", 21)
 	game_title.add_theme_color_override("font_color", Color("#6B3E29"))
 	content.add_child(game_title)
 
 	var actions := HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", 70)
-	actions.custom_minimum_size.y = 220
+	actions.custom_minimum_size.y = 180
 	content.add_child(actions)
 
 	var btn_reset := Button.new()
-	_set_image_button(btn_reset, str(UI_ICON["reset"]), 118, Vector2(245, 205), "Reiniciar", 24)
+	_set_image_button(btn_reset, str(UI_ICON["reset"]), 105, Vector2(240, 180), "Reiniciar", 22)
 	btn_reset.tooltip_text = "Empezar una partida nueva"
 	btn_reset.pressed.connect(_open_confirm_reset)
 	actions.add_child(btn_reset)
 
 	var btn_quit := Button.new()
-	_set_image_button(btn_quit, str(UI_ICON["quit"]), 118, Vector2(245, 205), "Salir", 24)
+	_set_image_button(btn_quit, str(UI_ICON["quit"]), 105, Vector2(240, 180), "Salir", 22)
 	btn_quit.tooltip_text = "Salir del juego"
 	btn_quit.pressed.connect(func():
 		if gm and not gm.save_game():
@@ -2049,16 +2351,16 @@ func _setup_settings_modal() -> void:
 	actions.add_child(btn_quit)
 
 	var hint := Label.new()
-	hint.text = "Toca un icono para cambiar su estado"
+	hint.text = "Toca una opción para cambiar su configuración"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 23)
+	hint.add_theme_font_size_override("font_size", 21)
 	hint.add_theme_color_override("font_color", Color("#8B6956"))
 	content.add_child(hint)
 
 	# Botón Cerrar (X) colocado al final para quedar siempre arriba en el orden visual y de input
 	var btn_close := Button.new()
 	btn_close.name = "BtnCloseSettings"
-	btn_close.position = Vector2(748, 38)
+	btn_close.position = Vector2(765, 36)
 	btn_close.size = Vector2(76, 76)
 	btn_close.custom_minimum_size = Vector2(76, 76)
 	btn_close.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -2069,12 +2371,51 @@ func _setup_settings_modal() -> void:
 
 	_update_settings_ui()
 
+func _select_hud_style(style_id: String) -> void:
+	if AudioManager:
+		AudioManager.play_pop()
+	if gm:
+		gm._commit_transaction({"hud_style": style_id})
+		gm.save_game()
+	_apply_hud_style(style_id)
+	_update_settings_hud_buttons()
+
+func _update_settings_hud_buttons() -> void:
+	var active_style: String = gm.hud_style if gm else "pou_circles"
+	for sid in _hud_style_buttons:
+		var btn: Button = _hud_style_buttons[sid]
+		if not is_instance_valid(btn):
+			continue
+		var is_selected: bool = (str(sid) == active_style)
+		var sb := StyleBoxFlat.new()
+		sb.set_corner_radius_all(16)
+		if is_selected:
+			sb.bg_color = Color("#5A3018")
+			sb.border_color = Color("#F5B942")
+			sb.set_border_width_all(3)
+			sb.shadow_color = Color(0.96, 0.72, 0.26, 0.40)
+			sb.shadow_size = 6
+			btn.add_theme_color_override("font_color", Color("#FFE29A"))
+			btn.add_theme_color_override("font_outline_color", Color("#2D1408"))
+			btn.add_theme_constant_override("outline_size", 4)
+		else:
+			sb.bg_color = Color("#EEDBB8")
+			sb.border_color = Color("#C4A57B")
+			sb.set_border_width_all(2)
+			btn.add_theme_color_override("font_color", Color("#553421"))
+			btn.add_theme_color_override("font_outline_color", Color.TRANSPARENT)
+			btn.add_theme_constant_override("outline_size", 0)
+		btn.add_theme_stylebox_override("normal", sb)
+		btn.add_theme_stylebox_override("hover", sb)
+		btn.add_theme_stylebox_override("pressed", sb)
+
 func _update_settings_ui() -> void:
 	if not gm:
 		return
 	_style_settings_toggle(btn_toggle_sfx, gm.sfx_enabled)
 	_style_settings_toggle(btn_toggle_music, gm.music_enabled)
 	_style_settings_toggle(btn_toggle_vib, gm.vibration_enabled)
+	_update_settings_hud_buttons()
 
 func _open_settings_modal() -> void:
 	if not settings_popup:
@@ -2569,23 +2910,264 @@ func _polish_header() -> void:
 		top.add_theme_constant_override("margin_" + side, 22)
 	for side in ["top", "bottom"]:
 		top.add_theme_constant_override("margin_" + side, 16)
-	var plate := Panel.new()
-	plate.name = "ReadableHeader"
-	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var plate := top.get_node_or_null("ReadableHeader") as Panel
+	if not plate:
+		plate = Panel.new()
+		plate.name = "ReadableHeader"
+		plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		top.add_child(plate)
+		top.move_child(plate, 0)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.16, 0.10, 0.075, 0.91)
-	style.border_color = Color(0.96, 0.74, 0.34, 0.7)
-	style.set_border_width_all(2)
+	style.bg_color = Color("#261710", 0.92)
+	style.border_color = Color("#E6C280", 0.85)
+	style.set_border_width_all(3)
 	style.set_corner_radius_all(26)
+	style.shadow_color = Color(0, 0, 0, 0.35)
+	style.shadow_size = 8
 	plate.add_theme_stylebox_override("panel", style)
-	top.add_child(plate)
-	top.move_child(plate, 0)
+
 	$TopBar/VBox.add_theme_constant_override("separation", 18)
+
 	for label in [coins_label, diamonds_label, level_label]:
-		label.add_theme_font_size_override("font_size", 32)
-	for button in [btn_coins, btn_diamonds, btn_settings]:
-		button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 90)
-		UIEffects.bind_button(button)
+		label.add_theme_font_size_override("font_size", 26)
+
+	# Estilos cálidos para la economía superior
+	if btn_coins:
+		var coin_st := StyleBoxFlat.new()
+		coin_st.bg_color = Color("#321C12", 0.92)
+		coin_st.border_color = Color("#F5B942", 0.90)
+		coin_st.set_border_width_all(2)
+		coin_st.set_corner_radius_all(20)
+		btn_coins.add_theme_stylebox_override("normal", coin_st)
+		btn_coins.add_theme_stylebox_override("hover", coin_st)
+		btn_coins.add_theme_stylebox_override("pressed", coin_st)
+		btn_coins.custom_minimum_size.y = maxf(btn_coins.custom_minimum_size.y, 80)
+		UIEffects.bind_button(btn_coins)
+
+	if btn_diamonds:
+		var diam_st := StyleBoxFlat.new()
+		diam_st.bg_color = Color("#172635", 0.92)
+		diam_st.border_color = Color("#52C8F2", 0.90)
+		diam_st.set_border_width_all(2)
+		diam_st.set_corner_radius_all(20)
+		btn_diamonds.add_theme_stylebox_override("normal", diam_st)
+		btn_diamonds.add_theme_stylebox_override("hover", diam_st)
+		btn_diamonds.add_theme_stylebox_override("pressed", diam_st)
+		btn_diamonds.custom_minimum_size.y = maxf(btn_diamonds.custom_minimum_size.y, 80)
+		UIEffects.bind_button(btn_diamonds)
+
+	if btn_settings:
+		var sett_st := StyleBoxFlat.new()
+		sett_st.bg_color = Color("#321C12", 0.92)
+		sett_st.border_color = Color("#E6C280", 0.90)
+		sett_st.set_border_width_all(2)
+		sett_st.set_corner_radius_all(22)
+		btn_settings.add_theme_stylebox_override("normal", sett_st)
+		btn_settings.add_theme_stylebox_override("hover", sett_st)
+		btn_settings.add_theme_stylebox_override("pressed", sett_st)
+		btn_settings.custom_minimum_size.y = maxf(btn_settings.custom_minimum_size.y, 80)
+		UIEffects.bind_button(btn_settings)
+
+	_setup_hud_styles()
+	_apply_hud_style(gm.hud_style if gm else "pou_circles")
+
+func _setup_hud_styles() -> void:
+	var vbox := $TopBar/VBox as VBoxContainer
+	if not vbox:
+		return
+
+	var stats_meta := [
+		{"key": "hunger", "icon": str(UI_ICON["hunger"]), "col": Color("#FF725E"), "room": "cocina"},
+		{"key": "protein", "icon": str(UI_ICON["protein"]), "col": Color("#E84A3B"), "room": "cocina"},
+		{"key": "energy", "icon": str(UI_ICON["energy"]), "col": Color("#7B68EE"), "room": "dormitorio"},
+		{"key": "fun", "icon": str(UI_ICON["fun"]), "col": Color("#FFC72F"), "room": "sala de juegos"},
+		{"key": "hygiene", "icon": str(UI_ICON["hygiene"]), "col": Color("#40C8D8"), "room": "baño"}
+	]
+
+	# 1. Row para Círculos Pou
+	if not _pou_circles_row:
+		_pou_circles_row = HBoxContainer.new()
+		_pou_circles_row.name = "PouCirclesRow"
+		_pou_circles_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		_pou_circles_row.add_theme_constant_override("separation", 14)
+		_pou_circles_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		vbox.add_child(_pou_circles_row)
+
+		for item in stats_meta:
+			var btn := Button.new()
+			btn.custom_minimum_size = Vector2(180, 126)
+			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			btn.flat = true
+			btn.focus_mode = Control.FOCUS_NONE
+			for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+				btn.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+			
+			var room_target: String = item.room
+			btn.pressed.connect(func():
+				if AudioManager:
+					AudioManager.play_pop()
+				_select_room(room_target)
+			)
+			UIEffects.bind_button(btn)
+
+			# Widget Circular
+			var circle := CircleProgress.new()
+			circle.custom_minimum_size = Vector2(92, 92)
+			circle.size = Vector2(92, 92)
+			circle.radius = 42.0
+			circle.ring_width = 6.0
+			circle.ring_color = item.col
+			circle.bg_color = Color("#261710", 0.90)
+			circle.border_color = Color("#E6C280", 0.85)
+			circle.border_width = 2.5
+			circle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			circle.position = Vector2(44, 4)
+			btn.add_child(circle)
+
+			# Icono centrado
+			var icon := TextureRect.new()
+			icon.texture = _load_ui_texture(item.icon)
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon.custom_minimum_size = Vector2(48, 48)
+			icon.size = Vector2(48, 48)
+			icon.position = Vector2(22, 22)
+			icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			circle.add_child(icon)
+
+			# Píldora inferior de porcentaje
+			var pct_badge := PanelContainer.new()
+			pct_badge.custom_minimum_size = Vector2(72, 28)
+			pct_badge.size = Vector2(72, 28)
+			pct_badge.position = Vector2(54, 86)
+			pct_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var badge_st := StyleBoxFlat.new()
+			badge_st.bg_color = Color("#1D100A", 0.95)
+			badge_st.border_color = Color("#E6C280", 0.85)
+			badge_st.set_border_width_all(2)
+			badge_st.set_corner_radius_all(10)
+			pct_badge.add_theme_stylebox_override("panel", badge_st)
+
+			var pct_lbl := Label.new()
+			pct_lbl.text = "100%"
+			pct_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			pct_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			pct_lbl.add_theme_font_size_override("font_size", 16)
+			pct_lbl.add_theme_color_override("font_color", Color.WHITE)
+			pct_lbl.add_theme_color_override("font_outline_color", Color("#1F0E06"))
+			pct_lbl.add_theme_constant_override("outline_size", 3)
+			pct_badge.add_child(pct_lbl)
+			btn.add_child(pct_badge)
+
+			_pou_circles_row.add_child(btn)
+			_pou_circle_badges[item.key] = {"circle": circle, "label": pct_lbl}
+
+	# 2. Row para Cápsulas Flotantes
+	if not _pou_capsules_row:
+		_pou_capsules_row = HBoxContainer.new()
+		_pou_capsules_row.name = "PouCapsulesRow"
+		_pou_capsules_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		_pou_capsules_row.add_theme_constant_override("separation", 14)
+		_pou_capsules_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		vbox.add_child(_pou_capsules_row)
+
+		for item in stats_meta:
+			var card_btn := Button.new()
+			card_btn.custom_minimum_size = Vector2(180, 126)
+			card_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			card_btn.focus_mode = Control.FOCUS_NONE
+			
+			var card_st := StyleBoxFlat.new()
+			card_st.bg_color = Color("#261710", 0.90)
+			card_st.border_color = Color("#E6C280", 0.85)
+			card_st.set_border_width_all(2)
+			card_st.set_corner_radius_all(18)
+			card_btn.add_theme_stylebox_override("normal", card_st)
+			card_btn.add_theme_stylebox_override("hover", card_st)
+			card_btn.add_theme_stylebox_override("pressed", card_st)
+
+			var room_target: String = item.room
+			card_btn.pressed.connect(func():
+				if AudioManager:
+					AudioManager.play_pop()
+				_select_room(room_target)
+			)
+			UIEffects.bind_button(card_btn)
+
+			var ic := TextureRect.new()
+			ic.texture = _load_ui_texture(item.icon)
+			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			ic.custom_minimum_size = Vector2(50, 50)
+			ic.size = Vector2(50, 50)
+			ic.position = Vector2(65, 12)
+			ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			card_btn.add_child(ic)
+
+			var pbar := ProgressBar.new()
+			pbar.custom_minimum_size = Vector2(146, 26)
+			pbar.size = Vector2(146, 26)
+			pbar.position = Vector2(17, 78)
+			pbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			pbar.show_percentage = false
+			pbar.value = 100.0
+
+			var p_track := StyleBoxFlat.new()
+			p_track.bg_color = Color("#170F0A", 0.92)
+			p_track.set_corner_radius_all(10)
+			var p_fill := StyleBoxFlat.new()
+			p_fill.bg_color = item.col
+			p_fill.set_corner_radius_all(9)
+			pbar.add_theme_stylebox_override("background", p_track)
+			pbar.add_theme_stylebox_override("fill", p_fill)
+			card_btn.add_child(pbar)
+
+			var lbl := Label.new()
+			lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+			lbl.text = "100%"
+			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			lbl.add_theme_font_size_override("font_size", 16)
+			lbl.add_theme_color_override("font_color", Color.WHITE)
+			lbl.add_theme_color_override("font_outline_color", Color("#1F0E06"))
+			lbl.add_theme_constant_override("outline_size", 3)
+			pbar.add_child(lbl)
+
+			_pou_capsules_row.add_child(card_btn)
+			_pou_capsule_badges[item.key] = {"pbar": pbar, "label": lbl}
+
+func _apply_hud_style(style_key: String) -> void:
+	if not _pou_circles_row or not _pou_capsules_row:
+		_setup_hud_styles()
+
+	var plate := $TopBar.get_node_or_null("ReadableHeader") as Panel
+	var s_grid := $TopBar/VBox/StatsGrid as HBoxContainer
+
+	match style_key:
+		"classic":
+			if plate: plate.visible = true
+			if s_grid: s_grid.visible = true
+			if _pou_circles_row: _pou_circles_row.visible = false
+			if _pou_capsules_row: _pou_capsules_row.visible = false
+		"pou_capsules":
+			if plate: plate.visible = false
+			if s_grid: s_grid.visible = false
+			if _pou_circles_row: _pou_circles_row.visible = false
+			if _pou_capsules_row: _pou_capsules_row.visible = true
+		_: # "pou_circles" por defecto
+			if plate: plate.visible = false
+			if s_grid: s_grid.visible = false
+			if _pou_circles_row: _pou_circles_row.visible = true
+			if _pou_capsules_row: _pou_capsules_row.visible = false
+
+	# Re-actualizar valores a las insignias activas
+	if gm:
+		_update_stat_ui("hunger", gm.hunger, gm.MAX_STAT)
+		_update_stat_ui("protein", gm.protein, gm.MAX_STAT)
+		_update_stat_ui("energy", gm.energy, gm.MAX_STAT)
+		_update_stat_ui("fun", gm.fun, gm.MAX_STAT)
+		_update_stat_ui("hygiene", gm.hygiene, gm.MAX_STAT)
 
 func _show_notice(message: String, _position: Vector2, color: Color, icon_path: String = "") -> void:
 	# A single readable notice above modals; no ever-growing label/tween list.
