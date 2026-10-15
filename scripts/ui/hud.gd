@@ -2295,7 +2295,7 @@ func _setup_settings_modal() -> void:
 
 	var style_options := [
 		{"id": "classic", "label": "Clásico"},
-		{"id": "pou_circles", "label": "Círculos Pou"},
+		{"id": "pou_circles", "label": "Círculos"},
 		{"id": "pou_capsules", "label": "Cápsulas"}
 	]
 
