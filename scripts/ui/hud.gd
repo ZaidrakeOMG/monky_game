@@ -2177,7 +2177,6 @@ func _setup_settings_modal() -> void:
 	# Marco ilustrado centrado.
 	var panel := Control.new()
 	panel.name = "Panel"
-	panel.set_meta("wonder_custom", true)
 	panel.custom_minimum_size = Vector2(880, 1260)
 	panel.size = Vector2(880, 1260)
 	panel.position = Vector2(100, 310)
